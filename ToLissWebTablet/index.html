@@ -482,7 +482,7 @@
             </div>
             <div class="nav-group">
                 <div class="nav-group-title">Flight</div>
-                <div class="nav-item" id="nav-telemetry" onclick="switchTab('telemetry')" style="display:none;">Map & Telemetry</div>
+                <div class="nav-item" id="nav-telemetry" onclick="switchTab('telemetry')">Map & Telemetry</div>
                 <div class="nav-item" id="nav-checklist" onclick="switchTab('checklist')" style="display:none;">Airbus Checklist</div>
                 <div class="nav-item" id="nav-mcdu" onclick="switchTab('mcdu')">MCDU</div>
                 <div class="nav-item" id="nav-displays" onclick="switchTab('displays')" style="display:none;">Cockpit Displays</div>
@@ -596,7 +596,7 @@
             </div>
 
             <!-- 1. AIRCRAFT REPOSITIONING -->
-            <div id="repositioning" class="tab-content active">
+            <div id="repositioning" class="tab-content">
                 <h3 style="margin-top: 0;">Aircraft Repositioning</h3>
                 <p style="font-size: 13px; color: var(--text-dim); margin-bottom: 15px; line-height: 1.5;">Search an airport, then tap a stand or runway on the map, or set up a final approach.</p>
 
@@ -1203,6 +1203,18 @@
                     <button id="btn-light" onclick="setTheme('light')" style="border: 2px solid transparent; font-size: 16px;">☀️ Light Theme</button>
                 </div>
 
+                <h3 style="margin-top: 25px;">Start Page</h3>
+                <div class="toggle-row">
+                    <div style="flex-grow: 1;">
+                        <label for="setting-start-page" style="display: block; font-size: 15px; color: var(--text-main); font-weight: 500;">Page shown when the EFB opens</label>
+                        <span style="font-size: 12px; color: var(--text-dim);">"Last page used" returns you to where you were, e.g. after reopening the EFB mid-flight</span>
+                    </div>
+                    <select id="setting-start-page" style="margin: 0; width: auto; min-width: 190px;" onchange="safeSetStorage('toliss_start_page', this.value)">
+                        <option value="telemetry">Map &amp; Telemetry</option>
+                        <option value="last">Last page used</option>
+                    </select>
+                </div>
+
                 <hr style="border: 0; border-top: 1px solid var(--border); margin: 30px 0 25px 0;">
 
                 <h3>Preflight</h3>
@@ -1233,14 +1245,6 @@
                 <hr style="border: 0; border-top: 1px solid var(--border); margin: 30px 0 25px 0;">
 
                 <h3>Flight</h3>
-                <div class="toggle-row">
-                    <div style="flex-grow: 1;">
-                        <label for="toggle-telemetry" style="display: block; font-size: 15px; color: var(--text-main); font-weight: 500; cursor: pointer;">Map & Telemetry</label>
-                        <span style="font-size: 12px; color: var(--text-dim);">Flight data dashboard and moving map with airport ground detail</span>
-                    </div>
-                    <input type="checkbox" id="toggle-telemetry" onchange="toggleIntegration('telemetry', this.checked)">
-                </div>
-
                 <div class="toggle-row" style="flex-direction: column; align-items: stretch; padding-bottom: 15px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div style="flex-grow: 1;">
@@ -5343,8 +5347,7 @@
             }
             
             if (!isEnabled && navBtn && navBtn.classList.contains('active')) {
-                let repNav = document.getElementById('nav-repositioning');
-                if(repNav) repNav.click();
+                switchTab('telemetry');
             }
         }
 
@@ -6580,7 +6583,7 @@
             updateNavGroups();
 
             if (!isEnabled && ((situationsNav && situationsNav.classList.contains('active')) || (failuresNav && failuresNav.classList.contains('active')))) {
-                switchTab('repositioning');
+                switchTab('telemetry');
             }
 
             if (isEnabled) {
@@ -6597,7 +6600,7 @@
             if (proToggle) proToggle.checked = proEnabled;
             toggleTolissPro(proEnabled);
 
-            ['telemetry', 'checklist', 'betterpushback', 'dispatch', 'vatsim', 'xpilot', 'externallinks', 'fdr', 'displays'].forEach(name => {
+            ['checklist', 'betterpushback', 'dispatch', 'vatsim', 'xpilot', 'externallinks', 'fdr', 'displays'].forEach(name => {
                 let saved = safeGetStorage(`toliss_int_${name}`);
                 const isEnabled = saved === null ? true : (saved === 'true');
                 const toggle = document.getElementById(`toggle-${name}`);
@@ -6630,6 +6633,7 @@
 
         function switchTab(tabName) {
             if ((tabName === 'situations' || tabName === 'failures') && safeGetStorage('toliss_pro_enabled') !== 'true') return;
+            safeSetStorage('toliss_last_tab', tabName);
 
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(t => t.classList.remove('active'));
@@ -7348,11 +7352,27 @@
             if (savedNotes && notesArea) notesArea.value = savedNotes;
         }
 
+        // Map & Telemetry by default; optionally the last page used, if it is still available
+        function openStartPage() {
+            const pref = safeGetStorage('toliss_start_page') || 'telemetry';
+            const sel = document.getElementById('setting-start-page');
+            if (sel) sel.value = pref;
+            let target = 'telemetry';
+            if (pref === 'last') {
+                const last = safeGetStorage('toliss_last_tab');
+                const nav = last ? document.getElementById('nav-' + last) : null;
+                const available = last && document.getElementById(last) && (last === 'settings' || (nav && nav.style.display !== 'none'));
+                if (available) target = last;
+            }
+            switchTab(target);
+        }
+
         window.onload = () => {
             try { loadConfig(); } catch(e){}
             try { loadAirportDB(); } catch(e){} 
             try { initScratchpad(); } catch(e){}
             try { loadIntegrations(); } catch(e){}
+            try { openStartPage(); } catch(e){ switchTab('telemetry'); }
             try { startStatePolling(); } catch(e){}
             try { startFlightDataPolling(); } catch(e){}
             try { 
