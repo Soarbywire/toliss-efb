@@ -103,6 +103,8 @@ as soon as the aircraft is positioned and finishes setting it up while paused, w
 - Much faster airport search and stand loading, using a saved airport index and custom-scenery priority from `scenery_packs.ini`.
 
 ### Other
+- The EFB opens on **Map & Telemetry**, which is now always available (its on/off switch is removed). A new
+  **Start page** setting can instead return you to the last page used.
 - Licensed under CC BY-NC 4.0 (free for personal, non-commercial use; commercial use needs a separate license).
   The license is shown in Settings → About and included as `LICENSE`.
 - Removed leftover code from the old Final approach and Localiser intercept tabs and from earlier designs.
