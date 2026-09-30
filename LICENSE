@@ -1,0 +1,35 @@
+License & Copyright
+===================
+
+© 2026 Soarbywire. Some rights reserved.
+
+This software ("ToLiss EFB", including the PI_ToLissWebTablet.py plugin and the ToLissWebTablet web interface)
+is dual-licensed:
+
+
+1. Non-Commercial / Personal Use (Free)
+---------------------------------------
+
+This project is released to the flight simulation community under the Creative Commons
+Attribution-NonCommercial 4.0 International License (CC BY-NC 4.0).
+
+  Summary:          https://creativecommons.org/licenses/by-nc/4.0/
+  Full legal code:  https://creativecommons.org/licenses/by-nc/4.0/legalcode
+
+You are free to download, use, and modify this software for personal, non-commercial purposes.
+You may not repackage this software, in whole or in part, for sale or include it in any payware products.
+
+Attribution: when sharing this software or work based on it, credit "ToLiss EFB by Soarbywire"
+with a link to https://github.com/soarbywire/toliss-efb and to the license above, and indicate if
+changes were made.
+
+
+2. Commercial Use (Paid)
+------------------------
+
+Commercial use of this software, its backend architecture, or its bridge plugins is strictly prohibited
+under the public license. If you are a commercial developer, cockpit builder, or organization wishing to
+integrate this EFB into a commercial product, payware aircraft, or business environment, you must purchase
+a separate commercial license.
+
+Please contact me at https://soarbywire.com/contact/ to discuss commercial licensing options.
