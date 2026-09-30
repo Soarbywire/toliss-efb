@@ -1,0 +1,48 @@
+# Publishes a ToLiss EFB release that the EFB's built-in updater can install.
+# Run it from the repository's Actions tab: "Publish release" -> "Run workflow" -> enter the version (e.g. 0.60).
+name: Publish release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish, e.g. 0.60 (must match EFB_VERSION in the plugin and the version in index.html)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ inputs.version }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check this version has not been published already
+        run: |
+          if gh release view "v$VERSION" >/dev/null 2>&1; then
+            echo "::error::Version $VERSION has already been published. Change the version number and try again."
+            exit 1
+          fi
+
+      - name: Build the release zip and its SHA-256 checksum
+        run: |
+          DIR="build/ToLiss EFB $VERSION"
+          mkdir -p "$DIR/ToLissWebTablet"
+          cp PI_ToLissWebTablet.py "$DIR/"
+          cp ToLissWebTablet/index.html "$DIR/ToLissWebTablet/"
+          cp CHANGELOG.md LICENSE "$DIR/"
+          cd build
+          python3 ../tools/make_release.py "ToLiss EFB $VERSION"
+
+      - name: Take the release notes from CHANGELOG.md
+        run: python3 tools/release_notes.py "$VERSION" > build/notes.md
+
+      - name: Publish the release on GitHub
+        run: |
+          NAME="ToLiss_EFB_${VERSION//./_}"
+          gh release create "v$VERSION" "build/$NAME.zip" "build/$NAME.zip.sha256" \
+            --title "ToLiss EFB $VERSION" --notes-file build/notes.md --target "$GITHUB_SHA"
