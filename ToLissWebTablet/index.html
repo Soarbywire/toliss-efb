@@ -1351,7 +1351,7 @@
                 <div style="line-height: 1.5; color: var(--text-muted); font-size: 13px;">
                     <p>A web-based, remote interface for the ToLiss line of aircraft in X-Plane 12.</p>
                     <p>By Soarbywire &middot; <a href="https://soarbywire.com" target="_blank" rel="noopener">soarbywire.com</a></p>
-                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.61 Release Beta</p>
+                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.62 Release Beta</p>
                     <p style="font-size: 11px; color: #ff9800; margin-top: 5px;"><strong>Caution:</strong> Some features may not work as intended.</p>
                     <p style="font-size: 11px; color: var(--text-dim); margin-top: 5px;">New versions are published on <a href="https://github.com/soarbywire/toliss-efb/releases" target="_blank" rel="noopener">GitHub</a> and the X-Plane.org forums, and can be installed from <b>Updates</b> above.</p>
                     <div class="lic">
@@ -3958,11 +3958,24 @@
             });
         }
 
-        async function mcDirTo(fix, nextFix) {
-            await mcStep(`MCDU: DIR TO ${fix}`, async () => {
+        async function mcDirTo(fix, nextFix, radialIn) {
+            const rad = radialIn !== undefined && radialIn !== null ? String(Math.round(radialIn) % 360 || 360).padStart(3, '0') : null;
+            await mcStep(`MCDU: DIR TO ${fix}${rad ? ' with RADIAL IN ' + rad + '°' : ''}`, async () => {
                 await mcPress('DirTo', 500);
                 let scr = await mcWait(s2 => /DIR/.test(mcTitle(s2)), 'the DIR TO page');
                 scr = await mcEnter(fix, 1, 'L', 'DIR TO ' + fix);
+                let radNote = '';
+                if (rad) {
+                    // RADIAL IN takes the radial from the fix (final course + 180); accept ToLiss's value if it already matches
+                    const lbl = mcLabel(scr, /RADIAL\s*IN/);
+                    if (lbl) {
+                        const shown = (scr.lines[lbl.row + 1] || '').toUpperCase().slice(12);
+                        if (shown.includes(rad)) await mcPress(`LSK${lbl.n}${lbl.side}`, 500);
+                        else await mcEnter(rad, lbl.n, lbl.side, 'RADIAL IN');
+                        radNote = `, radial in ${rad}°`;
+                        scr = await mcRead();
+                    } else radNote = ' (no RADIAL IN field: plain DIR TO)';
+                }
                 let ins = mcFind(scr, /INSERT/);
                 if (ins) {
                     await mcPress(`LSK${ins.n}${ins.side}`, 600);
@@ -3976,16 +3989,16 @@
                     const rows = [2, 4, 6, 8, 10].map(r2 => (scr.lines[r2] || '').toUpperCase().slice(0, 8).trim());
                     const iFix = rows.findIndex(t => t.startsWith(fix)), iNext = rows.findIndex(t => t.startsWith(nextFix));
                     if (iFix < 0 || iNext < 0 || iNext < iFix) return { warn: `${fix} is active, but ${nextFix} does not follow it in the F-PLN: check for a discontinuity` };
-                    return `${fix} active, then ${nextFix}`;
+                    return `${fix} active, then ${nextFix}${radNote}`;
                 }
-                return `${fix} is the active waypoint`;
+                return `${fix} is the active waypoint${radNote}`;
             });
         }
 
         // After DIR TO <fix> and inserting the approach, the F-PLN should read <fix>, <next>, ...
         // A discontinuity between two copies of <fix> is cleared (nothing is lost); any other gap is only reported.
         async function mcCheckLink(fix, nextFix) {
-            return await mcStep(`F-PLN: ${fix} then ${nextFix}`, async () => {
+            return await mcStep(nextFix ? `F-PLN: ${fix} then ${nextFix}` : `F-PLN: ${fix}`, async () => {
                 for (let attempt = 0; attempt < 3; attempt++) {
                     await mcPress('Fpln', 500);
                     const scr = await mcRead();
@@ -3994,22 +4007,49 @@
                     const iFix = idx(fix);
                     if (iFix < 0) throw new Error(`${fix} is not on the first F-PLN page`);
                     const after = rows[iFix + 1];
-                    if (after && after.t.slice(0, 8).trim().startsWith(nextFix)) return `${fix} → ${nextFix}`;
+                    if (!nextFix && !(after && /DISCON/.test(after.t))) return `${fix} active`;
+                    if (nextFix && after && after.t.slice(0, 8).trim().startsWith(nextFix)) return `${fix} → ${nextFix}`;
                     // A second copy of the fix directly after it is harmless (zero-length leg)
-                    if (after && after.t.slice(0, 8).trim().startsWith(fix) && rows[iFix + 2] && rows[iFix + 2].t.slice(0, 8).trim().startsWith(nextFix)) return `${fix} → ${nextFix}`;
+                    if (after && after.t.slice(0, 8).trim().startsWith(fix) && (!nextFix || (rows[iFix + 2] && rows[iFix + 2].t.slice(0, 8).trim().startsWith(nextFix)))) return nextFix ? `${fix} → ${nextFix}` : `${fix} active`;
                     if (after && /DISCON/.test(after.t)) {
                         const beyond = rows[iFix + 2];
-                        if (beyond && beyond.t.slice(0, 8).trim().startsWith(fix)) {
+                        const bName = beyond ? beyond.t.slice(0, 8).trim() : '';
+                        if (beyond && (bName.startsWith(fix) || (nextFix && bName.startsWith(nextFix)))) {
                             await mcClearScratch();
                             await mcPress('KeyClear', 250);                 // CLR in the scratchpad
                             await mcPress(`LSK${after.r2 / 2}L`, 600);      // ...applied to the discontinuity line
                             continue;
                         }
-                        return { warn: `discontinuity after ${fix} (next is ${(beyond ? beyond.t.slice(0, 8).trim() : '?')}): the curved legs are missing, check the F-PLN` };
+                        return { warn: `discontinuity after ${fix} (next is ${(beyond ? beyond.t.slice(0, 8).trim() : '?')}): check the F-PLN` };
                     }
+                    if (!nextFix) return `${fix} active`;
                     return { warn: `${nextFix} does not follow ${fix}: check the F-PLN` };
                 }
                 return { warn: `could not tidy the F-PLN after ${fix}` };
+            });
+        }
+
+        // Approaches built on a ground transmitter need it tuned on RAD NAV (RNAV/RNP approaches are flown on GPS)
+        const LS_TYPES = ['ILS', 'LOC', 'LOC BC', 'GLS', 'LDA', 'IGS', 'SDF'];
+        async function mcCheckLs(a) {
+            if (!LS_TYPES.includes(a.type)) return;
+            await mcStep('RAD NAV: ILS tuned', async () => {
+                await mcPress('RadNav', 500);
+                let scr = await mcWait(s2 => /RAD/.test(mcTitle(s2)), 'the RAD NAV page', 3000);
+                const lbl = mcLabel(scr, /\bLS\b|ILS/);
+                if (!lbl) return { warn: 'LS line not found on RAD NAV: check the ILS is tuned' };
+                const lsText = sc => (sc.lines[lbl.row + 1] || '').toUpperCase();
+                const tunedNow = sc => { const t = lsText(sc); return /[A-Z]{2,4}/.test(t.replace(/CRS/g, '')) || /1\d\d\.\d\d/.test(t); };
+                // the FMS tunes the destination ILS once the approach phase is active
+                for (let i = 0; i < 4 && !tunedNow(scr); i++) { await mcSleep(800); scr = await mcRead(); }
+                if (tunedNow(scr)) return `tuned by the FMS: ${lsText(scr).trim().split(/\s+/)[0]}`;
+                if (!a.loc || !a.loc.ident) return { warn: 'the FMS has not tuned the ILS and its ident is not in the navigation data: tune it on RAD NAV' };
+                try { scr = await mcEnter(a.loc.ident, lbl.n, lbl.side, 'LS ident'); }
+                catch (e) {
+                    if (e.message === 'Stopped' || !a.loc.freq) throw e;
+                    scr = await mcEnter(a.loc.freq.toFixed(2), lbl.n, lbl.side, 'LS frequency');
+                }
+                return { warn: `the FMS had not tuned the ILS, so ${a.loc.ident} was tuned by hand` };
             });
         }
 
@@ -4022,15 +4062,22 @@
         async function activateApproachPhase() {
             await mcStep('Activate the approach phase (PERF)', async () => {
                 await mcPress('Perf', 500);
-                let scr = await mcRead();
-                if (/APPR/.test(mcTitle(scr)) && !mcFind(scr, /ACTIVATE/)) return 'already active';
-                let act = mcFind(scr, /ACTIVATE/);
-                if (!act) throw new Error('No ACTIVATE APPR PHASE prompt (only available in flight)');
-                await mcPress(`LSK${act.n}${act.side}`, 600);
-                scr = await mcRead();
-                const conf = mcFind(scr, /CONFIRM/);
-                if (conf) await mcPress(`LSK${conf.n}${conf.side}`, 600);
-                return 'approach phase active';
+                // The prompt sits at LSK 6L, split over two lines: "ACTIVATE" (or "CONFIRM") above "<APPR PHASE"
+                const prompt = sc => {
+                    const lbl = (sc.lines[11] || '').toUpperCase().slice(0, 14), ln = (sc.lines[12] || '').toUpperCase().slice(0, 14);
+                    return /ACTIVATE|CONFIRM/.test(lbl + ' ' + ln) && /APPR|PHASE/.test(lbl + ' ' + ln) ? (/CONFIRM/.test(lbl + ln) ? 'CONFIRM' : 'ACTIVATE') : null;
+                };
+                let scr = await mcRead(), pressed = [];
+                for (let i = 0; i < 3; i++) {
+                    const p = prompt(scr);
+                    if (!p) break;
+                    await mcPress('LSK6L', 700);
+                    pressed.push(p);
+                    scr = await mcRead();
+                }
+                if (/APPR/.test(mcTitle(scr)) && !prompt(scr)) return pressed.length ? 'approach phase active' : 'already active';
+                if (!pressed.length) return { warn: 'no ACTIVATE APPR PHASE prompt on PERF: activate it by hand' };
+                return { warn: `pressed ${pressed.join(' then ')}, but PERF does not show the APPR phase: check PERF` };
             });
         }
 
@@ -4091,6 +4138,24 @@
             } catch (e) { h.fail(e.message); throw e; }
         }
 
+        // The first fix on the final approach ahead of a point <nm> from the threshold (the join point for intercepts,
+        // the start point on final), the fix after it, and the RADIAL IN for a DIR TO that follows the final course
+        function apFixAhead(r, nm) {
+            if (r.a.generic || !r.g.aim) return null;
+            const legs = r.a.final.filter(l => l.fix && l.lat !== null);
+            let bi = -1, bd = -1;
+            legs.forEach((l, i) => {
+                const d = distM([l.lat, l.lon], r.g.aim) / 1852;
+                if (d < nm - 0.3 && d > bd) { bd = d; bi = i; }
+            });
+            if (bi < 0) return null;
+            const fix = legs[bi].fix;
+            const nextLeg = legs.slice(bi + 1).find(l => l.fix !== fix);
+            const course = nextLeg && nextLeg.course !== null && nextLeg.course !== undefined ? nextLeg.course : r.a.course;
+            const radial = course !== null && course !== undefined ? (course + 180) % 360 : null;
+            return { fix, next: nextLeg ? nextLeg.fix : null, radial };
+        }
+
         async function apSetFcu(r) {
             await mcStep('FCU: QNH, speed, altitude', async () => {
                 const done = [];
@@ -4110,6 +4175,15 @@
                 const alt = Math.round(r.alt / 100) * 100;
                 await simSet('sim/cockpit/autopilot/altitude', alt);
                 done.push(`SPD ${Math.round(r.speed)}`, `ALT ${alt.toLocaleString()}`);
+                if (apStart === 'intercept') {
+                    // fly the intercept heading in selected HDG until the final course is captured
+                    const v = await simRead(['sim/flightmodel/position/psi', 'sim/flightmodel/position/mag_psi']);
+                    const diff = (Number(v['sim/flightmodel/position/mag_psi']) || 0) - (Number(v['sim/flightmodel/position/psi']) || 0);
+                    const magHdg = Math.round(((r.hdg + diff) % 360 + 360) % 360) || 360;
+                    await simSet('sim/cockpit/autopilot/heading_mag', magHdg);
+                    await simCmd('AirbusFBW/PullHDGSel', 300);
+                    done.push(`HDG ${String(magHdg).padStart(3, '0')} selected`);
+                }
                 return done.join(', ');
             });
         }
@@ -4138,7 +4212,7 @@
                 const v = await simRead(['sim/flightmodel/position/psi', 'sim/flightmodel/position/mag_psi']);
                 const diff = (Number(v['sim/flightmodel/position/mag_psi']) || 0) - (Number(v['sim/flightmodel/position/psi']) || 0);
                 const magHdg = Math.round(((r.hdg + diff) % 360 + 360) % 360) || 360;
-                const lateralNav = apStart === 'full' || (apStart === 'final' && !['ILS', 'LOC', 'LOC BC', 'GLS', 'LDA', 'SDF', 'IGS', 'Centreline'].includes(r.a.type));
+                const lateralNav = apStart !== 'intercept' && !r.a.generic;
                 await simSet('sim/cockpit/autopilot/heading_mag', magHdg);
                 await simCmd(lateralNav ? 'AirbusFBW/PushHDGSel' : 'AirbusFBW/PullHDGSel', 250);
                 return lateralNav ? 'NAV' : 'HDG ' + String(magHdg).padStart(3, '0');
@@ -4151,7 +4225,7 @@
                 if (Number(v['AirbusFBW/FD1Engage']) !== 1) await simCmd('toliss_airbus/fd1_push', 300);
                 if (Number(v['AirbusFBW/FD2Engage']) !== 1) await simCmd('toliss_airbus/fd2_push', 300);
                 const w = await simRead(['AirbusFBW/FD1Engage', 'AirbusFBW/FD2Engage']);
-                if (Number(w['AirbusFBW/FD1Engage']) !== 1) throw new Error('FD1 did not engage');
+                if (Number(w['AirbusFBW/FD1Engage']) !== 1) return { warn: 'FD1 did not come on: press FD on the FCU' };
                 return 'FD1 and FD2 on';
             });
             await mcStep('A/THR on', async () => {
@@ -4159,7 +4233,7 @@
                 if (Number(v['AirbusFBW/ATHRmode']) === 0) await simCmd('AirbusFBW/ATHRbutton', 400);
                 v = await simRead(['AirbusFBW/ATHRmode', 'AirbusFBW/throttle_input']);
                 const m = Number(v['AirbusFBW/ATHRmode']);
-                if (m === 0) throw new Error('A/THR did not engage (are the engines running?)');
+                if (m === 0) return { warn: 'A/THR did not engage: press A/THR on the FCU' };
                 // AirbusFBW/throttle_input is the physical lever position (not the thrust A/THR is commanding).
                 // A/THR can only add thrust up to the lever position, so at IDLE it has no authority.
                 const tl = v['AirbusFBW/throttle_input'];
@@ -4172,20 +4246,35 @@
             await mcStep('AP1 on', async () => {
                 let v = await simRead(['AirbusFBW/AP1Engage']);
                 if (Number(v['AirbusFBW/AP1Engage']) === 1) return 'already on';
+                // ToLiss engages the AP with the vertical mode managed: push the ALT knob first
+                await simCmd('AirbusFBW/PushAltitude', 400);
                 await simSet('AirbusFBW/AP1Engage', 1, 500);
                 v = await simRead(['AirbusFBW/AP1Engage']);
-                if (Number(v['AirbusFBW/AP1Engage']) !== 1) throw new Error('AP1 did not engage');
-                return 'engaged';
+                if (Number(v['AirbusFBW/AP1Engage']) !== 1) await simCmd('toliss_airbus/ap1_push', 600);
+                v = await simRead(['AirbusFBW/AP1Engage']);
+                if (Number(v['AirbusFBW/AP1Engage']) !== 1) return { warn: 'AP1 did not engage: check the sidestick is centred, then press AP1' };
+                return 'engaged (ALT managed)';
             });
             const locOnly = ['LOC', 'LOC BC', 'LDA', 'SDF'].includes(r.a.type);
             if (r.a.generic) return;
+            if (apStart !== 'intercept') {
+                // final and full-procedure starts fly the flight plan; intercepts stay in HDG to capture the localiser
+                await mcStep('NAV engaged', async () => {
+                    let v = await simRead(['AirbusFBW/HDGmanaged']);
+                    if (Number(v['AirbusFBW/HDGmanaged']) >= 1) return 'already in NAV';
+                    await simCmd('AirbusFBW/PushHDGSel', 500);
+                    v = await simRead(['AirbusFBW/HDGmanaged']);
+                    if (v['AirbusFBW/HDGmanaged'] !== undefined && Number(v['AirbusFBW/HDGmanaged']) < 1) return { warn: 'NAV did not engage: push the HDG knob' };
+                    return 'NAV';
+                });
+            }
             await mcStep(locOnly ? 'Arm LOC' : 'Arm APPR', async () => {
                 const d = locOnly ? 'AirbusFBW/LOCilluminated' : 'AirbusFBW/APPRilluminated';
                 let v = await simRead([d]);
                 if (Number(v[d]) === 1) return 'already armed';
                 await simCmd(locOnly ? 'AirbusFBW/LOCbutton' : 'AirbusFBW/APPRbutton', 400);
                 v = await simRead([d]);
-                if (Number(v[d]) !== 1) throw new Error((locOnly ? 'LOC' : 'APPR') + ' did not arm (is the approach in the flight plan and the ILS tuned?)');
+                if (Number(v[d]) !== 1) return { warn: (locOnly ? 'LOC' : 'APPR') + ' did not arm: check the approach is in the F-PLN (and the ILS is tuned), then press ' + (locOnly ? 'LOC' : 'APPR') };
                 return 'armed';
             });
         }
@@ -4265,7 +4354,7 @@
                 await apRequireEngines();
                 // Full procedure: insert the approach only once the aircraft is in position before its first fix,
                 // otherwise the FMS treats the fixes it was moved past as already flown (sequenced)
-                lateInsert = doProg && apStart === 'full' && !r.a.generic;
+                lateInsert = doProg && !r.a.generic;
                 if (doProg) await programMCDU(r, lateInsert ? 'init' : 'all');
                 await mcStep(`Position: ${r.label}`, async () => {
                     // The plugin pauses as soon as the aircraft is placed; the setup below then runs while paused
@@ -4279,19 +4368,33 @@
                     await mcSleep(far ? 9000 : 2500);
                     return `${Math.round(r.alt).toLocaleString()} ft, ${Math.round(r.speed)} kt`;
                 });
-                if (lateInsert) {
-                    // DIR TO the first fix first, so it is the active waypoint when the approach is inserted;
-                    // the FMS then links the approach onto it instead of treating its first fixes as flown
-                    await mcDirTo(r.fixName, null);
-                    await programMCDU(r, 'appr');
-                    if (r.nextFixName) await mcCheckLink(r.fixName, r.nextFixName);
-                } else if (apStart === 'full' && r.fixName && !r.a.generic && doAuto) {
-                    await mcDirTo(r.fixName, r.nextFixName);
+                // DIR TO: full procedures to their first fix; finals to the next fix ahead with RADIAL IN so the F-PLN
+                // follows the final course. Intercepts are flown in selected HDG, as on vectors.
+                let dir = null;
+                if (!r.a.generic && (doProg || doAuto)) {
+                    if (apStart === 'full') dir = r.fixName ? { fix: r.fixName, next: r.nextFixName, radial: null } : null;
+                    else if (apStart === 'final') dir = apFixAhead(r, apDist);
+                    // intercepts: no DIR TO; the AP holds the selected heading until LOC / APP NAV captures the final course
                 }
+                const dirTo = async () => {
+                    try { await mcDirTo(dir.fix, null, dir.radial); }
+                    catch (e) { if (e.message === 'Stopped') throw e; }
+                };
+                if (lateInsert) {
+                    // DIR TO first, so the fix is the active waypoint when the approach is inserted; the FMS then links
+                    // the approach onto it instead of treating fixes the aircraft was moved past as already flown
+                    if (dir) await dirTo();
+                    await programMCDU(r, 'appr');
+                    if (dir) await mcCheckLink(dir.fix, dir.next);
+                } else if (dir) {
+                    await dirTo();
+                    await mcCheckLink(dir.fix, dir.next);
+                }
+                if (doAct) await activateApproachPhase();
+                if (doProg || doAuto) await mcCheckLs(r.a);
                 await apSetFcu(r);
                 if (doConfig) await apConfigure(r);
                 if (doAuto) await apGuidance(r);
-                if (doAct) await activateApproachPhase();
                 if (pauseAir) await simCmd('sim/operation/pause_on', 200);   // no-op if already paused
                 const warns = Array.from(document.querySelectorAll('#mc-steps li.warn small')).map(x => x.textContent);
                 mcEnd(true, `Ready: ${r.a.name}, ${r.label}. You have control.` + (warns.length ? ' Note: ' + warns.join('; ') : ''));
@@ -5401,7 +5504,15 @@
             loadChecklistList();
             const cb = document.getElementById('rp-pause-air');
             if (cb) cb.checked = safeGetStorage('toliss_repo_pause_air') === 'true';
-            ['ap-prog', 'ap-act', 'ap-config', 'ap-auto'].forEach(id => { const el = document.getElementById(id); if (el) el.checked = safeGetStorage('toliss_' + id.replace('-', '_')) === 'true'; });
+            // 0.62: "Activate the approach phase" becomes the default; switch it on once, even if it was saved as off
+            if (safeGetStorage('toliss_ap_act_default_062') !== 'done') {
+                safeSetStorage('toliss_ap_act', 'true');
+                safeSetStorage('toliss_ap_act_default_062', 'done');
+            }
+            ['ap-prog', 'ap-act', 'ap-config', 'ap-auto'].forEach(id => {
+                const el = document.getElementById(id), v = safeGetStorage('toliss_' + id.replace('-', '_'));
+                if (el) el.checked = v === null || v === undefined ? id === 'ap-act' : v === 'true';   // approach phase on by default
+            });
             const ls = document.getElementById('rp-ls-air');
             if (ls) ls.checked = safeGetStorage('toliss_repo_ls_air') === 'true';
         });

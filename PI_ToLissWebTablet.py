@@ -25,7 +25,7 @@ from XPLMScenery import *
 
 # Independent Queues to prevent Race Conditions
 # ===== Version and updates =====
-EFB_VERSION = "0.61"
+EFB_VERSION = "0.62"
 # GitHub repository that publishes releases ("owner/name"). Change the owner if your GitHub username differs.
 UPDATE_REPO = "soarbywire/toliss-efb"
 UPDATE_API = "https://api.github.com/repos/{repo}/releases/latest"
@@ -955,7 +955,7 @@ def _dms(v):
 
 
 class NavDatabase:
-    CACHE_VERSION = 1
+    CACHE_VERSION = 2      # 2: adds localisers by runway
 
     def __init__(self, xp_path, cache_dir=None):
         self.xp_path = xp_path
@@ -965,6 +965,7 @@ class NavDatabase:
         self.fixes = None      # ident -> [(region, airport, lat, lon)]
         self.navaids = None    # ident -> [(region, airport, lat, lon, code, freq)]
         self.locs = None       # (airport, ident) -> (freq_mhz, true_bearing)
+        self.locs_rwy = None   # (airport, runway) -> (ident, freq_mhz, true_bearing)
         self.lock = threading.Lock()
         self.cache = {}
         self.source = ""
@@ -1006,13 +1007,14 @@ class NavDatabase:
                         cached = pickle.load(f)
                     if cached.get("signature") == signature:
                         self.fixes, self.navaids, self.locs = cached["fixes"], cached["navaids"], cached["locs"]
+                        self.locs_rwy = cached.get("locs_rwy", {})
                         self.state = "ready"
                         self.load_seconds = round(time.time() - t0, 2)
                         XPLMDebugString(f"ToLiss EFB: Navigation index loaded from cache in {self.load_seconds}s\n")
                         return
                 except Exception as e:
                     XPLMDebugString(f"ToLiss EFB: Navigation cache unreadable, rebuilding ({e})\n")
-            fixes, navaids, locs = {}, {}, {}
+            fixes, navaids, locs, locs_rwy = {}, {}, {}, {}
             for path in reversed(fix_files):        # later (higher priority) files overwrite earlier ones
                 seen = set()
                 try:
@@ -1053,7 +1055,10 @@ class NavDatabase:
                                     bearing = float(parts[6]) % 360.0
                                 except ValueError:
                                     bearing = None
-                                locs[(apt, ident)] = (int(freq) / 100.0 if freq.isdigit() else None, bearing)
+                                f_mhz = int(freq) / 100.0 if freq.isdigit() else None
+                                locs[(apt, ident)] = (f_mhz, bearing)
+                                if len(parts) > 10:          # the runway the localiser serves, e.g. 14 or 34L
+                                    locs_rwy[(apt, parts[10].upper())] = (ident, f_mhz, bearing)
                             elif code in (2, 3, 12, 13):
                                 key = ident
                                 if (key, "n") not in seen:
@@ -1062,7 +1067,7 @@ class NavDatabase:
                                 navaids[key].append((region, apt, lat, lon, code, freq))
                 except Exception as e:
                     XPLMDebugString(f"ToLiss EFB: earth_nav read error: {e}\n")
-            self.fixes, self.navaids, self.locs = fixes, navaids, locs
+            self.fixes, self.navaids, self.locs, self.locs_rwy = fixes, navaids, locs, locs_rwy
             self.state = "ready"
             self.load_seconds = round(time.time() - t0, 2)
             XPLMDebugString(f"ToLiss EFB: Navigation index built in {self.load_seconds}s\n")
@@ -1070,7 +1075,7 @@ class NavDatabase:
                 try:
                     tmp = cache_file + ".tmp"
                     with open(tmp, 'wb') as f:
-                        pickle.dump({"signature": signature, "fixes": fixes, "navaids": navaids, "locs": locs}, f, protocol=pickle.HIGHEST_PROTOCOL)
+                        pickle.dump({"signature": signature, "fixes": fixes, "navaids": navaids, "locs": locs, "locs_rwy": locs_rwy}, f, protocol=pickle.HIGHEST_PROTOCOL)
                     os.replace(tmp, cache_file)
                 except Exception as e:
                     XPLMDebugString(f"ToLiss EFB: Could not save navigation cache: {e}\n")
@@ -1151,6 +1156,7 @@ class NavDatabase:
                 centre = self._lookup(r[13].strip(), r[14].strip(), "D", "", icao, runways)
             alt_desc = r[22].strip()
             leg = {"seq": int(r[0]) if r[0].strip().isdigit() else 0, "fix": fix, "role": role, "pt": r[11].strip(),
+                   "nav": r[13].strip(),
                    "turn": r[9].strip(), "course": _num(r[20], 10.0), "dist": _num(r[21], 10.0),
                    "alt_desc": alt_desc, "alt1": _alt(r[23]), "alt2": _alt(r[24]),
                    "speed": _alt(r[27]), "vangle": _num(r[28], 100.0), "radius": _num(r[17], 1000.0),
@@ -1179,10 +1185,21 @@ class NavDatabase:
                 name = f"{tname} {pid[1:].lstrip('-')}".strip()
             rw = runways.get("RW" + rwy) if rwy else None
             loc = None
-            if rw and rw.get("loc") and tname in ("ILS", "LOC", "LOC BC", "LDA", "SDF", "IGS"):
-                li = self.locs.get((icao, rw["loc"]))
-                if li:
-                    loc = {"ident": rw["loc"], "freq": li[0], "bearing": li[1]}
+            if tname in ("ILS", "LOC", "LOC BC", "LDA", "SDF", "IGS"):
+                # 1. the runway record's localiser ident, 2. the recommended navaid on the final legs, 3. by runway
+                candidates = []
+                if rw and rw.get("loc"):
+                    candidates.append(rw["loc"])
+                candidates += [l["nav"] for l in final if l.get("nav")]
+                for ident in candidates:
+                    li = self.locs.get((icao, ident))
+                    if li:
+                        loc = {"ident": ident, "freq": li[0], "bearing": li[1]}
+                        break
+                if not loc and rwy:
+                    lr = (self.locs_rwy or {}).get((icao, rwy.upper()))
+                    if lr:
+                        loc = {"ident": lr[0], "freq": lr[1], "bearing": lr[2]}
             fin_course = next((l["course"] for l in reversed(final) if l["course"] is not None), None)
             gp = next((l["vangle"] for l in final if l["vangle"]), None)
             transitions = {k: sorted(v, key=lambda l: l["seq"]) for k, v in p["legs"].items() if k not in ("__final__", "__missed__")}

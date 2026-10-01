@@ -16,6 +16,27 @@ as soon as the aircraft is positioned and finishes setting it up while paused, w
 
 ---
 
+## 0.62
+
+- **Approach trainer, how each start is flown:**
+  - **Intercept:** flown as on vectors: selected HDG on the intercept heading, ALT held below the glide path, SPD
+    selected, AP1 on and APPR armed. LOC (or APP NAV for RNAV approaches) captures the final course; no DIR TO.
+  - **On final:** DIR TO the next fix ahead with RADIAL IN set to the final course (radial = course + 180°), so the
+    F-PLN follows the centreline, then NAV.
+  - **Full procedure:** DIR TO the first fix, then NAV.
+  - The approach is now inserted after positioning for every start, so the FMS doesn't treat fixes the aircraft was
+    moved past as already flown; a discontinuity before the approach's next fix is cleared.
+- **Approach phase activated automatically** after positioning (the option is now ticked by default, and is
+  switched on once for everyone with this version, even if it had been saved as off). The EFB recognises ToLiss's
+  ACTIVATE / CONFIRM APPR PHASE prompt at LSK 6L, which is split over two lines on the PERF page. This puts the
+  FMS in the right flight phase, so it tunes the destination ILS itself and shows managed approach speeds and V/DEV.
+  The EFB then checks RAD NAV and tunes the ILS by hand only if the FMS hasn't (with a warning). The ILS is found
+  from the runway's localiser ident, the approach's legs, or the runway it serves in X-Plane's navaid list.
+- **AP1 engages reliably:** the ALT knob is pushed (managed vertical mode) before engaging AP1, and ToLiss's AP1
+  button command is used as a fallback.
+- **Guidance problems no longer stop the sequence** once the aircraft is positioned: if FD, A/THR, AP1, NAV or
+  APPR does not engage, it is shown as a warning with what to do, and the rest of the setup still completes.
+
 ## 0.61
 
 - **Fix: "SELECT HDG/TRK FIRST" stopped the approach trainer in flight.** The FMS refuses changes to the active leg
