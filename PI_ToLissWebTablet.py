@@ -25,10 +25,14 @@ from XPLMScenery import *
 
 # Independent Queues to prevent Race Conditions
 # ===== Version and updates =====
-EFB_VERSION = "0.59"
+EFB_VERSION = "0.60"
 # GitHub repository that publishes releases ("owner/name"). Change the owner if your GitHub username differs.
 UPDATE_REPO = "soarbywire/toliss-efb"
 UPDATE_API = "https://api.github.com/repos/{repo}/releases/latest"
+# Fallback that does not use GitHub's API: the web address of the latest release redirects to its tag
+UPDATE_WEB = "https://github.com/{repo}/releases/latest"
+UPDATE_DL = "https://github.com/{repo}/releases/download/v{ver}/{name}"
+UPDATE_RAW = "https://raw.githubusercontent.com/{repo}/v{ver}/CHANGELOG.md"
 UPDATE_CHECK_INTERVAL_S = 6 * 3600
 UPDATE_MAX_BYTES = 30 * 1024 * 1024
 
@@ -745,30 +749,72 @@ class Updater:
             raise ValueError("download is larger than expected")
         return data
 
+    def _check_api(self):
+        req = urllib.request.Request(UPDATE_API.format(repo=UPDATE_REPO),
+                                     headers={'User-Agent': f'ToLissEFB/{EFB_VERSION}', 'Accept': 'application/vnd.github+json'})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            raw = r.read()
+        try:
+            rel = json.loads(raw.decode('utf-8'))
+        except ValueError:
+            raise ValueError("GitHub's release service sent an unexpected reply: " + raw[:80].decode('utf-8', errors='replace').strip())
+        tag = rel.get("tag_name") or rel.get("name") or ""
+        assets = rel.get("assets") or []
+        zip_a = next((x for x in assets if str(x.get("name", "")).lower().endswith(".zip")), None)
+        sha_a = next((x for x in assets if str(x.get("name", "")).lower().endswith(".sha256")), None)
+        notes = rel.get("body") or ""
+        m = re.search(r"SHA-?256[^0-9a-fA-F]*([0-9a-fA-F]{64})", notes)
+        return {"version": tag.lstrip("vV"), "notes": notes[:6000], "published": rel.get("published_at", ""),
+                "page": rel.get("html_url", ""),
+                "zip_url": zip_a.get("browser_download_url") if zip_a else None,
+                "zip_name": zip_a.get("name") if zip_a else None,
+                "sha_url": sha_a.get("browser_download_url") if sha_a else None,
+                "sha_in_notes": m.group(1).lower() if m else None}
+
+    def _check_web(self):
+        """Without the API: follow the 'latest release' address to its tag and use the standard file names."""
+        req = urllib.request.Request(UPDATE_WEB.format(repo=UPDATE_REPO), headers={'User-Agent': f'ToLissEFB/{EFB_VERSION}'})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            final = r.geturl()
+        m = re.search(r"/releases/tag/v?([\d.]+)", final)
+        if not m:
+            raise LookupError("No release has been published yet.")
+        ver = m.group(1)
+        name = f"ToLiss_EFB_{ver.replace('.', '_')}.zip"
+        notes = ""
+        try:
+            text = self._get(UPDATE_RAW.format(repo=UPDATE_REPO, ver=ver), 400000).decode('utf-8', errors='ignore')
+            sec = re.search(rf"^## {re.escape(ver)}\s*$(.*?)(?=^## |\Z)", text, re.M | re.S)
+            notes = sec.group(1).strip() if sec else ""
+        except Exception:
+            pass
+        return {"version": ver, "notes": notes[:6000], "published": "", "page": final,
+                "zip_url": UPDATE_DL.format(repo=UPDATE_REPO, ver=ver, name=name), "zip_name": name,
+                "sha_url": UPDATE_DL.format(repo=UPDATE_REPO, ver=ver, name=name + ".sha256"), "sha_in_notes": None}
+
     def check(self, force=False):
         if not force and (not self.enabled or time.time() - self.checked_at < UPDATE_CHECK_INTERVAL_S):
             return
         with self.lock:
             self.state = "checking" if self.state in ("idle", "failed") else self.state
-            try:
-                rel = json.loads(self._get(UPDATE_API.format(repo=UPDATE_REPO)).decode('utf-8'))
-                tag = rel.get("tag_name") or rel.get("name") or ""
-                assets = rel.get("assets") or []
-                zip_a = next((a for a in assets if str(a.get("name", "")).lower().endswith(".zip")), None)
-                sha_a = next((a for a in assets if str(a.get("name", "")).lower().endswith(".sha256")), None)
-                notes = rel.get("body") or ""
-                m = re.search(r"SHA-?256[^0-9a-fA-F]*([0-9a-fA-F]{64})", notes)
-                self.latest = {"version": tag.lstrip("vV"), "notes": notes[:6000], "published": rel.get("published_at", ""),
-                               "page": rel.get("html_url", ""),
-                               "zip_url": zip_a.get("browser_download_url") if zip_a else None,
-                               "zip_name": zip_a.get("name") if zip_a else None,
-                               "sha_url": sha_a.get("browser_download_url") if sha_a else None,
-                               "sha_in_notes": m.group(1).lower() if m else None}
-                self.error = ""
-            except urllib.error.HTTPError as e:
-                self.error = "No release has been published yet." if e.code == 404 else f"GitHub answered {e.code}."
-            except Exception as e:
-                self.error = f"Could not reach GitHub ({e.__class__.__name__})."
+            errors = []
+            for method in (self._check_api, self._check_web):
+                try:
+                    self.latest = method()
+                    self.error = ""
+                    break
+                except LookupError as e:
+                    self.error = str(e)
+                    errors = []
+                    break
+                except urllib.error.HTTPError as e:
+                    errors.append("No release has been published yet." if e.code == 404 else f"GitHub answered {e.code}.")
+                except Exception as e:
+                    errors.append(str(e) if isinstance(e, ValueError) else f"Could not reach GitHub ({e.__class__.__name__}).")
+            else:
+                self.error = errors[-1] if errors else "Could not check for updates."
+            if errors:
+                XPLMDebugString("ToLiss EFB: update check: " + " | ".join(errors) + "\n")
             self.checked_at = time.time()
             if self.state == "checking":
                 self.state = "idle"
@@ -2577,6 +2623,8 @@ class PythonInterface:
                         q_telem_req.put((names, response_q))
                         try:
                             vals = response_q.get(timeout=1.5)
+                            for name in vals.pop("__missing__", []):
+                                vals.pop(name, None)
                             body = {"status": "success", "data": vals}
                         except Exception:
                             body = {"status": "error", "message": "No response from the sim"}
@@ -3254,6 +3302,7 @@ class PythonInterface:
                 else:
                     drefs, reply_q = item, res_q
                 results = {}
+                missing = []
                 for d in drefs:
                     try:
                         if d == "toliss_web/max_fuel_kg":
@@ -3340,6 +3389,15 @@ class PythonInterface:
                                         XPLMGetDatavf(ref, out, 0, arr_len)
                                         results[d] = out
                                     else: results[d] = []
+                                elif types & xplmType_IntArray:
+                                    # whole-number lists, e.g. sim/flightmodel/engine/ENGN_running
+                                    arr_len = XPLMGetDatavi(ref, None, 0, 0)
+                                    if arr_len > 0:
+                                        if arr_len > 64: arr_len = 64
+                                        out = []
+                                        XPLMGetDatavi(ref, out, 0, arr_len)
+                                        results[d] = [float(x) for x in out]
+                                    else: results[d] = []
                                 elif types & xplmType_Data:
                                     arr_len = XPLMGetDatab(ref, None, 0, 0)
                                     if arr_len > 0:
@@ -3358,8 +3416,11 @@ class PythonInterface:
                                     results[d] = 0.0
                             else:
                                 results[d] = 0.0
+                                missing.append(d)
                     except Exception:
                         results[d] = 0.0
+                if missing:
+                    results["__missing__"] = missing
                 reply_q.put(results)
             except Exception:
                 pass

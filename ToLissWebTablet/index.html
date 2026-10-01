@@ -664,7 +664,7 @@
                             </div>
                             <div class="rp-info" id="ap-wx">Destination weather: loading METAR...</div>
                             <div class="rp-label" style="margin-top:14px;">Aircraft</div>
-                            <label class="rp-pause" style="margin-top:4px;"><input type="checkbox" id="ap-ready" onchange="safeSetStorage('toliss_ap_ready', this.checked)"> On the ground, start the engines first if they are off (ToLiss "Engines Running" state)</label>
+                            <div class="rp-note" style="margin-top:4px;">Start both engines before pressing <b>Position aircraft</b>. The aircraft is only positioned in the air when both engines are running.</div>
                             <label class="rp-pause" style="margin-top:6px;"><input type="checkbox" id="ap-config" onchange="safeSetStorage('toliss_ap_config', this.checked); apBuildOptions(); apPreview();"> Configure for the approach: flaps, gear, FCU speed, heading and altitude</label>
                             <label class="rp-pause" style="margin-top:6px;"><input type="checkbox" id="ap-auto" onchange="safeSetStorage('toliss_ap_auto', this.checked)"> Engage guidance: both FDs, A/THR, AP1 and arm APPR</label>
                             <div id="ap-cfg-opts"></div>
@@ -1351,7 +1351,7 @@
                 <div style="line-height: 1.5; color: var(--text-muted); font-size: 13px;">
                     <p>A web-based, remote interface for the ToLiss line of aircraft in X-Plane 12.</p>
                     <p>By Soarbywire &middot; <a href="https://soarbywire.com" target="_blank" rel="noopener">soarbywire.com</a></p>
-                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.59 Release Beta</p>
+                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.60 Release Beta</p>
                     <p style="font-size: 11px; color: #ff9800; margin-top: 5px;"><strong>Caution:</strong> Some features may not work as intended.</p>
                     <p style="font-size: 11px; color: var(--text-dim); margin-top: 5px;">New versions are published on <a href="https://github.com/soarbywire/toliss-efb/releases" target="_blank" rel="noopener">GitHub</a> and the X-Plane.org forums, and can be installed from <b>Updates</b> above.</p>
                     <div class="lic">
@@ -3692,7 +3692,8 @@
             return { done: (d) => {
                          if (d && typeof d === 'object' && d.warn) { li.className = 'warn'; li.innerHTML = esc(text) + `<small class="w">${esc(d.warn)}</small>`; return; }
                          li.className = 'ok'; if (d) li.innerHTML = esc(text) + `<small>${esc(d)}</small>`; },
-                     fail: (d) => { li.className = 'bad'; li.innerHTML = esc(text) + `<small>${esc(d || '')}</small>`; } };
+                     fail: (d) => { li.className = 'bad'; li.innerHTML = esc(text) + `<small>${esc(d || '')}</small>`; },
+                     update: (t, d) => { li.className = 'run'; li.innerHTML = `<b>${esc(t)}</b>` + (d ? `<small>${esc(d)}</small>` : ''); } };
         }
         async function mcStep(text, fn) {
             const h = mcLog(text);
@@ -4038,23 +4039,23 @@
             await mcSleep(wait || 200);
         }
 
-        async function apEnsureEngines() {
-            await mcStep('Cockpit ready: engines running', async () => {
-                const v = await simRead(['sim/flightmodel/engine/ENGN_running', 'sim/flightmodel/failures/onground_any']);
-                const running = Array.isArray(v['sim/flightmodel/engine/ENGN_running']) ? v['sim/flightmodel/engine/ENGN_running'].slice(0, 2).every(x => Number(x) === 1) : false;
-                if (running) return 'already running';
-                if (Number(v['sim/flightmodel/failures/onground_any']) !== 1) return 'in the air: left as is';
-                await simSet('toliss_airbus/iscsinterface/setAircraftState', 3, 500);
-                const end = Date.now() + 90000;
-                while (Date.now() < end) {
-                    if (MC.abort) throw new Error('Stopped');
-                    const w = await simRead(['sim/flightmodel/engine/ENGN_running']);
-                    const arr = w['sim/flightmodel/engine/ENGN_running'];
-                    if (Array.isArray(arr) && arr.slice(0, 2).every(x => Number(x) === 1)) { await mcSleep(2000); return 'engines started'; }
-                    await mcSleep(1000);
-                }
-                throw new Error('The engines did not start within 90 seconds');
-            });
+        async function engState() {
+            const v = await simRead(['sim/flightmodel/engine/ENGN_running', 'sim/cockpit2/engine/indicators/N2_percent']);
+            const arr = v['sim/flightmodel/engine/ENGN_running'], n2 = v['sim/cockpit2/engine/indicators/N2_percent'];
+            // running if X-Plane says so, or if N2 is above idle-start level (in case an aircraft does not report it)
+            const run = [0, 1].map(i => (Array.isArray(arr) && Number(arr[i]) === 1) || (Array.isArray(n2) && Number(n2[i]) >= 50));
+            return { run, running: run.every(Boolean) };
+        }
+
+        // Before positioning in the air: never put the aircraft on an approach without running engines
+        async function apRequireEngines() {
+            const h = mcLog('Engines running before positioning in the air');
+            try {
+                const st = await engState();
+                if (st.running) { h.done('yes'); return; }
+                const which = st.run[0] || st.run[1] ? `ENG ${st.run[0] ? 2 : 1} is not running` : 'neither engine is running';
+                throw new Error(`Start both engines before positioning in the air (${which}). Nothing has been moved.`);
+            } catch (e) { h.fail(e.message); throw e; }
         }
 
         function apMissedAltitude(r) {
@@ -4209,7 +4210,6 @@
         }
 
         async function apRunSequence(r, doProg, doAct, pauseAir, lsAir) {
-            const doReady = !!(document.getElementById('ap-ready') || {}).checked && simOnGround;
             const doConfig = !!(document.getElementById('ap-config') || {}).checked;
             const doAuto = !!(document.getElementById('ap-auto') || {}).checked;
             const postSteps = doAct || doConfig || doAuto;
@@ -4217,7 +4217,7 @@
             let positioned = false;
             let lateInsert = false;
             try {
-                if (doReady) await apEnsureEngines();
+                await apRequireEngines();
                 // Full procedure: insert the approach only once the aircraft is in position before its first fix,
                 // otherwise the FMS treats the fixes it was moved past as already flown (sequenced)
                 lateInsert = doProg && apStart === 'full' && !r.a.generic;
@@ -4272,8 +4272,8 @@
                 if (!r || r.error) { updateStatus(r && r.error ? r.error : 'Choose an approach first.'); return; }
                 const doProg = !!(document.getElementById('ap-prog') || {}).checked && !r.a.generic;
                 const doAct = !!(document.getElementById('ap-act') || {}).checked;
-                const doMore = ['ap-ready', 'ap-config', 'ap-auto'].some(id => (document.getElementById(id) || {}).checked);
-                if (doProg || doAct || doMore) {
+                // Always run the sequence: it also checks the engines are running before positioning in the air
+                {
                     if (MC.running) return;
                     apRunSequence(r, doProg, doAct, pauseAir, lsAir);
                     return;
@@ -5355,7 +5355,7 @@
             loadChecklistList();
             const cb = document.getElementById('rp-pause-air');
             if (cb) cb.checked = safeGetStorage('toliss_repo_pause_air') === 'true';
-            ['ap-prog', 'ap-act', 'ap-ready', 'ap-config', 'ap-auto'].forEach(id => { const el = document.getElementById(id); if (el) el.checked = safeGetStorage('toliss_' + id.replace('-', '_')) === 'true'; });
+            ['ap-prog', 'ap-act', 'ap-config', 'ap-auto'].forEach(id => { const el = document.getElementById(id); if (el) el.checked = safeGetStorage('toliss_' + id.replace('-', '_')) === 'true'; });
             const ls = document.getElementById('rp-ls-air');
             if (ls) ls.checked = safeGetStorage('toliss_repo_ls_air') === 'true';
         });

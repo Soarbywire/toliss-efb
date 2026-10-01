@@ -16,6 +16,19 @@ as soon as the aircraft is positioned and finishes setting it up while paused, w
 
 ---
 
+## 0.60
+
+- **Engines (approach trainer):** the automatic engine start option is removed; starting the engines is up to the
+  pilot, which works with any cockpit including hardware ENG MASTER switches. Before positioning in the air, the EFB
+  checks that both engines are running and otherwise stops with a warning, without moving the aircraft.
+- **Fix:** the engine check always reported "neither engine is running", because the plugin could not read X-Plane
+  values that are lists of whole numbers (such as which engines are running). Engines are also counted as running
+  when their N2 is above 50%.
+- **Fix:** values an aircraft doesn't provide are now reported as unavailable instead of 0.
+- **Update check:** if GitHub's release service doesn't answer normally (the "JSONDecodeError" message), the EFB now
+  finds the latest release through its web address instead. Errors say what GitHub actually sent and are written to
+  X-Plane's Log.txt.
+
 ## 0.59
 
 ### New pages and features
