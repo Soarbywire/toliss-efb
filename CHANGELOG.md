@@ -16,6 +16,14 @@ as soon as the aircraft is positioned and finishes setting it up while paused, w
 
 ---
 
+## 0.61
+
+- **Fix: "SELECT HDG/TRK FIRST" stopped the approach trainer in flight.** The FMS refuses changes to the active leg
+  while the autopilot is in NAV. Before changing the MCDU in the air, the EFB now selects HDG holding the current
+  heading; if the message still appears, it clears it, selects HDG and retries instead of stopping.
+- **FCU after every reposition:** QNH from the destination METAR on both sides (switching out of STD if needed), the
+  speed shown on the Approach page selected, and the FCU altitude set to the altitude shown on the Approach page.
+
 ## 0.60
 
 - **Engines (approach trainer):** the automatic engine start option is removed; starting the engines is up to the

@@ -1351,7 +1351,7 @@
                 <div style="line-height: 1.5; color: var(--text-muted); font-size: 13px;">
                     <p>A web-based, remote interface for the ToLiss line of aircraft in X-Plane 12.</p>
                     <p>By Soarbywire &middot; <a href="https://soarbywire.com" target="_blank" rel="noopener">soarbywire.com</a></p>
-                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.60 Release Beta</p>
+                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.61 Release Beta</p>
                     <p style="font-size: 11px; color: #ff9800; margin-top: 5px;"><strong>Caution:</strong> Some features may not work as intended.</p>
                     <p style="font-size: 11px; color: var(--text-dim); margin-top: 5px;">New versions are published on <a href="https://github.com/soarbywire/toliss-efb/releases" target="_blank" rel="noopener">GitHub</a> and the X-Plane.org forums, and can be installed from <b>Updates</b> above.</p>
                     <div class="lic">
@@ -3645,12 +3645,30 @@
                 await mcPress('KeyClear', 120);
             }
         }
-        async function mcEnter(text, n, side, what) {
+        // Select HDG on the FCU, holding the current heading, so the FMS accepts changes to the active leg in flight
+        async function apSelectHdgHold() {
+            const v = await simRead(['sim/flightmodel/position/mag_psi']);
+            const mag = Math.round(Number(v['sim/flightmodel/position/mag_psi']) || 0) % 360 || 360;
+            await simSet('sim/cockpit/autopilot/heading_mag', mag, 200);
+            await simCmd('AirbusFBW/PullHDGSel', 500);
+            return mag;
+        }
+        // "SELECT HDG/TRK FIRST" in the scratchpad: clear it, select HDG and report that a retry is needed
+        async function mcHdgFirst() {
+            const sp = mcScratch(await mcRead());
+            if (!/HDG\/?TRK FIRST|HDG FIRST|TRK FIRST/.test(sp)) return false;
+            await mcClearScratch();
+            await apSelectHdgHold();
+            return true;
+        }
+
+        async function mcEnter(text, n, side, what, retried) {
             await mcClearScratch();
             await fetch('/api/mcdu_key', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ side: MC.side, text }) });
             const want = text.replace(/\s/g, '');
             await mcWait(scr => mcScratch(scr).replace(/\s/g, '') === want, `"${text}" in the scratchpad`, 5000);
             await mcPress(`LSK${n}${side}`, 450);
+            if (!retried && await mcHdgFirst()) return mcEnter(text, n, side, what, true);
             const scr = await mcRead();
             const sp = mcScratch(scr);
             if (sp && MC_ERR.test(sp)) throw new Error(`MCDU rejected ${what}: ${sp}`);
@@ -3769,6 +3787,10 @@
             const dest = aptIcao;
             const onGround = simOnGround;
             await mcStep('Check the MCDU', async () => {
+                if (!simOnGround || (await simRead(['sim/flightmodel/failures/onground_any']))['sim/flightmodel/failures/onground_any'] < 1) {
+                    // in flight the FMS refuses active-leg changes while NAV is engaged ("SELECT HDG/TRK FIRST")
+                    await apSelectHdgHold();
+                }
                 let scr = await mcRead();
                 if (/MCDU MENU/.test(mcTitle(scr))) {
                     const f = mcFind(scr, /FMGC/);
@@ -3889,10 +3911,17 @@
                 if (!ins) { await mcPress('Fpln', 500); scr = await mcRead(); ins = mcFind(scr, /INSERT/); }
                 if (!ins) return 'nothing to insert';
                 await mcPress(`LSK${ins.n}${ins.side}`, 700);
+                let note = '';
+                if (await mcHdgFirst()) {
+                    note = ' (HDG selected first)';
+                    scr = await mcRead();
+                    ins = mcFind(scr, /INSERT/);
+                    if (ins) await mcPress(`LSK${ins.n}${ins.side}`, 700);
+                }
                 scr = await mcRead();
                 if (mcFind(scr, /INSERT/)) { await mcSleep(500); scr = await mcRead(); }
                 if (mcFind(scr, /INSERT/)) throw new Error('The temporary flight plan is still waiting to be inserted');
-                return 'inserted';
+                return 'inserted' + note;
             });
 
             await mcStep('PERF APPR: QNH, temperature, wind, minimum', async () => {
@@ -3934,8 +3963,12 @@
                 await mcPress('DirTo', 500);
                 let scr = await mcWait(s2 => /DIR/.test(mcTitle(s2)), 'the DIR TO page');
                 scr = await mcEnter(fix, 1, 'L', 'DIR TO ' + fix);
-                const ins = mcFind(scr, /INSERT/);
-                if (ins) { await mcPress(`LSK${ins.n}${ins.side}`, 600); scr = await mcRead(); }
+                let ins = mcFind(scr, /INSERT/);
+                if (ins) {
+                    await mcPress(`LSK${ins.n}${ins.side}`, 600);
+                    if (await mcHdgFirst()) { scr = await mcRead(); ins = mcFind(scr, /INSERT/); if (ins) await mcPress(`LSK${ins.n}${ins.side}`, 600); }
+                    scr = await mcRead();
+                }
                 if (mcFind(scr, /INSERT/)) throw new Error('The DIR TO is still waiting to be inserted');
                 await mcPress('Fpln', 500);
                 if (nextFix) {
@@ -4058,11 +4091,27 @@
             } catch (e) { h.fail(e.message); throw e; }
         }
 
-        function apMissedAltitude(r) {
-            const a = r.a;
-            let best = null;
-            if (!a.generic) (a.missed || []).forEach(l => { if (l.alt1 && l.alt1 > (best || 0)) best = l.alt1; });
-            return best || Math.ceil((aptElevFt + 3000) / 100) * 100;
+        async function apSetFcu(r) {
+            await mcStep('FCU: QNH, speed, altitude', async () => {
+                const done = [];
+                // QNH from the destination METAR (hPa like 1016, or inHg like 29.92), both sides, out of STD
+                const q = apWx && apWx.qnh ? String(apWx.qnh) : null;
+                if (q) {
+                    const inhg = q.includes('.') ? parseFloat(q) : parseFloat(q) / 33.8639;
+                    const st = await simRead(['AirbusFBW/BaroStdCapt', 'AirbusFBW/BaroStdFO']);
+                    if (Number(st['AirbusFBW/BaroStdCapt']) >= 1) await simCmd('toliss_airbus/capt_baro_pull', 300);
+                    if (Number(st['AirbusFBW/BaroStdFO']) >= 1) await simCmd('toliss_airbus/copilot_baro_pull', 300);
+                    await simSet('sim/cockpit2/gauges/actuators/barometer_setting_in_hg_pilot', +inhg.toFixed(3));
+                    await simSet('sim/cockpit2/gauges/actuators/barometer_setting_in_hg_copilot', +inhg.toFixed(3));
+                    done.push(`QNH ${q}`);
+                } else done.push('QNH not changed (no METAR)');
+                await simSet('sim/cockpit/autopilot/airspeed', Math.round(r.speed));
+                await simCmd('AirbusFBW/PullSPDSel', 250);
+                const alt = Math.round(r.alt / 100) * 100;
+                await simSet('sim/cockpit/autopilot/altitude', alt);
+                done.push(`SPD ${Math.round(r.speed)}`, `ALT ${alt.toLocaleString()}`);
+                return done.join(', ');
+            });
         }
 
         async function apConfigure(r) {
@@ -4085,18 +4134,14 @@
                 if ((Number(v['sim/cockpit2/controls/gear_handle_down']) === 1) !== c.gear) throw new Error('The gear lever did not move');
                 return 'lever ' + (c.gear ? 'down' : 'up');
             });
-            await mcStep('FCU: speed, heading, altitude', async () => {
+            await mcStep('FCU: heading', async () => {
                 const v = await simRead(['sim/flightmodel/position/psi', 'sim/flightmodel/position/mag_psi']);
                 const diff = (Number(v['sim/flightmodel/position/mag_psi']) || 0) - (Number(v['sim/flightmodel/position/psi']) || 0);
                 const magHdg = Math.round(((r.hdg + diff) % 360 + 360) % 360) || 360;
-                const fcuAlt = apStart === 'final' ? apMissedAltitude(r) : Math.round(r.alt / 100) * 100;
                 const lateralNav = apStart === 'full' || (apStart === 'final' && !['ILS', 'LOC', 'LOC BC', 'GLS', 'LDA', 'SDF', 'IGS', 'Centreline'].includes(r.a.type));
-                await simSet('sim/cockpit/autopilot/airspeed', Math.round(r.speed));
-                await simCmd('AirbusFBW/PullSPDSel', 250);
                 await simSet('sim/cockpit/autopilot/heading_mag', magHdg);
                 await simCmd(lateralNav ? 'AirbusFBW/PushHDGSel' : 'AirbusFBW/PullHDGSel', 250);
-                await simSet('sim/cockpit/autopilot/altitude', fcuAlt);
-                return `SPD ${Math.round(r.speed)} selected, ${lateralNav ? 'NAV' : 'HDG ' + String(magHdg).padStart(3, '0')}, ALT ${fcuAlt.toLocaleString()}`;
+                return lateralNav ? 'NAV' : 'HDG ' + String(magHdg).padStart(3, '0');
             });
         }
 
@@ -4243,6 +4288,7 @@
                 } else if (apStart === 'full' && r.fixName && !r.a.generic && doAuto) {
                     await mcDirTo(r.fixName, r.nextFixName);
                 }
+                await apSetFcu(r);
                 if (doConfig) await apConfigure(r);
                 if (doAuto) await apGuidance(r);
                 if (doAct) await activateApproachPhase();

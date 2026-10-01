@@ -25,7 +25,7 @@ from XPLMScenery import *
 
 # Independent Queues to prevent Race Conditions
 # ===== Version and updates =====
-EFB_VERSION = "0.60"
+EFB_VERSION = "0.61"
 # GitHub repository that publishes releases ("owner/name"). Change the owner if your GitHub username differs.
 UPDATE_REPO = "soarbywire/toliss-efb"
 UPDATE_API = "https://api.github.com/repos/{repo}/releases/latest"
