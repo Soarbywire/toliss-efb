@@ -16,6 +16,96 @@ as soon as the aircraft is positioned and finishes setting it up while paused, w
 
 ---
 
+## 0.65
+
+- **Change stand (Ops Centre):** the Stand assignment row has a **Change stand** button (**Assign stand** before one is
+  set), which opens a window with two choices:
+  - **Assign another automatically:** a different suitable stand, by the usual preference; among equally good stands
+    the pick is random, so trying again gives another.
+  - **Choose a stand:** the destination's stands from your scenery (gate or remote, size code, airlines, how often
+    your airline has used each, your rules), with search and **Show all stands** to also list stands not normally
+    offered, with the reason (e.g. "name suggests freight").
+  - Options: **Don't assign the current stand again at this airport**, and (when choosing) **Use this stand for this
+    airline's domestic/international flights here**, saved as a rule and assigned first next time.
+  - Before the arrival package the stand is sent with it; afterwards a **revised stand assignment** is sent; after
+    parking nothing is sent, but exclusions and rules are still saved.
+- **Map buttons** in the stand list open the moving map centred on that stand, with the airport layout.
+- **The assigned stand is marked on the moving map** (STAND 14) until the aircraft is parked.
+
+Updating from 0.62 or earlier? Version 0.64 added the Ops Centre (Hoppie ACARS dispatch) and fixed a crash when
+starting the Flight Recorder on macOS: see the full changelog at https://github.com/soarbywire/toliss-efb/blob/main/CHANGELOG.md
+
+## 0.64
+
+### Ops Centre (Hoppie ACARS): new
+A new Network page that turns the EFB into your airline's operations centre on the free Hoppie ACARS network. It
+dispatches your flight to the ToLiss MCDU (ATSU, AOC, RECEIVED MESSAGES) from pre-flight to block-in. Every message is
+formatted for the MCDU's 24-character lines, and automatic messages are spaced a few seconds apart.
+
+- **Setup:** Hoppie logon code (stored only on your PC, masked with Show/Hide), an ops callsign of your choice (e.g.
+  QFAOPS, up to 8 letters or digits, different from the aircraft) and the aircraft callsign, which can be taken from
+  SimBrief. Saved as each field is changed and filled in automatically. Can be switched off in Settings (Network).
+- **Messaging:** a message log with UTC times and delivery status, quick messages, an unread badge in the sidebar,
+  and Clear messages. Messages are checked every 45 to 75 seconds, as Hoppie asks (Check now: once every 20 s).
+- **Send as crew:** ToLiss's ATSU has no free-text page for company messages, so crew replies are sent from the EFB
+  under the aircraft's callsign to the ops centre, as an MCDU message would be. The EFB only ever collects the ops
+  centre's messages, never the aircraft's, so it doesn't interfere with ToLiss.
+- **Messages wait for the aircraft:** while Hoppie shows the aircraft's ATSU offline (e.g. powered down), messages
+  are held, shown as "Waiting for the aircraft (ATSU offline)", and sent when the ATSU is back online.
+- **Flight panel:** headed by the flight (callsign, route, aircraft, OFP time), with a timeline strip (OUT, OFF, ON,
+  IN, ETA, distance to go, EFOB, stand) and three phase sections. The current phase is open and marked; finished
+  phases fold into a summary line. Each item has an Auto switch and Send now; "New flight / resend all" starts again.
+
+**Pre-flight**
+- **When the SimBrief plan is loaded:** flight release (route, level, cost index, alternate, times, fuel breakdown,
+  estimated weights), weather for departure, destination and alternate (live METAR and TAF, or the plan's if
+  unavailable), NOTAMs from the OFP, and the preliminary load sheet.
+- **When the beacon comes on:** the final load sheet from the actual load in the sim (passengers, cargo per hold, ZFW,
+  take-off fuel, TOW, trip fuel, LAW, limits and underload), asking for acknowledgement, and takeoff data from
+  SimBrief's runway analysis (CONF, FLEX or TOGA, V1/VR/V2). The takeoff data adds CAUTION lines and "RECALCULATE
+  BEFORE DEPARTURE" if the actual TOW is above SimBrief's, the ATIS runway is not the planned one, or it is more than
+  3°C warmer than planned.
+- **Departure ATIS** from VATSIM, and again on each new letter until takeoff.
+
+**In flight**
+- **OOOI times** (out, off, on, in) detected from the sim; IN is the parking brake set on stand, as real ACARS reports it.
+- **Departure report** after takeoff: out and off times, ETA, and on time / early / late against the schedule.
+- **ETA updates** from the distance remaining along the SimBrief route at the current ground speed, sent when the ETA
+  moves by 10 minutes or more.
+- **Fuel check:** estimated fuel at destination against SimBrief's planned landing fuel; a message at 500 kg below
+  plan, and a stronger one if it would dip into alternate and final reserve.
+- **Destination weather** in cruise on each new METAR, with a caution if visibility or cloud base look low.
+
+**Arrival and after landing** (about 150 nm or 30 minutes out)
+- **Arrival ATIS** from VATSIM, and again on each new letter until landing.
+- **Stand assignment** from the destination's scenery, for the aircraft's ICAO size code (C for the A319/A320/A321,
+  E for the A330/A340). Stands marked or named as cargo, freight, maintenance, hangar, general aviation, de-icing and
+  similar are never assigned. Preference: the airline's rule, stands where it has parked before (learned
+  automatically when you park), stands the scenery lists for it, unrestricted stands, and other airlines' stands only
+  as a last resort; gates before remote stands. **Reassign** (beside the assigned stand) excludes an unsuitable stand
+  at that airport for good and, in flight, sends a revised assignment. Exclusions, learned stands and optional airline
+  rules (domestic and international) are kept in stand_rules.json in the ToLissWebTablet folder, e.g.
+  "YSSY": {"airlines": {"QFA": {"domestic": ["1-16"], "international": ["50-63"]}}}.
+- **Landing data** from SimBrief's runway analysis (LDA, wind, landing weight, CONF, VREF, autobrake and required
+  distances dry and wet), with cautions if the ATIS runway differs from the planned one, the estimated landing weight
+  is above SimBrief's, or the wet distance exceeds the LDA.
+- **Block-in summary** when the parking brake is set on stand: OOOI times, block and flight time, arrival against
+  schedule, fuel used against plan, touchdown rate (sampled 5 times a second below 300 ft) and the stand used.
+
+**Without a VATSIM ATIS:** nothing waits for it. The ATIS rows show "No VATSIM ATIS online (checking)", and a one-off
+"D-ATIS NOT AVBL" message with the latest METAR is sent instead (departure and destination). If an ATIS comes online
+later, it is sent as usual. Optional (off by default): an expected runway into wind, marked as an estimate.
+
+**Crew requests understood** (Send as crew): LOADSHEET RECEIVED, REQUEST WX [airports], REQUEST ATIS [airport],
+REQUEST LOADSHEET, REQUEST TO DATA, REQUEST ETA (or PROGRESS), REQUEST STAND, REQUEST LANDING DATA.
+
+### Fixes
+- **Crash to desktop when pressing Start on the Flight Recorder (notably on macOS).** Starting a recording read
+  X-Plane values from the web server's thread, which X-Plane does not allow. Start and Stop are now carried out on
+  X-Plane's main thread by the flight loop; the page still shows the recording at once.
+- **Saved settings were ignored after restarting X-Plane** for the Flight Recorder (mode, rate), automatic update
+  checks and the Ops Centre, because they were set up before the settings file was read.
+
 ## 0.62
 
 - **Approach trainer, how each start is flown:**

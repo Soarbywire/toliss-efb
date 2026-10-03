@@ -1,9 +1,15 @@
 # ToLiss EFB
 
 A web-based electronic flight bag for the ToLiss Airbus family in X-Plane 12. It runs as an XPPython3 plugin and
-opens in any browser on your network, including an iPad: dispatch and performance, ground and moving maps,
-repositioning and an approach trainer with MCDU automation, cockpit displays, a flight data recorder, xPilot and
-VATSIM tools, and more.
+opens in any browser on your network, including an iPad:
+
+- **Preflight:** SimBrief dispatch with takeoff and landing performance, weight & balance, ground services, pushback.
+- **Flight:** moving map with airport ground detail, ToLiss checklists, MCDU mirror, live PFD / E/WD / SD, and a
+  flight data recorder with landing reports.
+- **Sim control:** aircraft repositioning and an approach trainer that programs the MCDU and sets up the aircraft.
+- **Network:** VATSIM radar, xPilot and nearby ATC, and an **Ops Centre** that acts as your airline's operations
+  centre on the Hoppie ACARS network, dispatching the flight to the ToLiss MCDU (release, weather, NOTAMs, load sheets,
+  takeoff data, ATIS, ETA and fuel updates, stand assignment, landing data and a block-in summary).
 
 ## Installation
 

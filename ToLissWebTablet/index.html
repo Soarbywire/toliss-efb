@@ -388,6 +388,61 @@
         .lic p { margin: 0 0 8px 0; }
         .lic p:last-child { margin-bottom: 0; }
         .lic b { color: var(--text-main); }
+        .ops-secret { -webkit-text-security: disc; text-security: disc; font-family: var(--font-mono); }
+        .ops-secret.shown { -webkit-text-security: none; text-security: none; }
+        .ops-badge { display: inline-block; min-width: 18px; padding: 1px 6px; margin-left: 8px; border-radius: 9px; background: #ff9800; color: #111; font-size: 11px; font-weight: bold; text-align: center; }
+        .ops-setup { margin: 12px 0; background: var(--slider-bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; }
+        .ops-setup summary { cursor: pointer; font-weight: bold; color: var(--text-main); padding: 4px 0; }
+        .ops-log { border: 1px solid var(--border); border-radius: 8px; background: #000; padding: 10px; height: 46vh; min-height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+        .ops-msg { max-width: 78%; border-radius: 8px; padding: 8px 10px; font-family: var(--font-mono); font-size: 13px; line-height: 1.45; }
+        .ops-txt { white-space: pre-wrap; }
+        .ops-msg.in { align-self: flex-start; background: #102a1a; border: 1px solid #1f5a32; color: #19f25e; }
+        .ops-msg.out { align-self: flex-end; background: #0d2236; border: 1px solid #1d4d78; color: #2ec8ff; }
+        .ops-msg.failed { border-color: #f44336; }
+        .ops-msg.waiting { border-style: dashed; border-color: #ff9800; opacity: 0.85; }
+        .ops-item .st a { color: var(--accent); margin-left: 6px; }
+        .ops-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 4000; display: flex; align-items: center; justify-content: center; padding: 16px; }
+        .ops-modal-box { background: var(--panel-bg, #1e1e1e); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; width: min(720px, 100%); max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+        .ops-modal-box h4 { margin: 0 0 10px 0; color: var(--text-main); }
+        .ops-stand-list { max-height: 44vh; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; }
+        .ops-stand { display: grid; grid-template-columns: 90px 1fr auto; gap: 8px; align-items: center; padding: 7px 10px; border-bottom: 1px solid var(--border); cursor: pointer; font-size: 13px; }
+        .ops-stand:last-child { border-bottom: none; }
+        .ops-stand:hover { background: rgba(77,166,255,0.08); }
+        .ops-stand.sel { background: rgba(77,166,255,0.18); outline: 1px solid var(--accent); }
+        .ops-stand.bad { opacity: 0.6; }
+        .ops-stand b { font-family: var(--font-mono); color: var(--text-main); }
+        .ops-stand .d { color: var(--text-dim); font-size: 12px; }
+        .ops-stand .d .good { color: #4caf50; } .ops-stand .d .warn { color: #ff9800; }
+        .ops-stand button { min-height: 28px; padding: 0 10px; font-size: 12px; }
+        .ops-stand-marker { background: #ffb300; color: #111; font: bold 11px var(--font-mono); padding: 2px 6px; border-radius: 4px; white-space: nowrap; box-shadow: 0 1px 4px rgba(0,0,0,0.6); }
+        .ops-reassign { min-height: 26px !important; padding: 0 10px !important; margin-left: 8px; font-size: 12px; vertical-align: middle; }
+        .ops-event { align-self: center; font-size: 11px; color: var(--text-dim); font-family: var(--font-mono); border: 1px dashed var(--border); border-radius: 10px; padding: 2px 10px; }
+        .ops-meta { font-family: var(--font-ui); font-size: 11px; color: var(--text-dim); margin-bottom: 4px; }
+        .ops-meta b { color: var(--text-main); }
+        .ops-compose { margin-top: 10px; }
+        .ops-flight { margin: 0 0 12px 0; background: var(--slider-bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+        .ops-flight h4 { margin: 0 0 8px 0; font-size: 14px; color: var(--text-main); display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+        .ops-flight h4 span { font-family: var(--font-mono); color: var(--accent); font-weight: normal; }
+        .ops-timeline { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); padding: 6px 8px; margin-bottom: 8px; background: #000; border-radius: 6px; }
+        .ops-timeline b { color: var(--accent); font-weight: normal; margin-left: auto; }
+        .ops-phase { border-top: 1px solid var(--border); margin-top: 4px; }
+        .ops-phase-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 2px; cursor: pointer; font-weight: bold; font-size: 14px; color: var(--text-main); }
+        .ops-phase-head small { font-weight: normal; color: var(--text-dim); font-size: 12px; }
+        .ops-phase-head em { font-style: normal; font-weight: normal; font-size: 11px; color: #111; background: var(--accent); border-radius: 8px; padding: 1px 7px; margin-left: 6px; }
+        .ops-phase.finished .ops-phase-head { color: var(--text-dim); }
+        .ops-foot { border-top: 1px solid var(--border); margin-top: 6px; padding-top: 8px; font-size: 12px; color: var(--text-dim); }
+        .ops-foot label { display: flex; align-items: center; gap: 6px; }
+        .ops-help summary { cursor: pointer; color: var(--accent); }
+        .ops-help { font-size: 12px; color: var(--text-dim); flex: 1; }
+        .ops-item { display: grid; grid-template-columns: minmax(130px, 1.1fr) 2fr 64px 104px; gap: 10px; align-items: center; padding: 6px 0; border-top: 1px solid var(--border); font-size: 13px; }
+        .ops-item .st { color: var(--text-dim); font-size: 12px; }
+        .ops-item .st.ok { color: #4caf50; } .ops-item .st.wait { color: #ff9800; }
+        .ops-item label { font-size: 12px; color: var(--text-dim); display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+        .ops-item button { min-height: 32px; padding: 0 12px; }
+        @media (max-width: 700px) { .ops-item { grid-template-columns: 1fr auto; } .ops-item .st { grid-column: 1 / -1; } }
+        .ops-crew-btn { background: #14361f !important; border-color: #1f5a32 !important; color: #19f25e !important; }
+        .ops-compose select { width: 100%; margin: 0 0 6px 0; }
+        .ops-compose textarea { width: 100%; font-family: var(--font-mono); text-transform: uppercase; box-sizing: border-box; }
         .help-list { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
         .help-item { padding: 10px 14px; background: var(--slider-bg); border-bottom: 1px solid var(--border); }
         .help-item:last-child { border-bottom: none; }
@@ -500,6 +555,7 @@
                 <div class="nav-group-title">Network</div>
                 <div class="nav-item" id="nav-vatsim" onclick="switchTab('vatsim')" style="display:none;">VATSIM Network</div>
                 <div class="nav-item" id="nav-xpilot" onclick="switchTab('xpilot')" style="display:none;">xPilot &amp; ATC</div>
+                <div class="nav-item" id="nav-ops" onclick="switchTab('ops')" style="display:none;">Ops Centre<span class="ops-badge" id="ops-badge" style="display:none;"></span></div>
             </div>
             <div class="nav-group-spacer"></div>
             <div class="nav-item" id="nav-settings" onclick="switchTab('settings')">⚙️ Settings<span class="upd-dot" id="upd-dot" style="display:none;" title="Update available"></span></div>
@@ -975,6 +1031,98 @@
                 <div class="rp-note" id="mcdu-diag">Connecting to the MCDU...</div>
             </div>
 
+            <!-- OPS CENTRE (HOPPIE ACARS) -->
+            <div id="ops" class="tab-content">
+                <div class="dsp-bar">
+                    <h3 style="margin:0; border:none; padding:0;">Ops Centre</h3>
+                    <span class="dsp-status" id="ops-poll-txt"></span>
+                </div>
+                <div class="tstrip">
+                    <div class="tcell"><div class="tl">Ops centre</div><div class="tv" id="ops-st-conn">---</div></div>
+                    <div class="tcell"><div class="tl">Ops callsign</div><div class="tv" id="ops-st-ops">---</div></div>
+                    <div class="tcell"><div class="tl">Aircraft</div><div class="tv" id="ops-st-acft">---</div></div>
+                    <div class="tcell"><div class="tl">Aircraft ATSU</div><div class="tv" id="ops-st-online">---</div></div>
+                </div>
+                <div class="rp-note" id="ops-err" style="color:#f44336;"></div>
+
+                <details class="ops-setup" id="ops-setup">
+                    <summary>Setup</summary>
+                    <div class="rp-row">
+                        <label class="rp-field">Hoppie logon code
+                            <span style="display:flex; gap:6px;"><input type="text" id="ops-logon" class="ops-secret" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore placeholder="from hoppie.nl" onchange="opsSaveFields()" style="flex:1;">
+                            <button class="mc-btn" type="button" id="ops-show" onclick="opsToggleCode()" style="min-height:36px;">Show</button></span></label>
+                        <label class="rp-field">Ops callsign<input type="text" id="ops-cs" maxlength="8" autocomplete="off" autocapitalize="characters" placeholder="e.g. QFAOPS" onchange="opsSaveFields()"></label>
+                        <label class="rp-field">Aircraft callsign<input type="text" id="ops-acft" maxlength="8" autocomplete="off" autocapitalize="characters" placeholder="e.g. QFA431" onchange="opsSaveFields()"></label>
+                    </div>
+                    <div class="rp-row">
+                        <button class="mc-btn" onclick="opsFromSimbrief()">Use SimBrief callsign</button>
+                        <button class="rp-go" style="flex:1;" onclick="opsSaveConfig(true)">Save and connect</button>
+                        <button class="mc-btn" onclick="opsSaveConfig(false)">Disconnect</button>
+                    </div>
+                    <div class="rp-note">Get a free logon code at <a href="https://www.hoppie.nl/acars/" target="_blank" rel="noopener">hoppie.nl/acars</a>. Use the same code in the ToLiss ISCS (ATSU), with the aircraft callsign of your flight. The ops callsign is your choice: letters and digits, up to 8 characters, different from the aircraft. The code is stored only on this PC.</div>
+                </details>
+
+                <div class="ops-flight" id="ops-flight"></div>
+
+                <div class="ops-log" id="ops-log"><div class="perf-empty">No messages yet.</div></div>
+                <div class="ops-compose">
+                    <select id="ops-tpl" onchange="opsTemplate(this)">
+                        <option value="">Quick messages...</option>
+                        <optgroup label="From the ops centre">
+                            <option>RADIO CHECK, PLEASE ACKNOWLEDGE</option>
+                            <option>PLEASE SEND YOUR ETA</option>
+                            <option>LOADSHEET TO FOLLOW</option>
+                            <option>STAND ASSIGNMENT TO FOLLOW</option>
+                            <option>ROGER, THANK YOU</option>
+                        </optgroup>
+                        <optgroup label="From the crew">
+                            <option>LOADSHEET RECEIVED</option>
+                            <option>REQUEST WX</option>
+                            <option>REQUEST STAND</option>
+                            <option>READY FOR PUSHBACK</option>
+                            <option>REQUEST ETA</option>
+                            <option>REQUEST STAND</option>
+                            <option>REQUEST LANDING DATA</option>
+                            <option>ROGER</option>
+                        </optgroup>
+                    </select>
+                    <textarea id="ops-text" rows="3" placeholder="Message (sent as an ACARS telex)" oninput="this.value=this.value.toUpperCase()"></textarea>
+                    <div class="rp-row" style="margin-top:6px;">
+                        <span class="rp-note" id="ops-send-msg" style="flex:1; margin:0;"></span>
+                        <button class="mc-btn" onclick="opsClearLog()">Clear messages</button>
+                        <button class="mc-btn" onclick="opsPollNow()">Check now</button>
+                        <button class="mc-btn ops-crew-btn" onclick="opsSend(true)">Send as crew</button>
+                        <button class="rp-go" onclick="opsSend(false)">Send to aircraft</button>
+                    </div>
+                </div>
+                <div class="rp-note" style="margin-top:12px;"><b>Send to aircraft</b> sends from the ops centre; the message appears on the ToLiss MCDU (ATSU, AOC, RECEIVED MESSAGES). ToLiss's ATSU has no free-text page for company messages, so crew replies are sent here with <b>Send as crew</b>: they go from the aircraft's callsign to the ops centre, just as an MCDU message would. Messages are checked every 45 to 75 seconds, as Hoppie asks.</div>
+            </div>
+
+            <div class="ops-modal" id="ops-stand-modal" style="display:none;" onclick="if (event.target === this) opsStandClose()">
+                <div class="ops-modal-box">
+                    <h4 id="ops-stand-title">Change stand</h4>
+                    <div class="perf-rwys" style="margin:0 0 10px 0;">
+                        <button class="perf-rwy active" id="ops-stand-m-auto" onclick="opsStandMode('auto')">Assign another automatically</button>
+                        <button class="perf-rwy" id="ops-stand-m-choose" onclick="opsStandMode('choose')">Choose a stand</button>
+                    </div>
+                    <div id="ops-stand-auto" class="rp-note" style="margin:0 0 8px 0;">The ops centre picks a different suitable stand: the airline's rule first, then stands it has used before, and so on. Among equally good stands the pick is random, so trying again gives another.</div>
+                    <div id="ops-stand-choose" style="display:none;">
+                        <div class="rp-row" style="margin:0 0 6px 0;">
+                            <input type="text" id="ops-stand-q" placeholder="Search stand" oninput="opsStandList()" style="flex:1; margin:0;">
+                            <label class="rp-pause" style="margin:0;"><input type="checkbox" id="ops-stand-all" onchange="opsStandList()"> Show all stands</label>
+                        </div>
+                        <div class="ops-stand-list" id="ops-stand-list"></div>
+                    </div>
+                    <label class="rp-pause" id="ops-stand-excl-row"><input type="checkbox" id="ops-stand-excl"> <span id="ops-stand-excl-txt">Don't assign this stand again at this airport</span></label>
+                    <label class="rp-pause" id="ops-stand-rem-row" style="display:none;"><input type="checkbox" id="ops-stand-rem"> <span id="ops-stand-rem-txt">Use this stand for this airline here</span></label>
+                    <div class="rp-note" id="ops-stand-msg" style="min-height:16px;"></div>
+                    <div class="rp-row" style="justify-content:flex-end; margin-top:6px;">
+                        <button class="mc-btn" onclick="opsStandClose()">Cancel</button>
+                        <button class="rp-go" id="ops-stand-apply" onclick="opsStandApply()">Assign</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- xPILOT & NEARBY ATC -->
             <div id="xpilot" class="tab-content">
                 <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 12px;">
@@ -1316,6 +1464,14 @@
                     <input type="checkbox" id="toggle-xpilot" onchange="toggleIntegration('xpilot', this.checked)">
                 </div>
 
+                <div class="toggle-row">
+                    <div style="flex-grow: 1;">
+                        <label for="toggle-ops" style="display: block; font-size: 15px; color: var(--text-main); font-weight: 500; cursor: pointer;">Ops Centre (Hoppie ACARS)</label>
+                        <span style="font-size: 12px; color: var(--text-dim);">Your airline operations centre: send dispatch messages to the ToLiss MCDU</span>
+                    </div>
+                    <input type="checkbox" id="toggle-ops" onchange="toggleIntegration('ops', this.checked)">
+                </div>
+
                 <hr style="border: 0; border-top: 1px solid var(--border); margin: 30px 0 25px 0;">
 
                 <h3>External Tools</h3>
@@ -1351,7 +1507,7 @@
                 <div style="line-height: 1.5; color: var(--text-muted); font-size: 13px;">
                     <p>A web-based, remote interface for the ToLiss line of aircraft in X-Plane 12.</p>
                     <p>By Soarbywire &middot; <a href="https://soarbywire.com" target="_blank" rel="noopener">soarbywire.com</a></p>
-                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.62 Release Beta</p>
+                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.65 Release Beta</p>
                     <p style="font-size: 11px; color: #ff9800; margin-top: 5px;"><strong>Caution:</strong> Some features may not work as intended.</p>
                     <p style="font-size: 11px; color: var(--text-dim); margin-top: 5px;">New versions are published on <a href="https://github.com/soarbywire/toliss-efb/releases" target="_blank" rel="noopener">GitHub</a> and the X-Plane.org forums, and can be installed from <b>Updates</b> above.</p>
                     <div class="lic">
@@ -5519,6 +5675,372 @@
 
         if (typeof Chart !== 'undefined') { Chart.defaults.font.family = getComputedStyle(document.documentElement).getPropertyValue('--font-ui').trim() || 'sans-serif'; }
 
+        // ===== Ops Centre (Hoppie ACARS) =====
+        const OPS = { timer: null, lastId: 0, msgs: [], status: null };
+        const opsPost = (path, body) => fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) }).then(r => r.json());
+        function opsUtc(t) { const d = new Date(t * 1000); return `${String(d.getUTCHours()).padStart(2, '0')}${String(d.getUTCMinutes()).padStart(2, '0')}Z`; }
+
+        function opsRenderStatus(st) {
+            if (!st) return;
+            OPS.status = st;
+            const set = (id, t, c) => { const el = document.getElementById(id); el.textContent = t; el.style.color = c || ''; };
+            set('ops-st-conn', !st.configured ? 'Not set up' : (st.enabled ? (st.error ? 'Error' : 'Connected') : 'Off'), st.enabled && !st.error && st.configured ? '#4caf50' : (st.error ? '#f44336' : 'var(--text-dim)'));
+            set('ops-st-ops', st.ops_callsign || '---'); set('ops-st-acft', st.aircraft || '---');
+            set('ops-st-online', st.aircraft_online === null || st.aircraft_online === undefined ? '---' : (st.aircraft_online ? 'Online' : 'Offline'), st.aircraft_online ? '#4caf50' : (st.aircraft_online === false ? '#ff9800' : ''));
+            document.getElementById('ops-err').textContent = st.error || '';
+            document.getElementById('ops-poll-txt').textContent = st.enabled && st.configured ? (st.last_poll ? `Last check ${opsUtc(st.last_poll)}` : 'Connecting...') + (st.next_poll_in !== null && st.next_poll_in !== undefined ? ` · next in ${st.next_poll_in} s` : '') : '';
+            const badge = document.getElementById('ops-badge');
+            badge.style.display = st.unread ? '' : 'none'; badge.textContent = st.unread || '';
+            if (!st.configured) document.getElementById('ops-setup').open = true;
+        }
+
+        function opsRenderLog() {
+            const el = document.getElementById('ops-log');
+            if (!OPS.msgs.length) { el.innerHTML = '<div class="perf-empty">No messages yet. Messages you send appear on the aircraft&#39;s MCDU (ATSU AOC page).</div>'; return; }
+            const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+            el.innerHTML = OPS.msgs.map(m => m.type === 'event' ? `<div class="ops-event">${esc(m.text)} · ${esc(m.from)}</div>` : `<div class="ops-msg ${m.dir}${m.status === 'failed' ? ' failed' : ''}${m.status === 'waiting' ? ' waiting' : ''}">
+<div class="ops-meta"><b>${esc(m.from)}</b> → ${esc(m.to)} · ${opsUtc(m.t)}${m.type !== 'telex' ? ' · ' + esc(m.type.toUpperCase()) : ''}${m.status === 'failed' ? ' · <span style="color:#f44336">NOT SENT</span>' : ''}${m.status === 'waiting' ? ' · <span style="color:#ff9800">WAITING FOR THE AIRCRAFT (ATSU OFFLINE)</span>' : ''}</div><div class="ops-txt">${esc(m.text)}</div></div>`).join('');
+            if (atBottom || OPS.firstRender !== false) { el.scrollTop = el.scrollHeight; OPS.firstRender = false; }
+        }
+
+        // The flight panel: one section per phase, the current phase open, finished phases folded into a summary line
+        const OPS_PHASES = [
+            { id: 'pre', title: 'Pre-flight', items: [
+                ['release', 'Flight release', 'Sends when the SimBrief plan is loaded'],
+                ['wx', 'Weather (METAR, TAF)', 'Sends when the SimBrief plan is loaded'],
+                ['notams', 'NOTAMs', 'Sends when the SimBrief plan is loaded'],
+                ['prelim', 'Preliminary load sheet', 'Sends when the SimBrief plan is loaded'],
+                ['final', 'Final load sheet', 'Sends when the beacon comes on'],
+                ['todata', 'Takeoff data', 'Sends when the beacon comes on'],
+                ['atis', 'Departure ATIS', '']] },
+            { id: 'inflight', title: 'In flight', items: [
+                ['depreport', 'Departure report', 'Sends after takeoff'],
+                ['eta', 'ETA updates', 'Sends when the ETA moves by 10 minutes'],
+                ['fuel', 'Fuel check', 'Sends if fuel at destination falls 500 kg below plan'],
+                ['enroute_wx', 'Destination weather', 'Sends in cruise on each new METAR']] },
+            { id: 'arrival', title: 'Arrival & after landing', items: [
+                ['arr_atis', 'Arrival ATIS', ''],
+                ['stand', 'Stand assignment', 'Sends at about 150 nm / 30 min out'],
+                ['ldgdata', 'Landing data', 'Sends at about 150 nm / 30 min out'],
+                ['blockin', 'Block-in summary', 'Sends when the parking brake is set on stand']] }];
+        const OPS_PHASE_ORDER = ['pre', 'inflight', 'arrival', 'done'];
+        OPS.open = OPS.open || {};
+
+        function opsItemStatus(f, k, when) {
+            const sent = f.sent[k], queued = f.queued.includes(k);
+            if (queued) return [f.holding ? 'Waiting for the aircraft (ATSU offline)' : 'Sending...', 'wait'];
+            if (!sent && !f.auto[k]) return ['Not sent (switched off)', ''];
+            if (k === 'atis' || k === 'arr_atis') {
+                const online = k === 'atis' ? f.dep_atis_online : f.arr_atis_online;
+                const letter = k === 'atis' ? f.atis_letter : f.arr_atis_letter;
+                const noAtis = k === 'atis' ? f.no_atis_sent : f.no_arr_atis_sent;
+                if (sent && letter) return [`Sent ${opsUtc(sent)} · information ${letter}`, 'ok'];
+                if (sent && noAtis) return [`No VATSIM ATIS: latest METAR sent ${opsUtc(sent)} · checking`, 'wait'];
+                if (online) return [k === 'atis' ? 'VATSIM ATIS online: sends with the package' : 'VATSIM ATIS online: sends at about 150 nm out', ''];
+                return ['No VATSIM ATIS online (checking)', ''];
+            }
+            if (!sent) {
+                if (f.airborne && OPS_PHASES[0].items.some(i => i[0] === k)) return ['Not sent (airborne)', ''];
+                return [when, ''];
+            }
+            let st = 'Sent ' + opsUtc(sent), cls = 'ok';
+            if (k === 'final') { if (f.ack) st += ' · acknowledged ' + opsUtc(f.ack); else { st += ' · awaiting acknowledgement'; cls = 'wait'; } }
+            if (k === 'todata' && f.todata_caution) { st += ' · with cautions'; cls = 'wait'; }
+            if (k === 'ldgdata' && f.ldg_caution) { st += ' · with cautions'; cls = 'wait'; }
+            if (k === 'stand' && f.stand) st += ' · stand ' + f.stand + (f.parked_stand && f.parked_stand !== f.stand ? ' (parked on ' + f.parked_stand + ')' : '');
+            if (k === 'fuel' && f.fuel_level > 0) { st += f.fuel_level === 2 ? ' · BELOW RESERVES' : ' · below plan'; cls = 'wait'; }
+            if (k === 'blockin' && f.td_vs !== null && f.td_vs !== undefined) st += ' · touchdown ' + Math.round(f.td_vs) + ' fpm';
+            return [st, cls];
+        }
+
+        function opsTogglePhase(id, open) { OPS.open[id] = open; if (OPS.lastFlight) opsRenderFlight(OPS.lastFlight); }
+
+        function opsRenderFlight(f) {
+            const el = document.getElementById('ops-flight');
+            OPS.lastFlight = f;
+            try { opsUpdateMapStand(f); } catch (e) {}
+            if (!f || !f.loaded) {
+                el.innerHTML = '<h4>Flight</h4><div class="rp-note" style="margin:0;">Load your SimBrief flight plan (Dispatch &amp; OFP) to start. With the ops centre connected, the flight is dispatched automatically: pre-flight messages, in-flight updates, and the arrival package.</div>';
+                return;
+            }
+            const cur = OPS_PHASE_ORDER.indexOf(f.phase || 'pre');
+            const o = f.oooi || {};
+            const t = e => o[e] ? opsUtc(o[e]) : '----';
+            const landed = !!o.on;   // after landing only the stand is still of interest
+            const prog = [!landed && f.eta ? `ETA ${esc(f.dest)} ${opsUtc(f.eta)}` : '', !landed && f.dist_rem ? f.dist_rem + ' nm to go' : '',
+                          !landed && f.efob !== null && f.efob !== undefined ? 'EFOB ' + f.efob.toLocaleString() + ' kg' : '', f.stand ? 'Stand ' + esc(f.stand) : ''].filter(Boolean).join(' · ');
+            let html = `<h4>Flight <span>${esc(f.callsign)} ${esc(f.route.replace('-', ' → '))}${f.acft ? ' · ' + esc(f.acft) : ''}${f.generated ? ' · OFP ' + opsUtc(f.generated) : ''}</span></h4>
+                <div class="ops-timeline"><span>OUT ${t('out')}</span><span>OFF ${t('off')}</span><span>ON ${t('on')}</span><span>IN ${t('in')}</span>${prog ? `<b>${prog}</b>` : ''}</div>`;
+            OPS_PHASES.forEach((ph, i) => {
+                const items = ph.items;
+                const sentCount = items.filter(([k]) => f.sent[k]).length;
+                const isCur = i === cur || (cur === 3 && i === 2);
+                const finished = i < cur && !isCur;
+                const open = OPS.open[ph.id] !== undefined ? OPS.open[ph.id] : !finished;
+                let summary = `${sentCount} of ${items.length} sent`;
+                if (ph.id === 'pre' && f.ack) summary += ' · load sheet acknowledged';
+                if (ph.id === 'arrival' && f.td_vs !== null && f.td_vs !== undefined) summary += ` · touchdown ${Math.round(f.td_vs)} fpm`;
+                html += `<div class="ops-phase${isCur ? ' current' : ''}${finished ? ' finished' : ''}">
+                    <div class="ops-phase-head" onclick="opsTogglePhase('${ph.id}', ${!open})">
+                        <span>${open ? '▾' : '▸'} ${ph.title}${isCur && cur < 3 ? ' <em>current</em>' : ''}${cur === 3 && i === 2 ? ' <em>complete</em>' : ''}</span>
+                        <small>${summary}</small></div>`;
+                if (open) {
+                    html += items.map(([k, label, when]) => {
+                        const [st, cls] = opsItemStatus(f, k, when);
+                        const extra = k === 'stand' ? `<button class="mc-btn ops-reassign" onclick="opsStandOpen()">${f.stand ? 'Change stand' : 'Assign stand'}</button>` : '';
+                        return `<div class="ops-item"><div>${label}</div><div class="st ${cls}">${esc(st)}${extra}</div>
+                            <label><input type="checkbox" ${f.auto[k] ? 'checked' : ''} onchange="opsAuto('${k}', this.checked)"> Auto</label>
+                            <button class="mc-btn" onclick="opsAction('${k}')">Send now</button></div>`;
+                    }).join('');
+                }
+                html += '</div>';
+            });
+            html += `<div class="ops-foot">
+                <label><input type="checkbox" ${f.auto.exp_rwy ? 'checked' : ''} onchange="opsAuto('exp_rwy', this.checked)"> When there is no ATIS, add an expected runway from the wind (estimate)</label>
+                <div style="margin-top:4px;">Stands are learned from where your airline parks. <b>Change stand</b> (in the Stand assignment row) assigns another automatically or one you choose, and can exclude an unsuitable stand or save your choice for next time. Rules file: <code>${esc(f.rules_path || 'stand_rules.json')}</code></div>
+                <div class="rp-row" style="margin-top:6px;">
+                    <details class="ops-help"><summary>Crew requests</summary>Send these with <b>Send as crew</b>: LOADSHEET RECEIVED · REQUEST WX [airports] · REQUEST ATIS [airport] · REQUEST LOADSHEET · REQUEST TO DATA · REQUEST ETA · REQUEST STAND · REQUEST LANDING DATA</details>
+                    <button class="mc-btn" onclick="opsAction('reset')" style="margin-left:auto;">New flight / resend all</button>
+                </div></div>`;
+            el.innerHTML = html;
+        }
+
+        // ---- Change stand window ----
+        const STANDW = { mode: 'auto', data: null, sel: null };
+        function opsStandOpen() {
+            const f = OPS.lastFlight || {};
+            STANDW.sel = null; STANDW.data = null;
+            document.getElementById('ops-stand-title').textContent = f.stand ? `Change stand · ${f.dest} (now ${f.stand})` : `Assign stand · ${f.dest || ''}`;
+            document.getElementById('ops-stand-excl-row').style.display = f.stand ? '' : 'none';
+            document.getElementById('ops-stand-excl').checked = !!f.stand;
+            document.getElementById('ops-stand-excl-txt').textContent = f.stand ? `Don't assign stand ${f.stand} again at ${f.dest}` : '';
+            document.getElementById('ops-stand-msg').textContent = 'Loading the stands...';
+            document.getElementById('ops-stand-q').value = '';
+            document.getElementById('ops-stand-all').checked = false;
+            opsStandMode(f.stand ? 'auto' : 'choose');
+            document.getElementById('ops-stand-modal').style.display = 'flex';
+            fetch('/api/ops/stands').then(r => r.json()).then(d => {
+                const msg = document.getElementById('ops-stand-msg');
+                if (d.status !== 'success') { msg.textContent = d.message || 'The stands could not be read.'; return; }
+                STANDW.data = d;
+                msg.textContent = d.error || '';
+                document.getElementById('ops-stand-rem-txt').textContent = `Use this stand for ${d.airline || 'this airline'} ${d.domestic ? 'domestic' : 'international'} flights at ${d.dest} (assigned first next time)`;
+                opsStandList();
+            }).catch(() => { document.getElementById('ops-stand-msg').textContent = 'The plugin could not be reached.'; });
+        }
+        function opsStandClose() { document.getElementById('ops-stand-modal').style.display = 'none'; }
+        function opsStandMode(m) {
+            STANDW.mode = m;
+            document.getElementById('ops-stand-m-auto').classList.toggle('active', m === 'auto');
+            document.getElementById('ops-stand-m-choose').classList.toggle('active', m === 'choose');
+            document.getElementById('ops-stand-auto').style.display = m === 'auto' ? '' : 'none';
+            document.getElementById('ops-stand-choose').style.display = m === 'choose' ? '' : 'none';
+            document.getElementById('ops-stand-rem-row').style.display = m === 'choose' ? '' : 'none';
+            document.getElementById('ops-stand-apply').textContent = m === 'auto' ? 'Assign another' : 'Assign selected';
+        }
+        function opsStandList() {
+            const el = document.getElementById('ops-stand-list'), d = STANDW.data;
+            if (!d) { el.innerHTML = ''; return; }
+            const q = document.getElementById('ops-stand-q').value.trim().toUpperCase();
+            const all = document.getElementById('ops-stand-all').checked;
+            const kindTxt = k => ({ gate: 'Gate', tie_down: 'Remote', 'tie-down': 'Remote', misc: 'Stand', hangar: 'Hangar' })[k] || k;
+            let list = d.stands.filter(st => (all || !st.reason) && (!q || st.name.toUpperCase().includes(q)));
+            // the airline's rule and most-used stands first, then suitable ones, then the rest
+            list.sort((a, b) => (b.rule - a.rule) || (b.used - a.used) || ((a.reason ? 1 : 0) - (b.reason ? 1 : 0)) || a.name.localeCompare(b.name, undefined, { numeric: true }));
+            if (!list.length) { el.innerHTML = `<div class="perf-empty" style="padding:12px;">${d.stands.length ? 'No stands match. Try Show all stands.' : 'No stands in the scenery.'}</div>`; return; }
+            el.innerHTML = list.map((st, i) => {
+                const notes = [kindTxt(st.kind), st.size ? 'code ' + st.size : '', st.airlines.length ? st.airlines.join(', ') : ''].filter(Boolean).join(' · ');
+                const tags = [st.rule ? '<span class="good">your rule</span>' : '', st.used ? `<span class="good">used ${st.used} time${st.used > 1 ? 's' : ''}</span>` : '',
+                              st.name === d.current ? '<span class="warn">current</span>' : '', st.reason ? `<span class="warn">${esc(st.reason)}</span>` : ''].filter(Boolean).join(' · ');
+                return `<div class="ops-stand${st.reason ? ' bad' : ''}${STANDW.sel === st.name ? ' sel' : ''}" onclick="opsStandSelect(${JSON.stringify(st.name).replace(/"/g, '&quot;')})">
+                    <b>${esc(st.name)}</b><div class="d">${esc(notes)}${tags ? '<br>' + tags : ''}</div>
+                    <button class="mc-btn" onclick="event.stopPropagation(); opsStandMap(${st.lat}, ${st.lon})">Map</button></div>`;
+            }).join('');
+        }
+        function opsStandSelect(name) {
+            STANDW.sel = name; opsStandList();
+            const st = (STANDW.data.stands || []).find(x => x.name === name);
+            document.getElementById('ops-stand-msg').textContent = st && st.reason ? `Stand ${name} is normally not offered (${st.reason}); it can still be assigned.` : '';
+        }
+        function opsStandApply() {
+            const msg = document.getElementById('ops-stand-msg');
+            if (STANDW.mode === 'choose' && !STANDW.sel) { msg.textContent = 'Select a stand first.'; return; }
+            opsPost('/api/ops/stand', { mode: STANDW.mode, name: STANDW.sel, exclude_old: document.getElementById('ops-stand-excl').checked,
+                                        remember: STANDW.mode === 'choose' && document.getElementById('ops-stand-rem').checked }).then(res => {
+                if (res.status !== 'success') { msg.textContent = res.message; return; }
+                opsStandClose();
+                const m = document.getElementById('ops-send-msg'); m.textContent = res.message; m.style.color = '';
+                opsRenderFlight(res);
+                setTimeout(opsRefresh, 2500);
+            }).catch(() => { msg.textContent = 'The plugin could not be reached.'; });
+        }
+        // open the moving map at a stand (the airport layout loads by itself)
+        function opsStandMap(lat, lon) {
+            opsStandClose();
+            switchTab('telemetry');
+            setTimeout(() => {
+                if (!map) return;
+                const fp = document.getElementById('follow-plane'); if (fp) fp.checked = false;
+                firstLocalPan = true;
+                map.setView([lat, lon], 17);
+                if (typeof gmMaybeLoad === 'function') setTimeout(gmMaybeLoad, 300);
+            }, 250);
+        }
+        // the assigned stand on the moving map, until the aircraft is parked
+        let opsStandMarker = null;
+        function opsUpdateMapStand(f) {
+            if (!map || typeof L === 'undefined') return;
+            const show = f && f.stand && f.stand_pos && !((f.oooi || {}).in);
+            if (!show) { if (opsStandMarker) { map.removeLayer(opsStandMarker); opsStandMarker = null; } return; }
+            const ll = [f.stand_pos[0], f.stand_pos[1]];
+            const html = `<div class="ops-stand-marker">STAND ${esc(f.stand)}</div>`;
+            if (!opsStandMarker) opsStandMarker = L.marker(ll, { icon: L.divIcon({ className: '', html, iconAnchor: [0, 10] }), interactive: false, zIndexOffset: 900 }).addTo(map);
+            else { opsStandMarker.setLatLng(ll); opsStandMarker.setIcon(L.divIcon({ className: '', html, iconAnchor: [0, 10] })); }
+        }
+
+        function opsAuto(key, on) { opsPost('/api/ops/auto', { key, on }).then(opsRenderFlight); }
+        function opsAction(what) {
+            const msg = document.getElementById('ops-send-msg');
+            if (what === 'reassign' && !confirm('Exclude this stand at this airport from now on, and assign another?')) return;
+            if (what === 'reset' && !confirm('Start this flight again? Its progress is cleared and the messages are sent again from the start.')) return;
+            opsPost('/api/ops/action', { what }).then(res => {
+                msg.textContent = res.status === 'success' ? ((what === 'reset' || what === 'reassign') ? res.message : 'Queued: it is sent within a few seconds.') : res.message;
+                msg.style.color = res.status === 'success' ? '' : '#f44336';
+                opsRenderFlight(res);
+                setTimeout(opsRefresh, 3000);
+            });
+        }
+
+        function opsRefresh() {
+            const active = document.getElementById('ops').classList.contains('active');
+            fetch('/api/ops/status').then(r => r.json()).then(opsRenderStatus).catch(() => {});
+            if (!active) return;
+            fetch('/api/ops/flight').then(r => r.json()).then(opsRenderFlight).catch(() => {});
+            fetch('/api/ops/log?since=' + OPS.lastId + '&updated=' + (OPS.lastT || 0) + '&read=1').then(r => r.json()).then(res => {
+                const items = res.messages || [];
+                if (items.length) {
+                    items.forEach(m => {
+                        const i = OPS.msgs.findIndex(x => x.id === m.id);
+                        if (i >= 0) OPS.msgs[i] = m; else OPS.msgs.push(m);
+                        OPS.lastId = Math.max(OPS.lastId, m.id);
+                        OPS.lastT = Math.max(OPS.lastT || 0, m.t);
+                    });
+                    OPS.msgs = OPS.msgs.slice(-500);
+                    opsRenderLog();
+                }
+                else if (!OPS.rendered) opsRenderLog();
+                OPS.rendered = true;
+            }).catch(() => {});
+        }
+
+        // fill the setup fields from the plugin's saved settings (not while someone is typing in them)
+        function opsLoadFields() {
+            fetch('/api/ops/config').then(r => r.json()).then(c => {
+                if (c.status !== 'success') return;
+                [['ops-logon', c.logon], ['ops-cs', c.ops_callsign], ['ops-acft', c.aircraft]].forEach(([id, v]) => {
+                    const el = document.getElementById(id);
+                    if (el && document.activeElement !== el && v) el.value = v;
+                });
+            }).catch(() => {});
+        }
+        // save the setup as each field is changed, without connecting or disconnecting
+        function opsSaveFields() {
+            const body = { ops_callsign: document.getElementById('ops-cs').value, aircraft: document.getElementById('ops-acft').value };
+            const code = document.getElementById('ops-logon').value.trim();
+            if (code) body.logon = code;
+            opsPost('/api/ops/config', body).then(res => {
+                const msg = document.getElementById('ops-send-msg');
+                msg.textContent = res.status === 'success' ? 'Setup saved.' : res.message;
+                msg.style.color = res.status === 'success' ? '' : '#f44336';
+                opsRenderStatus(res);
+            }).catch(() => {});
+        }
+        function opsToggleCode() {
+            const el = document.getElementById('ops-logon'), b = document.getElementById('ops-show');
+            el.classList.toggle('shown'); b.textContent = el.classList.contains('shown') ? 'Hide' : 'Show';
+        }
+
+        function opsStart() {
+            clearInterval(OPS.timer);
+            opsLoadFields();
+            opsRefresh();
+            OPS.timer = setInterval(() => {
+                if (document.getElementById('ops').classList.contains('active')) opsRefresh();
+                else { clearInterval(OPS.timer); OPS.timer = null; }
+            }, 4000);
+        }
+
+        function opsSaveConfig(enable) {
+            const body = { enabled: !!enable, ops_callsign: document.getElementById('ops-cs').value, aircraft: document.getElementById('ops-acft').value };
+            const code = document.getElementById('ops-logon').value.trim();
+            if (code) body.logon = code;
+            opsPost('/api/ops/config', body).then(res => {
+                opsRenderStatus(res);
+                const msg = document.getElementById('ops-send-msg');
+                msg.textContent = res.status === 'success' ? (enable ? 'Saved. Connecting to Hoppie...' : 'Disconnected.') : res.message;
+                msg.style.color = res.status === 'success' ? '' : '#f44336';
+                if (res.status === 'success' && enable) document.getElementById('ops-setup').open = false;
+                setTimeout(opsRefresh, 2500);
+            });
+        }
+
+        function opsFromSimbrief() {
+            const d = typeof simbriefData !== 'undefined' && simbriefData ? simbriefData : null;
+            const msg = document.getElementById('ops-send-msg');
+            if (!d || !d.general) { msg.textContent = 'Load a SimBrief flight plan first (Dispatch & OFP).'; return; }
+            const atc = (d.atc && d.atc.callsign) || ((d.general.icao_airline || '') + (d.general.flight_number || ''));
+            document.getElementById('ops-acft').value = String(atc).toUpperCase().replace(/\s/g, '').slice(0, 8);
+            const cs = document.getElementById('ops-cs');
+            if (!cs.value) cs.value = ((d.general.icao_airline || 'EFB') + 'OPS').toUpperCase().slice(0, 8);
+            msg.textContent = 'Filled in from SimBrief.';
+            opsSaveFields();
+        }
+
+        function opsTemplate(sel) {
+            if (!sel.value) return;
+            const t = document.getElementById('ops-text');
+            t.value = sel.value; sel.value = ''; t.focus();
+        }
+
+        function opsSend(asCrew) {
+            const t = document.getElementById('ops-text'), msg = document.getElementById('ops-send-msg');
+            const text = t.value.trim();
+            if (!text) return;
+            msg.textContent = 'Sending...'; msg.style.color = '';
+            opsPost('/api/ops/send', { text, as_crew: !!asCrew }).then(res => {
+                msg.textContent = res.status === 'success' ? (asCrew ? 'Sent from the aircraft; it appears in the log in a few seconds.' : 'Sent to the aircraft.') : res.message;
+                if (asCrew && res.status === 'success') setTimeout(opsRefresh, 7000);
+                msg.style.color = res.status === 'success' ? '#4caf50' : '#f44336';
+                if (res.status === 'success') t.value = '';
+                opsRefresh();
+            }).catch(() => { msg.textContent = 'The plugin could not be reached.'; msg.style.color = '#f44336'; });
+        }
+
+        function opsClearLog() {
+            if (!confirm('Clear all Ops Centre messages? The flight\'s progress (Pre-flight, In flight, Arrival) is kept.')) return;
+            opsPost('/api/ops/clear').then(res => {
+                OPS.msgs = []; OPS.firstRender = true; opsRenderLog();
+                const msg = document.getElementById('ops-send-msg');
+                msg.textContent = res.status === 'success' ? 'Messages cleared.' : (res.message || 'Could not clear the messages.');
+                msg.style.color = res.status === 'success' ? '' : '#f44336';
+                fetch('/api/ops/status').then(r => r.json()).then(opsRenderStatus).catch(() => {});
+            });
+        }
+
+        function opsPollNow() {
+            const msg = document.getElementById('ops-send-msg');
+            msg.textContent = 'Checking for messages...'; msg.style.color = '';
+            opsPost('/api/ops/poll').then(res => { msg.textContent = res.message || 'Checked.'; opsRenderStatus(res); opsRefresh(); });
+        }
+        // unread badge in the sidebar, checked in the background
+        setInterval(() => {
+            if (document.getElementById('nav-ops').style.display === 'none') return;
+            fetch('/api/ops/status').then(r => r.json()).then(opsRenderStatus).catch(() => {});
+            // the assigned stand on the moving map, also when the Ops Centre page is not open
+            if (!document.getElementById('ops').classList.contains('active'))
+                fetch('/api/ops/flight').then(r => r.json()).then(f => { OPS.lastFlight = f; opsUpdateMapStand(f); }).catch(() => {});
+        }, 30000);
+
         // ===== Updates =====
         let updTimer = null;
         function updRender(st) {
@@ -6757,7 +7279,7 @@
             if (proToggle) proToggle.checked = proEnabled;
             toggleTolissPro(proEnabled);
 
-            ['checklist', 'betterpushback', 'dispatch', 'vatsim', 'xpilot', 'externallinks', 'fdr', 'displays'].forEach(name => {
+            ['checklist', 'betterpushback', 'dispatch', 'vatsim', 'xpilot', 'ops', 'externallinks', 'fdr', 'displays'].forEach(name => {
                 let saved = safeGetStorage(`toliss_int_${name}`);
                 const isEnabled = saved === null ? true : (saved === 'true');
                 const toggle = document.getElementById(`toggle-${name}`);
@@ -6813,6 +7335,10 @@
             
             if (tabName === 'xpilot') {
                 xpPoll();
+            }
+
+            if (tabName === 'ops') {
+                opsStart();
             }
 
             if (tabName === 'displays') {
