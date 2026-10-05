@@ -25,7 +25,7 @@ from XPLMScenery import *
 
 # Independent Queues to prevent Race Conditions
 # ===== Version and updates =====
-EFB_VERSION = "0.65"
+EFB_VERSION = "0.66"
 # GitHub repository that publishes releases ("owner/name"). Change the owner if your GitHub username differs.
 UPDATE_REPO = "soarbywire/toliss-efb"
 UPDATE_API = "https://api.github.com/repos/{repo}/releases/latest"
@@ -37,6 +37,7 @@ UPDATE_CHECK_INTERVAL_S = 6 * 3600
 UPDATE_MAX_BYTES = 30 * 1024 * 1024
 
 q_cmd = queue.Queue()
+q_instr = queue.Queue()        # instructor station commands, carried out in the flight loop
 q_dref_w = queue.Queue()
 q_teleport = queue.Queue()
 q_load_sit = queue.Queue()
@@ -686,6 +687,15 @@ DISPLAY_VALUES = {
     "abrk_lo": ("AirbusFBW/AutoBrkLo", None), "abrk_med": ("AirbusFBW/AutoBrkMed", None), "abrk_max": ("AirbusFBW/AutoBrkMax", None),
     "park_brake": ("sim/cockpit2/controls/parking_brake_ratio", None), "gear_lever": ("sim/cockpit2/controls/gear_handle_down", None),
     "sd_page": ("AirbusFBW/SDPage", None), "apu_n": ("sim/cockpit2/electrical/APU_N1_percent", None),
+    # FCU and EFIS control panels
+    "fcu_spd_dial": ("sim/cockpit2/autopilot/airspeed_dial_kts_mach", None), "spd_is_mach": ("sim/cockpit/autopilot/airspeed_is_mach", None),
+    "spd_dashed": ("AirbusFBW/SPDdashed", None), "hdg_dashed": ("AirbusFBW/HDGdashed", None), "vs_dashed": ("AirbusFBW/VSdashed", None),
+    "alt_managed": ("AirbusFBW/ALTmanaged", None), "hdgtrk": ("AirbusFBW/HDGTRKmode", None),
+    "fcu_vs": ("sim/cockpit/autopilot/vertical_velocity", None), "fcu_fpa": ("sim/cockpit2/autopilot/fpa", None),
+    "loc_lt": ("AirbusFBW/LOCilluminated", None), "appr_lt": ("AirbusFBW/APPRilluminated", None),
+    "exped_lt": ("AirbusFBW/EXPEDilluminated", None), "fd2": ("AirbusFBW/FD2Engage", None), "ls_fo": ("AirbusFBW/ILSonFO", None),
+    "baro_fo": ("sim/cockpit2/gauges/actuators/barometer_setting_in_hg_copilot", None),
+    "baro_std_fo": ("AirbusFBW/BaroStdFO", None), "baro_hpa_fo": ("AirbusFBW/BaroUnitFO", None),
     "fuel_used": ("sim/cockpit2/fuel/fuel_totalizer_sum_kg", None), "fuel_init": ("sim/cockpit2/fuel/fuel_totalizer_init_kg", None),
     "ldg_elev": ("AirbusFBW/LandElev", None),
 }
@@ -1529,7 +1539,7 @@ class OpsCentre:
         dest = _ops_g(o, "destination", "icao_code")
         # ---- OOOI ----
         fob_now = float(v.get("sim/flightmodel/weight/m_fuel_total", 0) or 0)
-        if "out" not in x and on_ground and brake < 0.5 and gs_kt > 3:
+        if "out" not in x and on_ground and ((brake < 0.5 and gs_kt > 3) or getattr(self.plugin, 'push', None)):
             x["out"] = int(now)
             fl["fob_out"] = fob_now
             if self.auto["oooi"]:
@@ -4217,6 +4227,34 @@ class PythonInterface:
                             plugin.stream_clients = max(0, getattr(plugin, 'stream_clients', 1) - 1)
                         return
 
+                    elif req.path.startswith('/api/nearest_airport'):
+                        rq = queue.Queue(maxsize=1)
+                        q_telem_req.put((["sim/flightmodel/position/latitude", "sim/flightmodel/position/longitude"], rq))
+                        try:
+                            v = rq.get(timeout=1.5)
+                            lat, lon = float(v.get("sim/flightmodel/position/latitude", 0)), float(v.get("sim/flightmodel/position/longitude", 0))
+                            icao = TabletHandler.plugin_ref.find_nearest_airport(lat, lon, 200000.0) if (lat or lon) else None
+                            body = {"status": "success", "icao": icao} if icao else {"status": "error", "message": "No airport found within 200 km."}
+                        except Exception:
+                            body = {"status": "error", "message": "No response from the sim"}
+                        req.send_response(200)
+                        req.send_header('Content-type', 'application/json')
+                        req.end_headers()
+                        req.wfile.write(json.dumps(body).encode('utf-8'))
+
+                    elif req.path.startswith('/api/instructor/state'):
+                        reply = queue.Queue(maxsize=1)
+                        q_instr.put(({"kind": "state"}, reply))
+                        try:
+                            res = reply.get(timeout=1.5)
+                            body = {"status": "success", **res["state"]}
+                        except Exception:
+                            body = {"status": "error", "message": "No response from the sim"}
+                        req.send_response(200)
+                        req.send_header('Content-type', 'application/json')
+                        req.end_headers()
+                        req.wfile.write(json.dumps(body).encode('utf-8'))
+
                     elif req.path.startswith('/api/ops/'):
                         ops = getattr(TabletHandler.plugin_ref, 'ops', None)
                         parsed = urllib.parse.urlparse(req.path)
@@ -4471,6 +4509,42 @@ class PythonInterface:
                             req.send_header('Content-type', 'application/json')
                             req.end_headers()
                             req.wfile.write(json.dumps({"status": "error", "message": "Timed out waiting for X-Plane."}).encode('utf-8'))
+
+                    elif req.path == '/api/slew/input':
+                        # movement while a pad button is held: stored here, used by the flight loop every frame
+                        sl = getattr(TabletHandler.plugin_ref, 'slew', None)
+                        if sl:
+                            sl["inp"] = {k: max(-1.0, min(1.0, float(data.get(k, 0) or 0))) for k in ("fwd", "side", "up", "turn")}
+                            if data.get("rate"):
+                                sl["rate"] = max(0.2, min(5000.0, float(data["rate"])))
+                            sl["last_input"] = time.time()
+                        req.send_response(200)
+                        req.send_header('Content-type', 'application/json')
+                        req.end_headers()
+                        req.wfile.write(json.dumps({"status": "success" if sl else "error", "slew": bool(sl)}).encode('utf-8'))
+                        return
+
+                    elif req.path in ('/api/instructor/set', '/api/instructor/freeze', '/api/instructor/rate', '/api/slew/on', '/api/slew/off', '/api/slew/place', '/api/slew/state', '/api/instructor/wx',
+                                      '/api/push/start', '/api/push/pause', '/api/push/resume', '/api/push/stop', '/api/push/state'):
+                        kind = req.path.rsplit('/', 1)[1]
+                        if req.path.startswith('/api/slew/'):
+                            kind = "slew_" + kind
+                        elif req.path.startswith('/api/push/'):
+                            kind = "push_" + kind
+                        item = dict(data) if isinstance(data, dict) else {}
+                        item["kind"] = kind
+                        reply = queue.Queue(maxsize=1)
+                        q_instr.put((item, reply))
+                        try:
+                            res = reply.get(timeout=6.0)
+                            result = {"status": "success" if res.get("ok") else "error", "message": res.get("message", ""), **(res.get("state") or {})}
+                        except Exception:
+                            result = {"status": "error", "message": "No response from the sim"}
+                        req.send_response(200)
+                        req.send_header('Content-type', 'application/json')
+                        req.end_headers()
+                        req.wfile.write(json.dumps(result).encode('utf-8'))
+                        return
 
                     elif req.path in ('/api/ops/config', '/api/ops/send', '/api/ops/poll', '/api/ops/clear', '/api/ops/auto', '/api/ops/action', '/api/ops/stand'):
                         ops = getattr(TabletHandler.plugin_ref, 'ops', None)
@@ -5145,6 +5219,763 @@ class PythonInterface:
             -math.cos(psi) * math.sin(theta) * math.sin(phi) + math.sin(psi) * math.cos(theta) * math.cos(phi),
         ]
 
+    # ================= Instructor station =================
+    def _instr_state(self):
+        g = self._get_f
+        psi, mag = g("sim/flightmodel/position/psi"), g("sim/flightmodel/position/mag_psi")
+        st = getattr(self, 'instr', {})
+        return {"alt_ft": round(g("sim/flightmodel/position/elevation") / 0.3048), "ias": round(g("sim/flightmodel/position/indicated_airspeed"), 1),
+                "tas": round(g("sim/flightmodel/position/true_airspeed") * KT_PER_MS, 1), "gs": round(g("sim/flightmodel/position/groundspeed") * KT_PER_MS, 1),
+                "hdg_mag": round(mag % 360, 1), "hdg_true": round(psi % 360, 1), "pitch": round(g("sim/flightmodel/position/theta"), 1),
+                "roll": round(g("sim/flightmodel/position/phi"), 1), "vs": round(g("sim/flightmodel/position/vh_ind_fpm")),
+                "agl_ft": round(g("sim/flightmodel/position/y_agl") / 0.3048), "on_ground": g("sim/flightmodel/failures/onground_any") >= 1,
+                "paused": g("sim/time/paused") >= 1, "sim_rate": g("sim/time/sim_speed", 1) or 1,
+                "alt_freeze": st.get("alt_y") is not None, "fuel_freeze": st.get("fuel") is not None,
+                "lat": round(g("sim/flightmodel/position/latitude"), 6), "lon": round(g("sim/flightmodel/position/longitude"), 6),
+                "slew": bool(getattr(self, 'slew', None)), "slew_ground": bool((getattr(self, 'slew', None) or {}).get("ground")),
+                "slew_rate": (getattr(self, 'slew', None) or {}).get("rate"), "busy": bool(getattr(self, 'instr_op', None)),
+                **self._push_state(), "park_brake": self._brake_set(),
+                "shear": (getattr(self, 'shear_arm', None) or {}).get("state"),
+                "fob": round(g("sim/flightmodel/weight/m_fuel_total"))}
+
+    def _instr_set(self, req):
+        """Set altitude, airspeed, heading, pitch, bank and/or vertical speed immediately (in flight only)."""
+        g = self._get_f
+        if g("sim/flightmodel/failures/onground_any") >= 1:
+            return {"ok": False, "message": "The aircraft is on the ground: speed, attitude and altitude can only be set in flight."}
+        psi, mag = g("sim/flightmodel/position/psi"), g("sim/flightmodel/position/mag_psi")
+        var = psi - mag
+        hdg_true = (float(req["hdg"]) + var) % 360 if req.get("hdg") is not None else psi
+        pitch = float(req["pitch"]) if req.get("pitch") is not None else g("sim/flightmodel/position/theta")
+        roll = float(req["roll"]) if req.get("roll") is not None else g("sim/flightmodel/position/phi")
+        elev = g("sim/flightmodel/position/elevation")
+        new_elev = float(req["alt"]) * 0.3048 if req.get("alt") is not None else elev
+        if req.get("alt") is not None:
+            agl = g("sim/flightmodel/position/y_agl")
+            if agl - (elev - new_elev) < 30:
+                return {"ok": False, "message": "That altitude is below the terrain here (less than 100 ft above ground)."}
+            self._set_num("sim/flightmodel/position/local_y", g("sim/flightmodel/position/local_y") + (new_elev - elev))
+        # airspeed: indicated -> true at the (new) altitude, standard atmosphere
+        if req.get("ias") is not None or req.get("alt") is not None:
+            ias = float(req["ias"]) if req.get("ias") is not None else g("sim/flightmodel/position/indicated_airspeed")
+            h_ft = new_elev / 0.3048
+            sigma = (1 - 6.8756e-6 * min(h_ft, 36089)) ** 4.2559 * (math.exp(-(h_ft - 36089) / 20806) if h_ft > 36089 else 1)
+            tas = ias * 0.514444 / math.sqrt(max(sigma, 0.05))
+        else:
+            tas = g("sim/flightmodel/position/true_airspeed")
+        vy = float(req["vs"]) * 0.00508 if req.get("vs") is not None else g("sim/flightmodel/position/local_vy")
+        vy = max(-abs(tas) * 0.9, min(abs(tas) * 0.9, vy))
+        horiz = math.sqrt(max(tas * tas - vy * vy, 0.0))
+        h = math.radians(hdg_true)
+        # ground velocity = air velocity + wind (local frame: +x east, +y up, -z north)
+        wx, wz = g("sim/weather/aircraft/wind_now_x_msc", 0.0), g("sim/weather/aircraft/wind_now_z_msc", 0.0)
+        self._set_num("sim/flightmodel/position/local_vx", horiz * math.sin(h) + wx)
+        self._set_num("sim/flightmodel/position/local_vy", vy)
+        self._set_num("sim/flightmodel/position/local_vz", -horiz * math.cos(h) + wz)
+        q_ref = self._dref("sim/flightmodel/position/q")
+        if q_ref is not None:
+            XPLMSetDatavf(q_ref, self._euler_to_quat(hdg_true, pitch, roll), 0, 4)
+        self._set_num("sim/flightmodel/position/psi", hdg_true)
+        self._set_num("sim/flightmodel/position/theta", pitch)
+        self._set_num("sim/flightmodel/position/phi", roll)
+        for d in ("local_ax", "local_ay", "local_az", "P", "Q", "R", "Prad", "Qrad", "Rrad", "P_dot", "Q_dot", "R_dot"):
+            self._set_num("sim/flightmodel/position/" + d, 0.0)
+        st = getattr(self, 'instr', {})
+        if st.get("alt_y") is not None:
+            st["alt_y"] = g("sim/flightmodel/position/local_y")      # keep the altitude freeze at the new altitude
+        return {"ok": True, "message": "Applied."}
+
+    def _instr_freeze(self, what, on):
+        st = self.__dict__.setdefault('instr', {})
+        if what == "pause":
+            self._sim_pause(bool(on))
+            return {"ok": True}
+        if what == "alt":
+            st["alt_y"] = self._get_f("sim/flightmodel/position/local_y") if on else None
+            return {"ok": True}
+        if what == "fuel":
+            if on:
+                ref = self._dref("sim/flightmodel/weight/m_fuel")
+                out = []
+                if ref is not None:
+                    XPLMGetDatavf(ref, out, 0, 9)
+                st["fuel"] = out or None
+            else:
+                st["fuel"] = None
+            return {"ok": True}
+        return {"ok": False, "message": "Unknown freeze."}
+
+    # ---- applying a change while paused: X-Plane (and ToLiss's freeze) put the aircraft back,
+    #      so unpause, apply for a few frames, pause again, then check it stuck ----
+    def _instr_op_step(self):
+        op = self.instr_op
+        op["frames"] += 1
+        def finish(res):
+            self.instr_op = None
+            res["state"] = self._instr_state()
+            try:
+                op["reply"].put_nowait(res)
+            except Exception:
+                pass
+        if op["phase"] == "resume":
+            if op["frames"] == 1:
+                self._sim_pause(False)
+            if op["frames"] >= 2 and self._get_f("sim/time/paused") < 1:
+                op["phase"], op["frames"] = "apply", 0
+            elif op["frames"] > 90:
+                finish({"ok": False, "message": "X-Plane could not be unpaused to apply the change."})
+        elif op["phase"] == "apply" and op.get("wx") is not None:
+            if op["frames"] == 1:
+                op["t0"] = time.time()
+                res = self._wx_apply(op["wx"])
+                if not res.get("ok"):
+                    if op["repause"]:
+                        self._sim_pause(True)
+                    return finish(res)
+                op["wx_res"] = res
+            elif op["wx"].get("_restore_winds") and time.time() - op.get("t0", 0) >= 0.5:
+                for name, (ref, vals) in op["wx"].pop("_restore_winds").items():
+                    XPLMSetDatavf(ref, vals, 0, len(vals))
+                self._set_num(self.WX + "update_immediately", 1)
+            elif time.time() - op.get("t0", 0) >= 1.0:          # let X-Plane's weather engine take the values up
+                if op["repause"]:
+                    self._sim_pause(True)
+                op["phase"], op["frames"] = "verify", 0
+        elif op["phase"] == "verify" and op.get("wx") is not None:
+            if op["frames"] < 4:
+                return
+            res = op.get("wx_res") or {"ok": True, "message": "Applied."}
+            changed = self._wx_check(res.get("expect"))
+            note = " (briefly unpaused to apply, then paused again)" if op["repause"] else ""
+            msg = res["message"].rstrip(".") + note + "."
+            if op["wx"].get("_field_m") is not None:
+                _, bases = self._wx_arr("cloud_base_msl_m", 1)
+                if bases:
+                    agl = round((bases[0] - op["wx"]["_field_m"]) / 0.3048 / 10) * 10
+                    asked = op["wx"].get("ceiling_ft")
+                    if asked is not None and abs(agl - float(asked)) > 30:
+                        msg += f" X-Plane set the cloud base to {max(0, agl):,} ft above the field."
+            if op["wx"].get("type") == "clear":
+                _, cov = self._wx_arr("cloud_coverage_percent", 3)
+                if cov:
+                    msg += " Cloud cover now " + " / ".join(f"{round(c * 100)}%" for c in cov) + " (layers 1-3)."
+            if changed:
+                return finish({"ok": False, "message": msg + " But X-Plane did not keep: " + ", ".join(changed) + "."})
+            finish({"ok": True, "message": msg + " X-Plane has taken the new values."})
+        elif op["phase"] == "apply":
+            res = self._instr_set(op["req"]) if op["req"] else {"ok": True}
+            if not res.get("ok"):
+                if op["repause"]:
+                    self._sim_pause(True)
+                return finish(res)
+            if op["frames"] >= op["hold"]:
+                if op["repause"]:
+                    self._sim_pause(True)
+                op["phase"], op["frames"] = "verify", 0
+        elif op["phase"] == "verify":
+            if op["frames"] < 4:
+                return
+            bad = self._instr_mismatch(op["req"])
+            if bad and op["tries"] < 1:
+                # ToLiss took longer to take up the new state: hold it for longer and try once more
+                op.update(phase="resume", frames=0, hold=15, tries=op["tries"] + 1)
+                return
+            if bad:
+                return finish({"ok": False, "message": "The change did not stick while paused (" + bad + "). Try again unpaused."})
+            note = " (briefly unpaused to apply, then paused again)" if op["repause"] else ""
+            finish({"ok": True, "message": op.get("done_msg", "Applied") + note + "."})
+
+    def _instr_mismatch(self, req):
+        """What, if anything, is not as requested (after a paused apply)."""
+        if not req:
+            return ""
+        g = self._get_f
+        if req.get("alt") is not None and abs(g("sim/flightmodel/position/elevation") / 0.3048 - float(req["alt"])) > 60:
+            return "altitude"
+        if req.get("hdg") is not None and abs(((g("sim/flightmodel/position/mag_psi") - float(req["hdg"])) + 540) % 360 - 180) > 3:
+            return "heading"
+        if req.get("roll") is not None and abs(g("sim/flightmodel/position/phi") - float(req["roll"])) > 2:
+            return "bank"
+        if req.get("pitch") is not None and abs(g("sim/flightmodel/position/theta") - float(req["pitch"])) > 2:
+            return "pitch"
+        return ""
+
+    # ---- slew: X-Plane stops moving the aircraft (override plane path) and the EFB moves it every frame ----
+    def _override_path(self, on):
+        ref = self._dref("sim/operation/override/override_planepath")
+        if ref is not None:
+            XPLMSetDatavi(ref, [1 if on else 0], 0, 1)
+
+    def _slew_start(self, item):
+        g = self._get_f
+        if getattr(self, 'slew', None):
+            return {"ok": True, "message": "Slew is already on."}
+        if getattr(self, 'push', None):
+            return {"ok": False, "message": "Stop the pushback first."}
+        was_paused = g("sim/time/paused") >= 1
+        if was_paused:
+            self._sim_pause(False)          # the position is held by the override, so the sim can run
+        on_ground = g("sim/flightmodel/failures/onground_any") >= 1
+        self._track_gear_height()
+        self.slew = {"ground": on_ground, "was_paused": was_paused, "hdg": g("sim/flightmodel/position/psi"),
+                     "pitch": 0.0 if not on_ground else g("sim/flightmodel/position/theta"),
+                     "agl_m": self._height_above_terrain(g("sim/flightmodel/position/local_x"), g("sim/flightmodel/position/local_z")) if on_ground
+                              else (getattr(self, 'gear_height_m', None) or max(2.0, g("sim/flightmodel/position/y_agl"))),
+                     "y": g("sim/flightmodel/position/local_y"), "inp": {"fwd": 0, "side": 0, "up": 0, "turn": 0},
+                     "rate": float(item.get("rate") or 20.0), "last_input": 0.0, "t": time.time(),
+                     "resume_ias": float(item.get("resume_ias") or g("sim/flightmodel/position/indicated_airspeed") or 250)}
+        self._override_path(True)
+        return {"ok": True, "message": "Slew on" + (" (unpaused; the aircraft is held in place)" if was_paused else "") + "."}
+
+    def _slew_place(self, x, z, sl):
+        """Put the aircraft at local x/z: on the ground at gear height, in the air at the slew altitude (>= 50 ft AGL)."""
+        ground_y = self._probe_terrain_y(x, sl["y"] + 2000.0, z)
+        if sl["ground"]:
+            y = (ground_y if ground_y is not None else sl["y"] - sl["agl_m"]) + sl["agl_m"]
+        else:
+            y = sl["y"]
+            if ground_y is not None and y < ground_y + 15.24:
+                y = ground_y + 15.24
+        sl["y"] = y
+        self._set_num("sim/flightmodel/position/local_x", x)
+        self._set_num("sim/flightmodel/position/local_y", y)
+        self._set_num("sim/flightmodel/position/local_z", z)
+        q_ref = self._dref("sim/flightmodel/position/q")
+        if q_ref is not None:
+            XPLMSetDatavf(q_ref, self._euler_to_quat(sl["hdg"], sl["pitch"], 0.0), 0, 4)
+        self._set_num("sim/flightmodel/position/psi", sl["hdg"])
+        self._set_num("sim/flightmodel/position/theta", sl["pitch"])
+        self._set_num("sim/flightmodel/position/phi", 0.0)
+        for d in ("local_vx", "local_vy", "local_vz", "local_ax", "local_ay", "local_az", "P", "Q", "R", "Prad", "Qrad", "Rrad"):
+            self._set_num("sim/flightmodel/position/" + d, 0.0)
+
+    def _slew_tick(self):
+        sl = self.slew
+        now = time.time()
+        dt, sl["t"] = min(0.1, max(0.0, now - sl["t"])), now
+        inp = sl["inp"] if now - sl["last_input"] < 1.0 else {"fwd": 0, "side": 0, "up": 0, "turn": 0}   # page gone quiet: stop
+        rate = max(0.2, min(5000.0, sl["rate"]))
+        sl["hdg"] = (sl["hdg"] + float(inp.get("turn", 0)) * 20.0 * dt) % 360
+        h = math.radians(sl["hdg"])
+        fwd, side = float(inp.get("fwd", 0)), float(inp.get("side", 0))
+        east = (fwd * math.sin(h) + side * math.cos(h)) * rate * dt
+        north = (fwd * math.cos(h) - side * math.sin(h)) * rate * dt
+        if not sl["ground"]:
+            sl["y"] += float(inp.get("up", 0)) * max(1.0, min(60.0, rate * 0.5)) * dt
+        x = self._get_f("sim/flightmodel/position/local_x") + east
+        z = self._get_f("sim/flightmodel/position/local_z") - north      # -z is north
+        self._slew_place(x, z, sl)
+
+    def _slew_stop(self):
+        sl = self.slew
+        self.slew = None
+        self._override_path(False)
+        if sl["ground"]:
+            for d in ("local_vx", "local_vy", "local_vz"):
+                self._set_num("sim/flightmodel/position/" + d, 0.0)
+            if sl["was_paused"]:
+                self._sim_pause(True)
+            return {"ok": True, "message": "Slew off." + (" Paused again." if sl["was_paused"] else "")}
+        # in the air: hand back at the resume airspeed, level, on the current heading (and pause again if it was paused)
+        return {"op": {"req": {"ias": sl["resume_ias"], "pitch": 2.5, "roll": 0.0, "vs": 0.0}, "repause": sl["was_paused"],
+                       "done_msg": f"Slew off: flying at {round(sl['resume_ias'])} kt"}}
+
+    # ---- quick weather (X-Plane 12 regional weather, static mode) ----
+    WX = "sim/weather/region/"
+
+    def _wx_arr(self, name, n):
+        ref = self._dref(self.WX + name)
+        if ref is None:
+            return None, None
+        out = []
+        XPLMGetDatavf(ref, out, 0, n)
+        return ref, out
+
+    def _turb_scale(self):
+        """The top of X-Plane's regional turbulence range, read from this installation's DataRefs.txt (default 10)."""
+        if getattr(self, '_turb_max', None):
+            return self._turb_max
+        self._turb_max = 10.0
+        try:
+            path = os.path.join(self.xp_path, "Resources", "plugins", "DataRefs.txt")
+            with open(path, 'r', encoding='utf-8', errors='ignore') as f:
+                for line in f:
+                    if line.startswith("sim/weather/region/turbulence"):
+                        m = re.search(r"(\d+(?:\.\d+)?)\s*(?:-|\.\.|to)\s*(\d+(?:\.\d+)?)", line)
+                        if m and float(m.group(2)) > 0:
+                            self._turb_max = float(m.group(2))
+                        elif "ratio" in line.lower():
+                            self._turb_max = 1.0
+                        XPLMDebugString(f"ToLiss EFB: turbulence range from DataRefs.txt: 0-{self._turb_max:g} ({line.strip()[:120]})\n")
+                        break
+        except Exception as e:
+            XPLMDebugString(f"ToLiss EFB: could not read DataRefs.txt ({e}); turbulence range 0-10 assumed\n")
+        return self._turb_max
+
+    def _wx_apply(self, item):
+        g = self._get_f
+        missing = []
+        if self._dref(self.WX + "change_mode") is None:
+            return {"ok": False, "message": "This X-Plane version has no regional weather controls."}
+        self._set_num(self.WX + "change_mode", 3)                    # static weather, as the presets use
+        field_m = g("sim/flightmodel/position/elevation") - g("sim/flightmodel/position/y_agl")
+        hdg = g("sim/flightmodel/position/psi")
+        kind = item.get("type")
+        expect = []                                  # (name, index or None, value, tolerance) checked after applying
+        alt_ref, alts = self._wx_arr("wind_altitude_msl_m", 13)
+        low = [i for i, a in enumerate(alts or []) if a < field_m + 3000] or [0, 1, 2]
+        ac_m = g("sim/flightmodel/position/elevation")
+        # every layer up to the aircraft, plus the first one above it (X-Plane blends between the layers either side)
+        above = [i for i, a in enumerate(alts or []) if a >= ac_m]
+        around = sorted(set(low) | {i for i, a in enumerate(alts or []) if a < ac_m} | ({min(above, key=lambda i: alts[i])} if above else set()))
+        def set_layers(name, values_by_layer):
+            ref, cur = self._wx_arr(name, 13)
+            if ref is None:
+                missing.append(name)
+                return
+            for i, v in values_by_layer.items():
+                if i < len(cur):
+                    cur[i] = float(v)
+            XPLMSetDatavf(ref, cur, 0, len(cur))
+            i0 = min(values_by_layer)
+            expect.append((name, i0, float(values_by_layer[i0]), 1.5 if name.endswith("_msc") else (6.0 if name.endswith("degt") else 0.05)))
+        msg = ""
+        if kind in ("wind", "calm"):
+            spd = 0.0 if kind == "calm" else float(item.get("speed", 0))
+            gust = 0.0 if kind == "calm" else max(0.0, float(item.get("gust", 0) or 0) - spd)
+            wdir = (hdg + float(item.get("rel", 0))) % 360                # wind FROM this direction (true)
+            set_layers("wind_direction_degt", {i: wdir for i in low})
+            set_layers("wind_speed_msc", {i: spd * 0.514444 for i in low})
+            set_layers("shear_speed_msc", {i: gust * 0.514444 for i in low})
+            msg = "Calm wind." if kind == "calm" else f"Wind {round(wdir):03d}°T at {round(spd)} kt" + (f" gusting {round(spd + gust)}" if gust else "") + "."
+        elif kind == "clear":
+            # X-Plane keeps its cloud cover when a plugin writes zero, but its own Clear/CAVOK preset clears the sky.
+            # Apply that preset (like the preset button), keeping the current low-level winds, then visibility and rain.
+            saved = {}
+            for name in ("wind_direction_degt", "wind_speed_msc", "shear_speed_msc", "turbulence"):
+                ref, cur = self._wx_arr(name, 13)
+                if ref is not None:
+                    saved[name] = (ref, list(cur))
+            if self._dref(self.WX + "weather_preset") is None:
+                missing.append("weather_preset")
+            else:
+                self._set_num(self.WX + "weather_preset", 0)            # 0 = Clear / CAVOK, as the preset button
+            item["_restore_winds"] = saved                              # put back once X-Plane has applied the preset
+            if self._dref(self.WX + "visibility_reported_sm") is not None:
+                self._set_num(self.WX + "visibility_reported_sm", 10000 / 1609.34)
+                expect.append(("visibility_reported_sm", None, 10000 / 1609.34, 0.6))
+            if self._dref(self.WX + "rain_percent") is not None:
+                self._set_num(self.WX + "rain_percent", 0.0)
+                expect.append(("rain_percent", None, 0.0, 0.05))
+            msg = "Clear sky (X-Plane's Clear/CAVOK weather, your winds kept), visibility 10 km. Clouds take about a minute to clear."
+        elif kind == "turb":
+            frac = max(0.0, min(1.0, float(item.get("level", 0))))
+            top = self._turb_scale()
+            set_layers("turbulence", {i: frac * top for i in around})
+            msg = f"Turbulence {item.get('label', round(frac, 2))} ({frac * top:g} on X-Plane's 0-{top:g} scale, up to {round(max(alts[i] for i in around) / 0.3048) if alts else '?'} ft)."
+        elif kind == "vis":
+            vis_m = float(item.get("vis_m", 10000))
+            if self._dref(self.WX + "visibility_reported_sm") is None:
+                missing.append("visibility_reported_sm")
+            else:
+                self._set_num(self.WX + "visibility_reported_sm", vis_m / 1609.34)
+                expect.append(("visibility_reported_sm", None, vis_m / 1609.34, max(0.1, vis_m / 1609.34 * 0.1)))
+            ceil = item.get("ceiling_ft")
+            base_ref, bases = self._wx_arr("cloud_base_msl_m", 3)
+            if base_ref is None:
+                missing.append("cloud_base_msl_m")
+            else:
+                cov_ref, cov = self._wx_arr("cloud_coverage_percent", 3)
+                top_ref, tops = self._wx_arr("cloud_tops_msl_m", 3)
+                typ_ref, typ = self._wx_arr("cloud_type", 3)
+                missing += [n for n, r in (("cloud_coverage_percent", cov_ref), ("cloud_tops_msl_m", top_ref), ("cloud_type", typ_ref)) if r is None]
+                if ceil is None:
+                    if cov_ref is not None:
+                        cov[0] = 0.0
+                        XPLMSetDatavf(cov_ref, cov, 0, len(cov))
+                else:
+                    bases[0] = field_m + float(ceil) * 0.3048
+                    XPLMSetDatavf(base_ref, bases, 0, len(bases))
+                    item["_field_m"] = field_m                  # to report the base X-Plane chooses, above the field
+                    if top_ref is not None:
+                        tops[0] = bases[0] + 1200.0
+                        XPLMSetDatavf(top_ref, tops, 0, len(tops))
+                    if cov_ref is not None:
+                        cov[0] = 1.0                                     # overcast
+                        XPLMSetDatavf(cov_ref, cov, 0, len(cov))
+                    if typ_ref is not None:
+                        typ[0] = 1.0                                     # stratus
+                        XPLMSetDatavf(typ_ref, typ, 0, len(typ))
+            msg = f"Visibility {round(vis_m):,} m" + (f", overcast at {int(ceil)} ft" if ceil is not None else ", no low cloud") + "."
+        elif kind == "shear_arm":
+            self.shear_arm = {"state": "armed", "field_m": field_m, "t": time.time()}
+            return {"ok": True, "message": "Wind shear armed: it hits when you descend through about 1,000 ft above the field.", "expect": []}
+        elif kind == "shear_cancel":
+            sa = getattr(self, 'shear_arm', None)
+            if sa and sa.get("saved"):
+                self._shear_restore(sa)
+            self.shear_arm = None
+            return {"ok": True, "message": "Wind shear cancelled.", "expect": []}
+        elif kind == "shear":
+            # tailwind at the surface, strong headwind from about 1,000 ft: the wind changes sharply on short final
+            order = sorted(low, key=lambda i: alts[i] if alts else i)
+            surface, aloft = order[:1], order[1:]
+            set_layers("wind_direction_degt", {**{i: (hdg + 180) % 360 for i in surface}, **{i: hdg % 360 for i in aloft}})
+            set_layers("wind_speed_msc", {**{i: 15 * 0.514444 for i in surface}, **{i: 35 * 0.514444 for i in aloft}})
+            set_layers("shear_speed_msc", {i: 10 * 0.514444 for i in order})
+            set_layers("turbulence", {i: 0.35 for i in order})
+            msg = "Wind shear: tailwind 15 kt at the surface, headwind 35 kt from about 1,000 ft, with gusts and turbulence."
+        else:
+            return {"ok": False, "message": "Unknown weather change."}
+        self._set_num(self.WX + "update_immediately", 1)
+        if missing:
+            msg += " Not available in this X-Plane version: " + ", ".join(missing) + "."
+        return {"ok": True, "message": msg, "expect": expect}
+
+    # ---- armed wind shear: on approach, below about 1,000 ft, the wind changes sharply (the way a real one hits) ----
+    def _shear_restore(self, sa):
+        for name, (ref, vals) in sa["saved"].items():
+            XPLMSetDatavf(ref, vals, 0, len(vals))
+        self._set_num(self.WX + "update_immediately", 1)
+
+    def _shear_tick(self):
+        sa = self.shear_arm
+        g = self._get_f
+        now = time.time()
+        agl_ft = g("sim/flightmodel/position/y_agl") / 0.3048
+        on_ground = g("sim/flightmodel/failures/onground_any") >= 1
+        if sa["state"] == "armed":
+            if not on_ground and agl_ft < 1000 and g("sim/flightmodel/position/vh_ind_fpm") < -200:
+                hdg = g("sim/flightmodel/position/psi")
+                saved = {}
+                for name in ("wind_direction_degt", "wind_speed_msc", "shear_speed_msc", "turbulence"):
+                    ref, cur = self._wx_arr(name, 13)
+                    if ref is not None:
+                        saved[name] = (ref, list(cur))
+                sa.update(state="increase", t=now, hdg=hdg, saved=saved)
+                self._shear_set(hdg, 20, 0.25)               # first a sudden headwind gust ...
+            return
+        if sa["state"] == "increase" and now - sa["t"] >= 4:
+            sa.update(state="decrease", t=now)
+            self._shear_set((sa["hdg"] + 180) % 360, 25, 0.5)   # ... then the headwind collapses into a strong tailwind
+        elif sa["state"] == "decrease" and (now - sa["t"] >= 20 or on_ground):
+            self._shear_restore(sa)
+            self.shear_arm = None
+
+    def _shear_set(self, from_dir, speed_kt, turb_frac):
+        _, alts = self._wx_arr("wind_altitude_msl_m", 13)
+        ac_m = self._get_f("sim/flightmodel/position/elevation")
+        layers = [i for i, a in enumerate(alts or []) if a < ac_m + 1000] or [0, 1, 2]
+        for name, val in (("wind_direction_degt", from_dir), ("wind_speed_msc", speed_kt * 0.514444), ("shear_speed_msc", 8 * 0.514444),
+                          ("turbulence", turb_frac * self._turb_scale())):
+            ref, cur = self._wx_arr(name, 13)
+            if ref is None:
+                continue
+            for i in layers:
+                if i < len(cur):
+                    cur[i] = float(val)
+            XPLMSetDatavf(ref, cur, 0, len(cur))
+        self._set_num(self.WX + "update_immediately", 1)
+
+    def _wx_check(self, expect):
+        """Read the weather back: which values X-Plane did not keep."""
+        changed = []
+        for name, idx, val, tol in expect or []:
+            ref = self._dref(self.WX + name)
+            if ref is None:
+                continue
+            if idx is None:
+                cur = self._get_f(self.WX + name)
+            else:
+                _, arr = self._wx_arr(name, idx + 1)
+                cur = arr[idx] if arr and len(arr) > idx else None
+            if cur is not None and abs(cur - val) > tol:
+                changed.append(name.replace("_", " "))
+        return sorted(set(changed))
+
+    # ---- built-in pushback: the EFB tows the aircraft along a planned path (like slew, at towing speed) ----
+    PUSH_RADIUS_M = 25.0          # tug turning radius
+    PUSH_ACCEL = 0.25             # m/s2, gentle start and stop
+
+    @staticmethod
+    def push_path(x0, z0, hdg0, back_m, turn_deg, side, final_m, forward=False, radius=25.0, step=0.25):
+        """Poses (s, x, z, heading) along the path. Backwards: straight, then an arc where the tail swings to
+        <side> (tail left = nose turns right), then a final straight. Forwards: the turn is to <side>."""
+        sgn = -1.0 if forward else 1.0           # direction of travel relative to the nose (+1 = backwards)
+        if forward:
+            dh_sign = -1.0 if side == "L" else 1.0
+        else:
+            dh_sign = 1.0 if side == "L" else -1.0
+        pts = [(0.0, x0, z0, hdg0 % 360)]
+        x, z, h, s_ = x0, z0, hdg0, 0.0
+        def move(ds, dh):
+            nonlocal x, z, h, s_
+            h = (h + dh) % 360
+            r = math.radians(h)
+            x -= sgn * ds * math.sin(r)
+            z += sgn * ds * math.cos(r)          # -z is north: moving backwards (sgn=+1) goes south of the nose
+            s_ += ds
+            pts.append((s_, x, z, h))
+        for _ in range(int(max(0.0, back_m) / step)):
+            move(step, 0.0)
+        arc = radius * math.radians(max(0.0, min(180.0, turn_deg)))
+        for _ in range(int(arc / step)):
+            move(step, dh_sign * math.degrees(step / radius))
+        for _ in range(int(max(0.0, final_m) / step)):
+            move(step, 0.0)
+        return pts
+
+    # the parking brake, from X-Plane and ToLiss (set if either says so)
+    PARK_BRAKE_REFS = ("sim/cockpit2/controls/parking_brake_ratio", "AirbusFBW/ParkBrake")
+
+    def _brake_set(self):
+        return any(self._dref(n) is not None and self._get_f(n) >= 0.5 for n in self.PARK_BRAKE_REFS)
+
+    def _push_start(self, item):
+        g = self._get_f
+        if getattr(self, 'slew', None):
+            return {"ok": False, "message": "End slew first."}
+        if g("sim/flightmodel/failures/onground_any") < 1:
+            return {"ok": False, "message": "Pushback works on the ground only."}
+        if getattr(self, 'push', None):
+            return {"ok": False, "message": "A pushback is already running."}
+        if g("sim/time/paused") >= 1:
+            self._sim_pause(False)
+        self._track_gear_height()
+        x0, z0, h0 = g("sim/flightmodel/position/local_x"), g("sim/flightmodel/position/local_z"), g("sim/flightmodel/position/psi")
+        forward = bool(item.get("forward"))
+        pts = self.push_path(x0, z0, h0, float(item.get("back_m", 0)), float(item.get("turn_deg", 0)), str(item.get("side", "L")),
+                             float(item.get("final_m", 0)), forward, self.PUSH_RADIUS_M)
+        if len(pts) < 3:
+            return {"ok": False, "message": "Set a distance or a turn first."}
+        await_brake = self._brake_set()
+        self.push = {"pts": pts, "total": pts[-1][0], "s": 0.0, "v": 0.0, "target": max(0.3, min(3.0, float(item.get("speed_kt", 3)) * 0.514444)),
+                     "paused": False, "forward": forward, "t": time.time(), "i": 0, "await_brake": await_brake, "braked": False,
+                     "sl": {"ground": True, "y": g("sim/flightmodel/position/local_y"), "pitch": g("sim/flightmodel/position/theta"),
+                            "agl_m": self._height_above_terrain(x0, z0), "hdg": h0}, "settle": None}
+        if await_brake:
+            # as with a real tug: nothing moves until the parking brake is released
+            return {"ok": True, "message": "Tug ready: release the parking brake to start."}
+        self._override_path(True)
+        return {"ok": True, "message": f"{'Pulling forward' if forward else 'Pushing back'}: {round(pts[-1][0])} m."}
+
+    def _height_above_terrain(self, x, z):
+        """The aircraft's reference point above the terrain right now (keeps the gear exactly as compressed as it is)."""
+        y = self._get_f("sim/flightmodel/position/local_y")
+        ty = self._probe_terrain_y(x, y + 50.0, z)
+        if ty is None:
+            return getattr(self, 'gear_height_m', None) or max(2.0, self._get_f("sim/flightmodel/position/y_agl"))
+        return y - ty
+
+    def _push_end(self, message):
+        self.push = None
+        self._override_path(False)
+        for d in ("local_vx", "local_vy", "local_vz"):
+            self._set_num("sim/flightmodel/position/" + d, 0.0)
+        self.push_done = message
+
+    def _push_hold(self, pb):
+        """Hold the aircraft where the push ended (or was stopped), so idle thrust can't move it, until the brake is set."""
+        x, z = pb["hold_xz"]
+        self._slew_place(x, z, pb["sl"])
+        for d in ("local_vx", "local_vy", "local_vz", "local_ax", "local_ay", "local_az", "P", "Q", "R", "Prad", "Qrad", "Rrad"):
+            self._set_num("sim/flightmodel/position/" + d, 0.0)
+        if self._brake_set():
+            self._push_end(pb.get("hold_msg_done", "Parking brake set: pushback complete. Disconnect the tug."))
+
+    def _push_start_hold(self, pb, done_msg):
+        pb["hold"] = True
+        pb["paused"], pb["v"] = True, 0.0
+        pb["hold_xz"] = (self._get_f("sim/flightmodel/position/local_x"), self._get_f("sim/flightmodel/position/local_z"))
+        pb["hold_msg_done"] = done_msg
+
+    def _push_tick(self):
+        pb = self.push
+        now = time.time()
+        if pb.get("hold"):
+            return self._push_hold(pb)
+        if pb["await_brake"]:
+            if self._brake_set():
+                pb["t"] = now
+                return                                   # waiting for the brake to be released
+            pb["await_brake"] = False
+            self._override_path(True)
+        elif not pb["braked"] and self._brake_set():
+            # brake set during the push: stop at once (a real tow bar would be at risk); Resume once released
+            pb["braked"], pb["paused"], pb["v"] = True, True, 0.0
+        dt, pb["t"] = min(0.1, max(0.0, now - pb["t"])), now
+        remaining = pb["total"] - pb["s"]
+        # speed: accelerate gently to towing speed, slow down smoothly to stop at the end (or when paused)
+        want = 0.0 if pb["paused"] else min(pb["target"], math.sqrt(max(0.0, 2 * self.PUSH_ACCEL * remaining)))
+        if pb["v"] < want:
+            pb["v"] = min(want, pb["v"] + self.PUSH_ACCEL * dt)
+        else:
+            pb["v"] = max(want, pb["v"] - self.PUSH_ACCEL * 2 * dt)
+        pb["s"] = min(pb["total"], pb["s"] + pb["v"] * dt)
+        pts, i = pb["pts"], pb["i"]
+        while i + 1 < len(pts) and pts[i + 1][0] <= pb["s"]:
+            i += 1
+        pb["i"] = i
+        a = pts[i]
+        b = pts[min(i + 1, len(pts) - 1)]
+        f = 0.0 if b[0] == a[0] else (pb["s"] - a[0]) / (b[0] - a[0])
+        x, z = a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f
+        dh = ((b[3] - a[3] + 540) % 360) - 180
+        sl = pb["sl"]
+        sl["hdg"] = (a[3] + dh * f) % 360
+        self._slew_place(x, z, sl)
+        # ground speed for the instruments: moving along the path
+        sgn = 1.0 if pb["forward"] else -1.0
+        r = math.radians(sl["hdg"])
+        self._set_num("sim/flightmodel/position/local_vx", sgn * pb["v"] * math.sin(r))
+        self._set_num("sim/flightmodel/position/local_vz", -sgn * pb["v"] * math.cos(r))
+        if pb["s"] >= pb["total"] - 0.01 and pb["v"] < 0.05:
+            # hold still for a second with all motion zeroed, then hand back: no drop or bounce on release
+            for d in ("local_vx", "local_vy", "local_vz", "local_ax", "local_ay", "local_az", "P", "Q", "R", "Prad", "Qrad", "Rrad"):
+                self._set_num("sim/flightmodel/position/" + d, 0.0)
+            if pb["settle"] is None:
+                pb["settle"] = now + 1.0
+            elif now >= pb["settle"]:
+                # keep holding the aircraft until the parking brake is set (engines may be running)
+                self._push_start_hold(pb, "Parking brake set: pushback complete. Disconnect the tug.")
+
+    def _push_state(self):
+        pb = getattr(self, 'push', None)
+        st = {"pushing": bool(pb), "push_done": getattr(self, 'push_done', None)}
+        if pb:
+            st.update(push_paused=pb["paused"], push_s=round(pb["s"], 1), push_total=round(pb["total"], 1),
+                      push_kt=round(pb["v"] / 0.514444, 1), push_forward=pb["forward"],
+                      push_await_brake=pb["await_brake"], push_braked=pb["braked"], push_hold=bool(pb.get("hold")))
+        return st
+
+    def _instr_tick(self):
+        """Every frame: carry out instructor commands and hold the altitude / fuel freezes."""
+        if getattr(self, 'instr_op', None):
+            self._instr_op_step()
+        if getattr(self, 'slew', None):
+            self._slew_tick()
+        if getattr(self, 'shear_arm', None):
+            try:
+                self._shear_tick()
+            except Exception as e:
+                XPLMDebugString(f"ToLiss EFB: wind shear: {e}\n")
+                self.shear_arm = None
+        if getattr(self, 'push', None):
+            try:
+                self._push_tick()
+            except Exception as e:
+                self._push_end(f"Pushback stopped: {e}")
+        while True:
+            try:
+                item, reply = q_instr.get_nowait()
+            except queue.Empty:
+                break
+            try:
+                kind = item.get("kind")
+                if kind == "state":
+                    res = {"ok": True, "state": self._instr_state()}
+                elif kind == "set":
+                    if getattr(self, 'instr_op', None):
+                        res = {"ok": False, "message": "Still applying the previous change; try again in a moment."}
+                    elif getattr(self, 'slew', None):
+                        res = {"ok": False, "message": "End slew first."}
+                    elif self._get_f("sim/time/paused") >= 1 and self._get_f("sim/flightmodel/failures/onground_any") < 1:
+                        self.instr_op = {"req": item, "reply": reply, "phase": "resume", "frames": 0, "hold": 4, "tries": 0, "repause": True}
+                        continue                    # answered when the change has been applied and checked
+                    else:
+                        res = self._instr_set(item)
+                elif kind == "wx":
+                    if getattr(self, 'instr_op', None):
+                        res = {"ok": False, "message": "Still applying the previous change; try again in a moment."}
+                    else:
+                        paused = self._get_f("sim/time/paused") >= 1
+                        self.instr_op = {"wx": item, "req": None, "reply": reply, "phase": "resume" if paused else "apply",
+                                         "frames": 0, "hold": 0, "tries": 1, "repause": paused}
+                        continue                    # answered after the weather has been applied and read back
+                elif kind == "push_start":
+                    self.push_done = None
+                    res = self._push_start(item)
+                elif kind in ("push_pause", "push_resume"):
+                    if getattr(self, 'push', None) and self.push.get("hold"):
+                        res = {"ok": False, "message": "The push has ended: set the parking brake (or press Release now)."}
+                    elif getattr(self, 'push', None):
+                        if kind == "push_resume" and self._brake_set():
+                            res = {"ok": False, "message": "Release the parking brake first."}
+                        else:
+                            self.push["paused"] = kind == "push_pause"
+                            if kind == "push_resume":
+                                self.push["braked"] = False
+                            res = {"ok": True, "message": "Paused." if kind == "push_pause" else "Resuming."}
+                    else:
+                        res = {"ok": False, "message": "No pushback is running."}
+                elif kind == "push_stop":
+                    pb = getattr(self, 'push', None)
+                    if pb and (pb.get("hold") or item.get("release")):
+                        self._push_end("Released without the parking brake.")      # "Release now"
+                        res = {"ok": True, "message": "Released."}
+                    elif pb:
+                        if pb["await_brake"]:
+                            self._push_end("Pushback cancelled.")
+                        else:
+                            self._push_start_hold(pb, "Parking brake set: pushback stopped. Disconnect the tug.")
+                        res = {"ok": True, "message": "Stopped: holding the aircraft until the parking brake is set."}
+                    else:
+                        res = {"ok": True, "message": "Stopped."}
+                elif kind == "push_state":
+                    res = {"ok": True}
+                elif kind == "slew_on":
+                    res = self._slew_start(item)
+                elif kind == "slew_off":
+                    if not getattr(self, 'slew', None):
+                        res = {"ok": True, "message": "Slew is off."}
+                    else:
+                        res = self._slew_stop()
+                        if "op" in res:
+                            op = res["op"]
+                            self.instr_op = {"req": op["req"], "reply": reply, "phase": "apply", "frames": 0, "hold": 4, "tries": 1,
+                                             "repause": op["repause"], "done_msg": op["done_msg"]}
+                            continue
+                elif kind == "slew_place":
+                    sl = getattr(self, 'slew', None)
+                    if not sl:
+                        res = {"ok": False, "message": "Start slew first."}
+                    else:
+                        x, _, z = XPLMWorldToLocal(float(item["lat"]), float(item["lon"]), self._get_f("sim/flightmodel/position/elevation"))[:3]
+                        self._slew_place(x, z, sl)
+                        res = {"ok": True, "message": "Placed."}
+                elif kind == "slew_state":
+                    res = {"ok": True}
+                elif kind == "freeze":
+                    res = self._instr_freeze(item.get("what"), item.get("on"))
+                elif kind == "rate":
+                    self._set_num("sim/time/sim_speed", int(max(1, min(16, int(item.get("rate", 1))))))
+                    res = {"ok": True}
+                else:
+                    res = {"ok": False, "message": "Unknown request."}
+                if kind != "state":
+                    res["state"] = self._instr_state()
+            except Exception as e:
+                res = {"ok": False, "message": f"Could not apply: {e}"}
+            try:
+                reply.put_nowait(res)
+            except Exception:
+                pass
+        st = getattr(self, 'instr', None)
+        if st and getattr(self, 'slew', None):
+            st["alt_y"] = None                         # slew moves the aircraft; the altitude freeze would fight it
+        if not st:
+            return
+        if st.get("alt_y") is not None:
+            if self._get_f("sim/flightmodel/failures/onground_any") >= 1:
+                st["alt_y"] = None                     # never hold an altitude on the ground
+            else:
+                self._set_num("sim/flightmodel/position/local_y", st["alt_y"])
+                self._set_num("sim/flightmodel/position/local_vy", 0.0)
+        if st.get("fuel"):
+            ref = self._dref("sim/flightmodel/weight/m_fuel")
+            if ref is not None:
+                XPLMSetDatavf(ref, st["fuel"], 0, len(st["fuel"]))
+
     def _sim_pause(self, on):
         try:
             cmd = XPLMFindCommand("sim/operation/pause_on" if on else "sim/operation/pause_off")
@@ -5535,6 +6366,10 @@ class PythonInterface:
             self.process_dref_read_queue(q_payload_req, q_payload_res)
             self.process_dref_read_queue(q_telem_req, q_telem_res)
             self._process_mcdu()
+            try:
+                self._instr_tick()
+            except Exception as e:
+                XPLMDebugString(f"ToLiss EFB: instructor error: {e}\n")
             try:
                 self._update_stream()
             except Exception as e:

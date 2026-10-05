@@ -271,8 +271,25 @@
         .xp-buttons button { margin: 0; min-height: 40px; padding: 8px 14px; font-size: 13px; background: var(--input-bg); color: var(--text-main); border: 1px solid var(--border); border-radius: 6px; }
         .xp-buttons button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
         @media (max-width: 560px) { .xp-radios { grid-template-columns: 1fr; } .xp-row { grid-template-columns: 14px 1fr auto; } .xp-tune { grid-column: 2 / -1; } }
-        .mcdu-unit { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 6px; max-width: 620px; margin: 0 auto; }
-        .mcdu-screen { background: #000; border: 3px solid #333; border-radius: 6px; padding: 8px 6px; font-family: "Consolas", "Menlo", "DejaVu Sans Mono", monospace;
+        /* MCDU laid out like the real unit (and the MOZA / WinWing replicas) */
+        .mcdu-body { --r: 40px; --g: 7px; --gn: 10px; --F: calc(var(--r) * 1.25); --B: calc(var(--r) * 1.35); --legend: #f4e7c0;
+                     --KW: calc(6 * var(--F) + 5 * var(--g) + 12px + var(--B)); --L: 44px; --Lg: 8px;
+                     /* sized from the keypad outwards: screen = keypad width, LSKs beside it, a narrow bezel margin */
+                     width: calc(var(--KW) + 2 * var(--L) + 2 * var(--Lg) + 24px); max-width: 100%; margin: 0 auto; background: linear-gradient(#67737e, #56626c);
+                     border: 2px solid #3e4851; border-radius: 3px; padding: 10px 12px 18px 12px; box-sizing: border-box;
+                     box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 4px 14px rgba(0,0,0,0.45); }
+        .mcdu-unit { display: grid; grid-template-columns: var(--L) minmax(0, var(--KW)) var(--L); gap: var(--Lg); justify-content: center; }
+        .mcdu-ann-top { display: flex; justify-content: center; gap: 10px; margin: 0 0 8px 0; }
+        .ann { min-width: 34px; height: 15px; padding: 0 5px; border-radius: 3px; background: #1d2024; border: 1px solid #14171a; font: bold 9px/15px var(--font-mono); text-align: center; letter-spacing: 0.5px; }
+        .ann.amber { color: #6e5428; } .ann.green { color: #3e6a46; } .ann.white { color: #6c7176; }
+        .ann.amber.lit { color: #ffb02e; } .ann.green.lit { color: #3dff6e; } .ann.white.lit { color: #ffffff; }
+        .mcdu-side-ann { position: absolute; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+        .mcdu-side-ann.l { left: -24px; top: calc(var(--r) + var(--g)); }
+        .mcdu-side-ann.r { right: -24px; top: 0; }
+        .ann-v { writing-mode: vertical-rl; text-orientation: upright; font: bold 10px var(--font-mono); letter-spacing: 1px; padding: 5px 2px; border-radius: 3px; background: #1d2024; border: 1px solid #14171a; }
+        .ann-v.amber { color: #6e5428; } .ann-v.white { color: #6c7176; }
+        .ann-v.amber.lit { color: #ffb02e; } .ann-v.white.lit { color: #ffffff; }
+        .mcdu-screen { background: #000; border: 4px solid #2b3137; border-radius: 2px; padding: 8px 6px; font-family: "Consolas", "Menlo", "DejaVu Sans Mono", monospace;
                        display: grid; grid-template-rows: repeat(14, 1fr); aspect-ratio: 1.12; container-type: inline-size; overflow: hidden; }
         .mcdu-row { display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); align-items: center; }
         .mcdu-row span { text-align: center; font-size: 5.4cqw; line-height: 1; white-space: pre; min-width: 0; overflow: visible; display: flex; justify-content: center; align-items: center; }
@@ -283,21 +300,45 @@
         .mc-w { color: #f2f2f2; } .mc-a { color: #ff9d00; } .mc-b { color: #2ec8ff; } .mc-c { color: #2ef2ff; }
         .mc-g { color: #19f25e; } .mc-m { color: #ff66ff; } .mc-y { color: #ffe81a; } .mc-s { color: #2ec8ff; }
         .mcdu-lsk-col { display: grid; grid-template-rows: repeat(14, 1fr); padding: 11px 0; }
-        .mcdu-lsk-col button { margin: 0; padding: 0; min-height: 0; height: 100%; max-height: 34px; align-self: center; background: #3a3a3a; color: #ddd; border: 1px solid #555; border-radius: 4px; font-size: 16px; }
+        .mcdu-lsk-col { grid-template-rows: repeat(14, minmax(0, 1fr)) !important; }
+        .mcdu-lsk-col button { position: relative; margin: 0; padding: 0; min-height: 0; height: 100%; max-height: 26px; width: 42px; align-self: center; justify-self: center; background: linear-gradient(#3a3e43, #24272b); color: var(--legend); border: 1px solid #16181b; border-radius: 4px; font-size: 15px; line-height: 1;
+                               box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), 0 2px 0 #3a444d; }
+        /* leader lines from each line-select key to its screen line */
+        #mcdu-lsk-l button::after, #mcdu-lsk-r button::after { content: ''; position: absolute; top: 50%; width: 8px; height: 2px; background: #e8e2cf; }
+        #mcdu-lsk-l button::after { left: 100%; margin-left: 1px; } #mcdu-lsk-r button::after { right: 100%; margin-right: 1px; }
         .mcdu-lsk-col button:active, .mcdu-keys button:active { background: var(--accent); color: #fff; }
-        .mcdu-keys { max-width: 620px; margin: 12px auto 0 auto; }
-        .mcdu-keys button { margin: 0; min-height: 40px; padding: 4px 2px; font-size: 12px; font-weight: bold; background: #3a3a3a; color: #eee; border: 1px solid #555; border-radius: 5px; }
-        .mcdu-fn { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
-        .mcdu-lower { display: grid; grid-template-columns: 6fr 5fr; gap: 14px; margin-top: 14px; }
-        .mcdu-left { display: grid; grid-template-columns: repeat(6, 1fr); grid-template-rows: repeat(7, 42px); gap: 6px; }
-        .mcdu-alpha { display: grid; grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(7, 42px); gap: 6px; }
-        .mcdu-keys button { min-height: 0; height: 100%; }
-        .mcdu-fn button { min-height: 44px; }
-        .mcdu-keys button.mk-blank { background: #2c2c2c; border-color: #444; cursor: default; }
-        .mcdu-keys button.mk-blank:active { background: #2c2c2c; }
-        .mcdu-keys button.mk-clr { background: #5a3a1a; }
-        .mcdu-keys button.mk-arrow { font-size: 18px; }
-        @media (max-width: 560px) { .mcdu-fn { grid-template-columns: repeat(4, 1fr); } .mcdu-lower { grid-template-columns: 1fr; } .mcdu-left, .mcdu-alpha { grid-template-rows: repeat(7, 40px); } }
+        /* keypad sized from the key itself, like the real unit: function keys ~1.25 x a letter key */
+        .mcdu-keys { width: calc(6 * var(--F) + 5 * var(--g) + 12px + var(--B)); margin: 14px auto 0 auto; }
+        .mcdu-keys button { margin: 0; padding: 0; min-height: 0; font-weight: bold; background: linear-gradient(#3a3e43, #24272b); color: var(--legend); border: 1px solid #16181b; border-radius: 5px;
+                            box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), 0 2px 0 #3a444d; letter-spacing: 0.3px; line-height: 1.05; font-family: var(--font-ui); }
+        .mcdu-keys button:active { background: var(--accent); color: #111; }
+        .mcdu-fnwrap { display: grid; grid-template-columns: calc(6 * var(--F) + 5 * var(--g)) var(--B); column-gap: 12px; }
+        .mcdu-fn { display: grid; grid-template-columns: repeat(6, var(--F)); grid-auto-rows: calc(var(--r) * 0.85); gap: var(--g); }
+        .mcdu-fn button { font-size: 10px; }
+        .mcdu-brt { display: grid; grid-auto-rows: calc(var(--r) * 0.85); gap: var(--g); }
+        .mcdu-brt button { background: linear-gradient(#202225, #0f1012); font-size: 10px; }
+        .mcdu-lower { position: relative; display: grid; grid-template-columns: calc(3 * var(--r) + 2 * var(--gn)) calc(5 * var(--r) + 4 * var(--g));
+                      justify-content: space-between; margin-top: 14px; }
+        /* left: AIRPORT/blank and the arrows in two function-key columns (under F-PLN and RAD NAV), then the round number keys */
+        .mcdu-left { display: flex; flex-direction: column; gap: var(--g); }
+        .mcdu-lt { display: grid; grid-template-columns: repeat(2, var(--F)); grid-auto-rows: var(--r); gap: var(--g); }
+        .mcdu-num { display: grid; grid-template-columns: repeat(3, var(--r)); grid-auto-rows: var(--r); column-gap: var(--gn); row-gap: var(--g); }
+        .mcdu-lt button { font-size: 10px; }
+        .mcdu-lt button.mk-arrow { font-size: 17px; }
+        .mcdu-num button { border-radius: 50%; font-size: 16px; }
+        /* letters: six rows spread over the same height as the left block's seven, ending flush with BRT/DIM */
+        .mcdu-alpha { display: grid; grid-template-columns: repeat(5, var(--r)); grid-template-rows: repeat(6, minmax(0, 1fr)); column-gap: var(--g);
+                      height: calc(7 * var(--r) + 6 * var(--g)); align-items: center; }
+        .mcdu-alpha button { width: var(--r); height: var(--r); font-size: 16px; }
+        .mcdu-alpha button.mk-word { font-size: 11px; }
+        .mcdu-alpha button .box { border: 1.5px solid var(--legend); padding: 0 4px; border-radius: 2px; }
+        .mcdu-keys button.mk-blank { background: #4c5761; border-color: #46515a; box-shadow: inset 0 1px 2px rgba(0,0,0,0.35); cursor: default; }
+        .mcdu-keys button.mk-blank:active { background: #4c5761; }
+        @media (max-width: 560px) { .mcdu-body { --r: 28px; --g: 5px; --gn: 7px; --L: 34px; --Lg: 6px; padding: 8px 8px 12px 8px; }
+            .mcdu-lsk-col button { width: 32px; } .mcdu-fn button, .mcdu-brt button, .mcdu-lt button { font-size: 8px; }
+            .mcdu-num button, .mcdu-alpha button { font-size: 13px; } .mcdu-alpha button.mk-word { font-size: 8px; }
+            .mcdu-side-ann.l { left: -17px; } .mcdu-side-ann.r { right: -17px; }
+            .ann-v { font-size: 8px; } .ann { min-width: 26px; font-size: 8px; } }
         .ap-legs { margin-top: 12px; }
         .mc-btn { margin: 0 !important; min-height: 44px; padding: 0 16px; background: #3a3a3a !important; color: #eee !important; border: 1px solid #555; }
         .mc-progress { margin-top: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--slider-bg); padding: 10px 12px; }
@@ -371,6 +412,8 @@
         .dsp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #000; padding: 6px; border-radius: 8px; }
         .dsp-grid.one { grid-template-columns: minmax(0, 720px); justify-content: center; }
         .dsp-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+        .dsp-fcu { background: #1b1f23; border-radius: 10px; padding: 6px; margin-bottom: 8px; }
+        .dsp-fcu svg { width: 100%; height: auto; display: block; font-family: var(--font-mono); }
         .dsp-grid:fullscreen { align-content: center; height: 100vh; border-radius: 0; }
         .dsp-unit { background: #000; border: 2px solid #1a1a1a; border-radius: 6px; aspect-ratio: 1; min-width: 0; }
         .dsp-unit svg { width: 100%; height: 100%; display: block; font-family: var(--font-mono); }
@@ -390,6 +433,75 @@
         .lic b { color: var(--text-main); }
         .ops-secret { -webkit-text-security: disc; text-security: disc; font-family: var(--font-mono); }
         .ops-secret.shown { -webkit-text-security: none; text-security: none; }
+        .ins-h { margin: 18px 0 8px 0; font-size: 15px; color: var(--text-main); }
+        .ins-h small { font-weight: normal; color: var(--text-dim); font-size: 12px; margin-left: 6px; }
+        .ins-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+        .ins-f { background: var(--slider-bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+        .ins-f label { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-dim); margin-bottom: 4px; }
+        .ins-f label b { font-family: var(--font-mono); color: var(--text-main); font-weight: normal; }
+        .ins-row { display: flex; gap: 4px; align-items: center; }
+        .ins-row input { flex: 1; min-width: 0; margin: 0; font-family: var(--font-mono); text-align: center; }
+        .ins-row button { min-height: 38px; padding: 0 14px; font-size: 13px; }
+        .ins-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 4px; }
+        .ins-steps button { min-height: 34px; padding: 0; font-size: 12px; font-family: var(--font-mono); }
+        .ins-row .ap { background: #2e7d32; color: #fff; border-color: #2e7d32; }
+        .ins-freezes { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+        .ins-ground { background: rgba(255,152,0,0.12); border: 1px solid #ff9800; border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; font-size: 13px; color: var(--text-main); }
+        .ins-ground a { color: var(--accent); }
+        .ins-tog { text-align: left; background: var(--slider-bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; color: var(--text-main); cursor: pointer; }
+        .ins-tog b { display: block; margin-bottom: 3px; }
+        .ins-tog span { font-size: 12px; color: var(--text-dim); }
+        .ins-tog.on { background: rgba(33,150,243,0.18); border-color: var(--accent); }
+        .ins-tog.on b::after { content: ' · ON'; color: var(--accent); }
+        .ios-tag { display: inline-block; vertical-align: middle; margin-left: 6px; padding: 1px 7px; border-radius: 8px; border: 1px solid var(--border); font-size: 10px; font-weight: bold; letter-spacing: 0.5px; color: var(--text-dim); }
+        .slw-wrap { display: grid; grid-template-columns: minmax(280px, 360px) 1fr; gap: 14px; margin-top: 10px; }
+        @media (max-width: 800px) { .slw-wrap { grid-template-columns: 1fr; } }
+        .slw-toggle { width: 100%; min-height: 52px; font-size: 17px; font-weight: bold; background: #2e7d32; color: #fff; border: none; border-radius: 8px; }
+        .slw-toggle.on { background: #c62828; }
+        .slw-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; user-select: none; -webkit-user-select: none; touch-action: none; }
+        .slw-pad button { min-height: 74px; font-size: 26px; background: var(--slider-bg); border: 1px solid var(--border); border-radius: 10px; color: var(--text-main); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; touch-action: none; }
+        .slw-pad button small { font-size: 11px; color: var(--text-dim); }
+        .slw-pad button.vert { background: #1d2733; }
+        .slw-pad button.held { background: var(--accent); color: #111; }
+        .slw-pad button.held small { color: #111; }
+        .slw-pad.off button { opacity: 0.35; pointer-events: none; }
+        .slw-c { display: flex; align-items: center; justify-content: center; text-align: center; font-size: 11px; color: var(--text-dim); }
+        .slw-plane { font-size: 26px; color: #ffb300; text-shadow: 0 0 3px #000; line-height: 28px; text-align: center; }
+        .slw-map { height: 460px; border-radius: 8px; border: 1px solid var(--border); background: #111; }
+        .qp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin: 10px 0; }
+        .qp-grid button { text-align: left; min-height: 64px; padding: 8px 12px; background: var(--slider-bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); }
+        .qp-grid button b { display: block; font-size: 14px; margin-bottom: 2px; }
+        .qp-grid button span { font-size: 11px; color: var(--text-dim); }
+        .qp-grid button.missing { opacity: 0.45; }
+        .qw-group { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; }
+        .qw-group b { width: 100%; font-size: 13px; color: var(--text-muted); }
+        .qw-group button { margin: 0; min-height: 40px; padding: 0 12px; font-size: 13px; }
+        .qw-group button.shear-armed { background: #e68a00; color: #111; border-color: #e68a00; font-weight: bold; }
+        .qw-group button.shear-active { background: #c62828; color: #fff; border-color: #c62828; font-weight: bold; animation: shearPulse 1s infinite alternate; }
+        @keyframes shearPulse { from { opacity: 1; } to { opacity: 0.7; } }
+        .pb-wrap { display: grid; grid-template-columns: minmax(300px, 380px) 1fr; gap: 14px; margin-top: 10px; }
+        @media (max-width: 820px) { .pb-wrap { grid-template-columns: 1fr; } }
+        .pb-disabled #pb-dir, .pb-disabled #pb-presets, .pb-disabled .pb-f, .pb-disabled .pb-btns, .pb-disabled #pb-new { opacity: 0.4; pointer-events: none; }
+        .pb-presets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+        .pb-presets button { margin: 0; min-height: 36px; padding: 0 10px; font-size: 12px; }
+        .pb-f { background: var(--slider-bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; }
+        .pb-f label { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted); margin-bottom: 4px; }
+        .pb-f input[type=number] { width: 70px; margin: 0; text-align: center; font-family: var(--font-mono); min-height: 32px; }
+        .pb-f input[type=range] { width: 100%; }
+        .pb-f .perf-rwy { min-height: 30px; padding: 0 8px; font-size: 12px; }
+        .pb-btns { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 6px; margin-top: 4px; }
+        .pb-btns button { min-height: 48px; margin: 0; }
+        .pb-stop { background: #c62828 !important; color: #fff !important; border-color: #c62828 !important; }
+        .pb-stop:disabled { opacity: 0.4; }
+        .pb-progress { height: 6px; background: var(--slider-bg); border-radius: 3px; margin-top: 10px; overflow: hidden; }
+        .pb-progress div { height: 100%; width: 0; background: var(--accent); transition: width 0.3s; }
+        .pb-map { height: 480px; border-radius: 8px; border: 1px solid var(--border); background: #111; }
+        .sat-switch { display: flex; gap: 4px; }
+        .sat-switch button { min-height: 32px; padding: 0 10px; margin: 0; font-size: 12px; font-weight: bold; background: rgba(20,20,20,0.85); color: #eee; border: 1px solid #555; border-radius: 6px; cursor: pointer; }
+        .sat-switch button.on { background: var(--accent); color: #111; border-color: var(--accent); }
+        .sat-credit { background: rgba(0,0,0,0.6); color: #ccc; font-size: 10px; padding: 1px 5px; border-radius: 3px; }
+        .kofi-btn { display: inline-block; background: #29abe0; color: #fff; font-weight: bold; padding: 10px 18px; border-radius: 8px; text-decoration: none; }
+        .kofi-btn:hover { background: #1f97c7; }
         .ops-badge { display: inline-block; min-width: 18px; padding: 1px 6px; margin-left: 8px; border-radius: 9px; background: #ff9800; color: #111; font-size: 11px; font-weight: bold; text-align: center; }
         .ops-setup { margin: 12px 0; background: var(--slider-bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; }
         .ops-setup summary { cursor: pointer; font-weight: bold; color: var(--text-main); padding: 4px 0; }
@@ -415,7 +527,8 @@
         .ops-stand .d .good { color: #4caf50; } .ops-stand .d .warn { color: #ff9800; }
         .ops-stand button { min-height: 28px; padding: 0 10px; font-size: 12px; }
         .ops-stand-marker { background: #ffb300; color: #111; font: bold 11px var(--font-mono); padding: 2px 6px; border-radius: 4px; white-space: nowrap; box-shadow: 0 1px 4px rgba(0,0,0,0.6); }
-        .ops-reassign { min-height: 26px !important; padding: 0 10px !important; margin-left: 8px; font-size: 12px; vertical-align: middle; }
+        .ops-reassign { min-height: 26px !important; padding: 0 10px !important; margin-left: auto; font-size: 12px; flex-shrink: 0; }
+        .ops-item .st.has-btn { display: flex; align-items: center; gap: 12px; padding-right: 10px; }
         .ops-event { align-self: center; font-size: 11px; color: var(--text-dim); font-family: var(--font-mono); border: 1px dashed var(--border); border-radius: 10px; padding: 2px 10px; }
         .ops-meta { font-family: var(--font-ui); font-size: 11px; color: var(--text-dim); margin-bottom: 4px; }
         .ops-meta b { color: var(--text-main); }
@@ -533,7 +646,7 @@
                 <div class="nav-item" id="nav-dispatch" onclick="switchTab('dispatch')" style="display:none;">Dispatch & OFP</div>
                 <div class="nav-item" id="nav-payload" onclick="switchTab('payload')">Weight & Balance</div>
                 <div class="nav-item" id="nav-ground" onclick="switchTab('ground')">Ground Services</div>
-                <div class="nav-item" id="nav-betterpushback" onclick="switchTab('betterpushback')" style="display:none;">Better Pushback</div>
+                <div class="nav-item" id="nav-pushback" onclick="switchTab('pushback')">Pushback</div>
             </div>
             <div class="nav-group">
                 <div class="nav-group-title">Flight</div>
@@ -545,11 +658,13 @@
                 <div class="nav-item" id="nav-scratchpad" onclick="switchTab('scratchpad')">Scratchpad</div>
             </div>
             <div class="nav-group">
-                <div class="nav-group-title">Sim control</div>
-                <div class="nav-item active" id="nav-repositioning" onclick="switchTab('repositioning')">Aircraft Repositioning</div>
-                <div class="nav-item" id="nav-environment" onclick="switchTab('environment')">Environment</div>
-                <div class="nav-item" id="nav-situations" onclick="switchTab('situations')" style="display:none;">Startup/Situations</div>
-                <div class="nav-item" id="nav-failures" onclick="switchTab('failures')" style="display:none;">Failures</div>
+                <div class="nav-group-title" title="Instructor Operating Station">IOS</div>
+                <div class="nav-item" id="nav-instructor" onclick="switchTab('instructor')">Aircraft State</div>
+                <div class="nav-item" id="nav-slew" onclick="switchTab('slew')">Slew</div>
+                <div class="nav-item active" id="nav-repositioning" onclick="switchTab('repositioning')">Reposition</div>
+                <div class="nav-item" id="nav-environment" onclick="switchTab('environment')">Weather &amp; Time</div>
+                <div class="nav-item" id="nav-situations" onclick="switchTab('situations')" style="display:none;">Situations</div>
+                <div class="nav-item" id="nav-failures" onclick="switchTab('failures')" style="display:none;">Malfunctions</div>
             </div>
             <div class="nav-group">
                 <div class="nav-group-title">Network</div>
@@ -584,7 +699,8 @@
 
             <!-- TOLISS PRO SITUATIONS -->
             <div id="situations" class="tab-content">
-                <h3 style="margin-top: 0;">ToLiss Quick States</h3>
+                <h3 style="margin-top: 0;">Situations <span class="ios-tag">IOS</span></h3>
+                <h4 style="margin: 4px 0 10px 0; color: var(--text-muted);">ToLiss Quick States</h4>
                 <div class="button-grid">
                     <button onclick="setAircraftState(0, 'Cold & Dark')">Cold & Dark</button>
                     <button onclick="setAircraftState(1, 'Ext Power On')">Ext Power On</button>
@@ -604,9 +720,18 @@
 
             <div id="failures" class="tab-content">
                 <h3 style="margin-top: 0;">
-                    <span>Fault Scenarios</span>
+                    <span>Malfunctions <span class="ios-tag">IOS</span></span>
                     <button onclick="fetchFailures(true)" style="background-color: var(--btn-hover); color: var(--text-main); padding: 6px 12px; margin: 0; font-size: 13px; min-height: 0;">Refresh</button>
                 </h3>
+
+                <div class="slider-group">
+                    <h4 style="margin:0 0 6px 0;">Quick malfunctions</h4>
+                    <div class="rp-note" style="margin:0 0 8px 0;">Each finds the fault in ToLiss's own list and arms it with the right trigger. V1 comes from your SimBrief takeoff data, or type it in.</div>
+                    <label class="rp-field" style="max-width:220px;">V1 (kt)<input type="number" id="qm-v1" inputmode="numeric"></label>
+                    <div class="qp-grid" id="qm-grid"></div>
+                    <div class="rp-note" id="qm-msg" style="min-height:16px;"></div>
+                </div>
+
 
                 <div class="slider-group">
                     <div style="display: grid; grid-template-columns: minmax(140px, 1fr) minmax(180px, 2fr); gap: 10px; margin-bottom: 10px;">
@@ -653,13 +778,14 @@
 
             <!-- 1. AIRCRAFT REPOSITIONING -->
             <div id="repositioning" class="tab-content">
-                <h3 style="margin-top: 0;">Aircraft Repositioning</h3>
+                <h3 style="margin-top: 0;">Reposition <span class="ios-tag">IOS</span></h3>
                 <p style="font-size: 13px; color: var(--text-dim); margin-bottom: 15px; line-height: 1.5;">Search an airport, then tap a stand or runway on the map, or set up a final approach.</p>
 
                 <div style="margin-bottom: 15px; position: relative;">
                     <div style="display: flex; gap: 10px;">
                         <input type="text" id="airport-search-input" placeholder="Enter ICAO or Airport Name..." autocomplete="off" style="flex: 1; text-transform: uppercase;" oninput="handleLocalSearch(this.value)" onkeydown="if(event.key === 'Enter') triggerAirportSearch()">
                         <button onclick="triggerAirportSearch()" style="background-color: var(--accent); color: white; padding: 0 20px; font-weight: bold; margin: 0; min-height: 44px; flex-shrink: 0;">Search</button>
+                        <button onclick="repoNearest(true)" title="Fill in the airport nearest to the aircraft" style="padding: 0 14px; margin: 0; min-height: 44px; flex-shrink: 0;">Nearest</button>
                     </div>
                     <div id="airport-search-results" style="display:none; position:absolute; top:100%; left:0; right:0; background:var(--panel); border:1px solid var(--border); border-radius:4px; max-height:200px; overflow-y:auto; z-index:1100;"></div>
                 </div>
@@ -670,6 +796,7 @@
                         <div class="sub-tabs rp-modes">
                             <div class="sub-tab active" id="rp-tab-ground" onclick="setRepoMode('ground')">Stands &amp; runways</div>
                             <div class="sub-tab" id="rp-tab-appr" onclick="setRepoMode('appr')">Approach</div>
+                            <div class="sub-tab" id="rp-tab-quick" onclick="setRepoMode('quick')">Quick positions</div>
                         </div>
                     </div>
 
@@ -680,6 +807,21 @@
                             <button onclick="aptMap && aptMap.zoomOut()" aria-label="Zoom out">&minus;</button>
                         </div>
                         <div class="map-ovl map-ovl-attr">&copy; OpenFreeMap &copy; OpenMapTiles &copy; OpenStreetMap &middot; Airport data: X-Plane scenery</div>
+                    </div>
+
+                    <div id="rp-quick-panel" style="display:none;">
+                        <div class="rp-row">
+                            <label class="rp-field" style="flex:1;">Runway<select id="qp-rwy"></select></label>
+                            <label class="rp-field" style="flex:1;">Circuit<select id="qp-circuit"><option value="L">Left-hand</option><option value="R">Right-hand</option></select></label>
+                        </div>
+                        <div class="qp-grid">
+                            <button onclick="qpGo('lineup')"><b>Lined up</b><span>On the runway, ready for takeoff</span></button>
+                            <button onclick="qpGo('final5')"><b>5 nm final</b><span>On the centreline, through the approach trainer</span></button>
+                            <button onclick="qpGo('final10')"><b>10 nm final</b><span>On the centreline, through the approach trainer</span></button>
+                            <button onclick="qpGo('downwind')"><b>Downwind</b><span>1,500 ft above the field, 3 nm abeam the threshold, 180 kt</span></button>
+                            <button onclick="qpGo('overhead')"><b>Overhead</b><span>2,000 ft above the runway, runway heading, 200 kt</span></button>
+                        </div>
+                        <div class="rp-note">Finals use the Approach tab's options (engine check, FCU, configuration, guidance). Downwind and overhead set the FCU altitude, speed and heading; the engines must be running.</div>
                     </div>
 
                     <div id="rp-ground-panel">
@@ -713,6 +855,7 @@
 
                             <div class="rp-label" style="margin-top:14px;">MCDU</div>
                             <label class="rp-pause" style="margin-top:4px;"><input type="checkbox" id="ap-prog" onchange="safeSetStorage('toliss_ap_prog', this.checked)"> Program the MCDU first (destination, approach and VIA, PERF APPR)</label>
+                            <label class="rp-pause" style="margin-top:6px;"><input type="checkbox" id="ap-reset" onchange="safeSetStorage('toliss_ap_reset', this.checked)"> Clear the flight plan first (erases any temporary plan and everything after the first waypoint, as a NEW DEST revision does)</label>
                             <label class="rp-pause" style="margin-top:6px;"><input type="checkbox" id="ap-act" onchange="safeSetStorage('toliss_ap_act', this.checked)"> Activate the approach phase after positioning</label>
                             <div class="rp-row">
                                 <label class="rp-field">Minimum, BARO (ft)<input type="number" id="ap-mins" min="0" max="10000" step="10" placeholder="Auto"></label>
@@ -871,7 +1014,8 @@
 
             <!-- 5. ENVIRONMENT -->
             <div id="environment" class="tab-content">
-                <h3 style="margin-top: 0;">Live Simulator Weather (METAR)</h3>
+                <h3 style="margin-top: 0;">Weather &amp; Time <span class="ios-tag">IOS</span></h3>
+                <h4 style="margin: 4px 0 10px 0; color: var(--text-muted);">Live Simulator Weather (METAR)</h4>
                 <div style="background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 8px; padding: 20px; font-family: var(--font-mono); font-size: 16px; color: var(--accent); line-height: 1.6; margin-bottom: 25px; word-wrap: break-word;" id="metar-display">
                     Connecting to X-Plane Atmospheric Sensors...
                 </div>
@@ -917,25 +1061,90 @@
                         <button onclick="applyWeatherPreset(8)">⛈️ Large-Cell Storms</button>
                     </div>
                 </div>
+                <div class="slider-group">
+                    <h3 style="margin-top:0;">Quick weather</h3>
+                    <p style="font-size: 13px; color: var(--text-dim); margin-bottom: 12px; line-height: 1.5;">Applied immediately, for practice. Wind is set relative to the aircraft's current heading, so line up or set up on final first. Selecting quick weather switches off Real-World Weather.</p>
+                    <div class="qw-group"><b>Wind</b>
+                        <button onclick="wxQuick({type:'wind', rel:0, speed:15})">Headwind 15 kt</button>
+                        <button onclick="wxQuick({type:'wind', rel:-90, speed:15})">Crosswind 15 kt from the left</button>
+                        <button onclick="wxQuick({type:'wind', rel:90, speed:15})">Crosswind 15 kt from the right</button>
+                        <button onclick="wxQuick({type:'wind', rel:-60, speed:25, gust:35})">25 kt gusting 35 from the left</button>
+                        <button onclick="wxQuick({type:'wind', rel:60, speed:25, gust:35})">25 kt gusting 35 from the right</button>
+                        <button onclick="wxQuick({type:'wind', rel:180, speed:10})">Tailwind 10 kt</button>
+                        <button onclick="wxQuick({type:'calm'})">Calm</button>
+                    </div>
+                    <div class="qw-group"><b>Turbulence</b>
+                        <button onclick="wxQuick({type:'turb', level:0, label:'none'})">None</button>
+                        <button onclick="wxQuick({type:'turb', level:0.25, label:'light'})">Light</button>
+                        <button onclick="wxQuick({type:'turb', level:0.5, label:'moderate'})">Moderate</button>
+                        <button onclick="wxQuick({type:'turb', level:0.85, label:'severe'})">Severe</button>
+                    </div>
+                    <div class="qw-group"><b>Visibility &amp; cloud</b>
+                        <button onclick="wxClearSky()">Clear sky (X-Plane's Clear / CAVOK)</button>
+                        <button onclick="wxQuick({type:'vis', vis_m:1500, ceiling_ft:400})">Low visibility: 1,500 m, OVC 400 ft</button>
+                        <button onclick="wxQuick({type:'vis', vis_m:800, ceiling_ft:200})">CAT I: 800 m, OVC 200 ft</button>
+                        <button onclick="wxQuick({type:'vis', vis_m:350, ceiling_ft:100})">CAT II: 350 m, OVC 100 ft</button>
+                        <button onclick="wxQuick({type:'vis', vis_m:200, ceiling_ft:50})">CAT IIIA: 200 m, fog</button>
+                    </div>
+                    <div class="qw-group"><b>Wind shear</b>
+                        <button id="qw-shear" onclick="wxQuick({type:'shear_arm'})">Arm wind shear on approach</button>
+                        <button onclick="wxQuick({type:'shear_cancel'})">Cancel</button>
+                        <span class="rp-note" style="margin:0; width:100%;">Hits when you descend through about 1,000 ft above the field: a sudden headwind gust, then the headwind collapses into a 25 kt tailwind with turbulence for about 20 seconds; the previous wind then returns. ToLiss's reactive wind shear warning works from its own energy calculations, so it may or may not trigger; predictive wind shear (PWS) needs the weather radar and PWS switch on.</span>
+                    </div>
+                    <div class="rp-note" id="qw-msg" style="min-height:16px;"></div>
+                </div>
             </div>
 
-            <!-- 7. BETTER PUSHBACK -->
-            <div id="betterpushback" class="tab-content">
-                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px;">
-                    <h3 style="margin-bottom: 0; border: none; padding: 0;">Better Pushback Controls</h3>
+            <!-- PUSHBACK (built in) -->
+            <div id="pushback" class="tab-content">
+                <div class="dsp-bar">
+                    <h3 style="margin:0; border:none; padding:0;">Pushback</h3>
+                    <span class="dsp-status" id="pb-status"></span>
                 </div>
-                <p style="font-size: 13px; color: var(--text-dim); margin-bottom: 25px; line-height: 1.5;">
-                    This tab interfaces directly with the 3rd-party Better Pushback plugin.
-                </p>
-                <div class="button-grid" style="margin-bottom: 10px;">
-                    <button onclick="sendCommand('BetterPushback/start')" style="background-color: #2e7d32; color: white; min-height: 70px; font-size: 16px;">Plan / Start Pushback</button>
+                <div class="pb-wrap">
+                    <div class="pb-left" id="pb-left">
+                        <div class="ins-ground" id="pb-air" style="display:none;">Pushback is available on the ground only.</div>
+                        <div class="perf-rwys" style="margin:0 0 10px 0;" id="pb-dir">
+                            <button class="perf-rwy active" onclick="pbSetDir(false)">Push back</button>
+                            <button class="perf-rwy" onclick="pbSetDir(true)">Pull forward</button>
+                        </div>
+                        <div class="pb-presets" id="pb-presets">
+                            <button onclick="pbPreset(30,0,'L',0)">Straight back 30 m</button>
+                            <button onclick="pbPreset(15,90,'L',0)">Tail left 90°</button>
+                            <button onclick="pbPreset(15,90,'R',0)">Tail right 90°</button>
+                            <button onclick="pbPreset(10,180,'L',0)">Tail left 180°</button>
+                            <button onclick="pbPreset(10,180,'R',0)">Tail right 180°</button>
+                        </div>
+                        <div class="pb-f"><label><span id="pb-l-back">Straight back</span> <span><input type="number" id="pb-back-n" min="0" max="150" step="1" oninput="pbSync('back', this.value)"> m</span></label>
+                            <input type="range" id="pb-back" min="0" max="150" step="1" value="20" oninput="pbSync('back', this.value)"></div>
+                        <div class="pb-f"><label>Turn
+                            <span class="perf-rwys" id="pb-side" style="margin:0;">
+                                <button class="perf-rwy" onclick="pbSide('L')" id="pb-side-L">Tail left</button>
+                                <button class="perf-rwy" onclick="pbSide('R')" id="pb-side-R">Tail right</button>
+                            </span>
+                            <span><input type="number" id="pb-turn-n" min="0" max="180" step="5" oninput="pbSync('turn', this.value)"> °</span></label>
+                            <input type="range" id="pb-turn" min="0" max="180" step="5" value="90" oninput="pbSync('turn', this.value)"></div>
+                        <div class="pb-f"><label>Then straight <span><input type="number" id="pb-final-n" min="0" max="100" step="1" oninput="pbSync('final', this.value)"> m</span></label>
+                            <input type="range" id="pb-final" min="0" max="100" step="1" value="0" oninput="pbSync('final', this.value)"></div>
+                        <div class="pb-f"><label>Towing speed <span><input type="number" id="pb-speed-n" min="1" max="5" step="0.5" oninput="pbSync('speed', this.value)"> kt</span></label>
+                            <input type="range" id="pb-speed" min="1" max="5" step="0.5" value="3" oninput="pbSync('speed', this.value)"></div>
+                        <div class="pb-btns">
+                            <button class="rp-go" id="pb-start" onclick="pbStart()">Start pushback</button>
+                            <button class="mc-btn" id="pb-pause" onclick="pbPause()" disabled>Pause</button>
+                            <button class="mc-btn pb-stop" id="pb-stop" onclick="pbStop()" disabled>Stop</button>
+                        </div>
+                        <button class="mc-btn" id="pb-new" onclick="pbNewPlan()" style="display:none; width:100%; margin-top:6px;">Plan another push</button>
+                        <div class="pb-progress"><div id="pb-bar"></div></div>
+                        <div class="rp-note" id="pb-msg" style="min-height:18px;"></div>
+                    </div>
+                    <div class="pb-right">
+                        <div id="pb-map" class="pb-map"></div>
+                        <div class="rp-note">The line runs from the tail now to the nose at the end (the outline shows where the aircraft ends up). Once you start, the plan stays on the map: the travelled part turns solid. Check the path is clear: there is no collision detection.</div>
+                    </div>
                 </div>
-                <div class="button-grid">
-                    <button onclick="sendCommand('BetterPushback/reconnect')" style="background-color: var(--btn-bg); min-height: 60px;">Reconnect Tug</button>
-                    <button onclick="sendCommand('BetterPushback/stop')" style="background-color: #f44336; color: white; min-height: 60px;">Stop / Disconnect</button>
-                </div>
+                <div class="rp-note" style="margin-top:10px;">As with a real tug, the push starts when you release the parking brake, and stops if you set it during the push. You can start the engines during the push. The tug model isn't shown, and X-Plane may not animate the wheels while the EFB moves the aircraft.</div>
             </div>
-            
+
             <!-- 8. CHECKLIST -->
             <div id="checklist" class="tab-content">
                 <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px;">
@@ -963,6 +1172,7 @@
                     <div class="perf-rwys" id="dsp-stick"></div>
                     <button class="mc-btn" onclick="dspFullscreen()">Full screen</button>
                 </div>
+                <div class="dsp-fcu" id="dsp-fcu-unit"><svg id="dsp-fcu" viewBox="0 0 1200 190" preserveAspectRatio="xMidYMid meet"></svg></div>
                 <div class="dsp-grid" id="dsp-grid">
                     <div class="dsp-unit" id="dsp-pfd-unit"><svg id="dsp-pfd" viewBox="0 0 512 512" preserveAspectRatio="xMidYMid meet"></svg></div>
                     <div class="dsp-unit" id="dsp-ewd-unit"><svg id="dsp-ewd" viewBox="0 0 512 512" preserveAspectRatio="xMidYMid meet"></svg></div>
@@ -1015,20 +1225,93 @@
                     </div>
                 </div>
 
-                <div class="mcdu-unit">
-                    <div class="mcdu-lsk-col" id="mcdu-lsk-l"></div>
-                    <div class="mcdu-screen" id="mcdu-screen"></div>
-                    <div class="mcdu-lsk-col" id="mcdu-lsk-r"></div>
-                </div>
-
-                <div class="mcdu-keys">
-                    <div class="mcdu-fn" id="mcdu-fn"></div>
-                    <div class="mcdu-lower">
-                        <div class="mcdu-left" id="mcdu-left"></div>
-                        <div class="mcdu-alpha" id="mcdu-alpha"></div>
+                <div class="mcdu-body">
+                    <div class="mcdu-ann-top" aria-hidden="true">
+                        <span class="ann amber">FM1</span><span class="ann amber">IND</span><span class="ann green">RDY</span><span class="ann amber"></span><span class="ann amber">FM2</span>
+                    </div>
+                    <div class="mcdu-unit">
+                        <div class="mcdu-lsk-col" id="mcdu-lsk-l"></div>
+                        <div class="mcdu-screen" id="mcdu-screen"></div>
+                        <div class="mcdu-lsk-col" id="mcdu-lsk-r"></div>
+                    </div>
+                    <div class="mcdu-keys">
+                        <div class="mcdu-fnwrap">
+                            <div class="mcdu-fn" id="mcdu-fn"></div>
+                            <div class="mcdu-brt" id="mcdu-brt"></div>
+                        </div>
+                        <div class="mcdu-lower">
+                            <div class="mcdu-side-ann l" aria-hidden="true"><span class="ann-v amber">FAIL</span><span class="ann-v white">FM</span></div>
+                            <div class="mcdu-left" id="mcdu-left"></div>
+                            <div class="mcdu-alpha" id="mcdu-alpha"></div>
+                            <div class="mcdu-side-ann r" aria-hidden="true"><span class="ann-v white">MCDU MENU</span></div>
+                        </div>
                     </div>
                 </div>
                 <div class="rp-note" id="mcdu-diag">Connecting to the MCDU...</div>
+            </div>
+
+            <!-- INSTRUCTOR STATION -->
+            <div id="instructor" class="tab-content">
+                <div class="dsp-bar">
+                    <h3 style="margin:0; border:none; padding:0;">Aircraft State <span class="ios-tag">IOS</span></h3>
+                    <span class="dsp-status" id="ins-status"></span>
+                </div>
+                <div class="tstrip" id="ins-live"></div>
+
+                <h4 class="ins-h">Set the aircraft <small>in flight; takes effect immediately</small></h4>
+                <div class="ins-ground" id="ins-ground" style="display:none;">On the ground: these changes are available in flight. To move the aircraft on the ground, use <a href="#" onclick="switchTab('slew');return false;">Slew</a> or <a href="#" onclick="switchTab('repositioning');return false;">Reposition</a>. You can still type values to prepare them.</div>
+                <div class="ins-grid" id="ins-set"></div>
+                <div class="rp-row" style="margin-top:8px;">
+                    <button class="mc-btn" onclick="insCopy()">Fill in current values</button>
+                    <button class="mc-btn" onclick="insLevel()">Wings level, level flight</button>
+                    <button class="rp-go" style="margin-left:auto;" id="ins-apply-all" onclick="insApplyAll()">Set entered values</button>
+                </div>
+                <div class="rp-note" style="margin-top:4px;">Step buttons apply immediately. Typed values apply with their <b>Set</b> button, or all together with <b>Set entered values</b>, so the aircraft goes straight to the combined state (e.g. FL100, 250 kt, heading 270).</div>
+                <div class="rp-note" id="ins-msg" style="min-height:16px;"></div>
+
+                <h4 class="ins-h">Freeze</h4>
+                <div class="ins-freezes">
+                    <button class="ins-tog" id="ins-f-pause" onclick="insFreeze('pause')"><b>Freeze</b><span>Pauses X-Plane. With "X-Plane pause acts as freeze motion" on in the ToLiss ISCS, the aircraft holds still while its systems keep running.</span></button>
+                    <button class="ins-tog" id="ins-f-alt" onclick="insFreeze('alt')"><b>Altitude freeze</b><span>The aircraft keeps flying, but its altitude is held.</span></button>
+                    <button class="ins-tog" id="ins-f-fuel" onclick="insFreeze('fuel')"><b>Fuel freeze</b><span>Fuel quantities stay as they are.</span></button>
+                </div>
+
+                <h4 class="ins-h">Sim rate</h4>
+                <div class="perf-rwys" id="ins-rate" style="margin:0;"></div>
+            </div>
+
+            <!-- SLEW -->
+            <div id="slew" class="tab-content">
+                <div class="dsp-bar">
+                    <h3 style="margin:0; border:none; padding:0;">Slew <span class="ios-tag">IOS</span></h3>
+                    <span class="dsp-status" id="slw-status"></span>
+                </div>
+                <div class="tstrip" id="slw-live"></div>
+                <div class="slw-wrap">
+                    <div class="slw-left">
+                        <button class="slw-toggle" id="slw-toggle" onclick="slwToggle()">Start slew</button>
+                        <label class="rp-field" id="slw-resume-row" style="margin-top:8px;">Resume airspeed when slew ends (kt IAS)<input type="number" id="slw-resume" inputmode="numeric" placeholder="speed when slew started"></label>
+                        <div class="slw-pad" id="slw-pad">
+                            <button data-ax="turn" data-v="-1">⟲<small>Turn left</small></button>
+                            <button data-ax="fwd" data-v="1">▲<small>Forward</small></button>
+                            <button data-ax="turn" data-v="1">⟳<small>Turn right</small></button>
+                            <button data-ax="side" data-v="-1">◀<small>Left</small></button>
+                            <span class="slw-c" id="slw-c">Hold to move</span>
+                            <button data-ax="side" data-v="1">▶<small>Right</small></button>
+                            <button data-ax="up" data-v="1" class="vert">⇧<small>Climb</small></button>
+                            <button data-ax="fwd" data-v="-1">▼<small>Back</small></button>
+                            <button data-ax="up" data-v="-1" class="vert">⇩<small>Descend</small></button>
+                        </div>
+                        <label class="rp-field" style="margin-top:10px;">Rate <b id="slw-rate-txt" style="font-family:var(--font-mono);"></b>
+                            <input type="range" id="slw-rate" min="0" max="100" value="45" oninput="slwRateChanged()"></label>
+                        <div class="rp-note">Keyboard: ↑ ↓ forward/back, ← → turn, Shift + ← → sideways, Page Up / Page Down climb/descend.</div>
+                    </div>
+                    <div class="slw-right">
+                        <div id="slw-map" class="slw-map"></div>
+                        <div class="rp-note" id="slw-map-note">Start slew, then tap the map to place the aircraft there.</div>
+                    </div>
+                </div>
+                <div class="rp-note" style="margin-top:10px;">While slewing, X-Plane stops moving the aircraft and the EFB moves it: on the ground it slides along the terrain, in the air it keeps its altitude (never below 50 ft above the terrain). Ending slew hands control back: in the air at the resume airspeed, level; on the ground stopped. If X-Plane was paused, it is paused again.</div>
             </div>
 
             <!-- OPS CENTRE (HOPPIE ACARS) -->
@@ -1382,14 +1665,6 @@
                     </div>
                 </div>
 
-                <div class="toggle-row">
-                    <div style="flex-grow: 1;">
-                        <label for="toggle-betterpushback" style="display: block; font-size: 15px; color: var(--text-main); font-weight: 500; cursor: pointer;">Better Pushback Integration</label>
-                        <span style="font-size: 12px; color: var(--text-dim);">Dedicated controls for Better Pushback</span>
-                    </div>
-                    <input type="checkbox" id="toggle-betterpushback" onchange="toggleIntegration('betterpushback', this.checked)">
-                </div>
-
                 <hr style="border: 0; border-top: 1px solid var(--border); margin: 30px 0 25px 0;">
 
                 <h3>Flight</h3>
@@ -1436,10 +1711,10 @@
 
                 <hr style="border: 0; border-top: 1px solid var(--border); margin: 30px 0 25px 0;">
 
-                <h3>Sim control</h3>
+                <h3>IOS (Instructor Operating Station)</h3>
                 <div class="toggle-row">
                     <div style="flex-grow: 1;">
-                        <label for="toggle-toliss-pro" style="display: block; font-size: 15px; color: var(--text-main); font-weight: 500; cursor: pointer;">Startup/Situations & Failures</label>
+                        <label for="toggle-toliss-pro" style="display: block; font-size: 15px; color: var(--text-main); font-weight: 500; cursor: pointer;">Situations &amp; Malfunctions</label>
                         <span style="font-size: 12px; color: var(--text-dim);">Enable ToLiss Pro-only functions.</span>
                     </div>
                     <input type="checkbox" id="toggle-toliss-pro" onchange="toggleTolissPro(this.checked)">
@@ -1507,7 +1782,7 @@
                 <div style="line-height: 1.5; color: var(--text-muted); font-size: 13px;">
                     <p>A web-based, remote interface for the ToLiss line of aircraft in X-Plane 12.</p>
                     <p>By Soarbywire &middot; <a href="https://soarbywire.com" target="_blank" rel="noopener">soarbywire.com</a></p>
-                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.65 Release Beta</p>
+                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.66 Release Beta</p>
                     <p style="font-size: 11px; color: #ff9800; margin-top: 5px;"><strong>Caution:</strong> Some features may not work as intended.</p>
                     <p style="font-size: 11px; color: var(--text-dim); margin-top: 5px;">New versions are published on <a href="https://github.com/soarbywire/toliss-efb/releases" target="_blank" rel="noopener">GitHub</a> and the X-Plane.org forums, and can be installed from <b>Updates</b> above.</p>
                     <div class="lic">
@@ -1525,6 +1800,11 @@
                         payware aircraft, or business environment, you must purchase a separate commercial license.</p>
                         <p>Please <a href="https://soarbywire.com/contact/" target="_blank" rel="noopener">contact me</a> to discuss commercial licensing options.</p>
                     </div>
+                </div>
+
+                <div class="slider-group kofi-box">
+                    <h3 style="margin-top:0;">Support the project</h3>
+                    <p style="font-size: 13px; color: var(--text-dim); line-height: 1.5; margin: 0;">ToLiss EFB is free for personal use. If it makes your flying better, you can <a href="https://ko-fi.com/soarbywire" target="_blank" rel="noopener">support</a> its development.</p>
                 </div>
             </div>
             
@@ -2298,6 +2578,50 @@
         }
 
         // Make buildings (terminals, hangars) stand out on the dark basemap
+        // Map / Satellite switch: Esri World Imagery between the base map and the airport layout (credit shown)
+        // with satellite on, filled pavement/apron/runway shapes become transparent; lines stay
+        function satFade(groups, on) {
+            (groups || []).forEach(g => g && g.eachLayer(l => {
+                if (!(l instanceof L.Polygon)) return;
+                if (on) { if (!l._satOrig) l._satOrig = { fillOpacity: l.options.fillOpacity, opacity: l.options.opacity }; l.setStyle({ fillOpacity: 0, opacity: 0.35 }); }
+                else if (l._satOrig) { l.setStyle(l._satOrig); }
+            }));
+        }
+        function satApply(m) { if (m && m._satGroups) satFade(m._satGroups(), !!m._satOn); }
+        function addSatelliteSwitch(m, key, extra, groups) {
+            if (!m || typeof L === 'undefined') return;
+            m.createPane('satPane'); m.getPane('satPane').style.zIndex = 250;
+            const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                                    { pane: 'satPane', maxNativeZoom: 19, maxZoom: 21 });
+            const credit = L.control({ position: 'bottomright' });
+            credit.onAdd = () => { const d = L.DomUtil.create('div', 'sat-credit'); d.textContent = 'Imagery © Esri, Maxar, Earthstar Geographics'; return d; };
+            const ctl = L.control({ position: 'topright' });
+            let btn;
+            ctl.onAdd = () => {
+                const box = L.DomUtil.create('div', 'sat-switch');
+                btn = L.DomUtil.create('button', '', box);
+                L.DomEvent.on(btn, 'click', e => { L.DomEvent.stop(e); set(!m.hasLayer(sat)); });
+                (extra || []).forEach(([label, fn, initial]) => {
+                    const b = L.DomUtil.create('button', initial ? 'on' : '', box);
+                    b.textContent = label;
+                    L.DomEvent.on(b, 'click', e => { L.DomEvent.stop(e); b.classList.toggle('on', fn()); });
+                });
+                L.DomEvent.disableClickPropagation(box);
+                return box;
+            };
+            ctl.addTo(m);
+            m._satGroups = groups || null;
+            function set(on) {
+                m._satOn = on;
+                satApply(m);
+                if (on) { sat.addTo(m); credit.addTo(m); } else { m.removeLayer(sat); credit.remove(); }
+                btn.textContent = on ? 'Map' : 'Satellite';
+                btn.classList.toggle('on', on);
+                safeSetStorage('toliss_sat_' + key, on ? '1' : '0');
+            }
+            set(safeGetStorage('toliss_sat_' + key) === '1');
+        }
+
         function gmStyleBasemap(glLayer) {
             let m = null;
             try { m = glLayer.getMaplibreMap(); } catch (e) { return null; }
@@ -2587,15 +2911,17 @@
 
         function gmRender() {
             renderAirportDetail(gmData, { base: gmBase, rwyLbl: gmRwyLbl, twyLbl: gmTwyLbl, standLbl: gmStandLbl }, gmRenderer);
+            satApply(map);
             gmApplyZoom();
         }
 
+        let gmLayoutOff = false;
         function gmApplyZoom() {
             if (!map) return;
             const z = map.getZoom();
             const show = (layer, minZ) => {
                 if (!layer) return;
-                const want = gmData && z >= minZ;
+                const want = gmData && z >= minZ && !gmLayoutOff;
                 if (want && !map.hasLayer(layer)) layer.addTo(map);
                 if (!want && map.hasLayer(layer)) map.removeLayer(layer);
             };
@@ -2617,6 +2943,8 @@
             if (gmGL) gmGL.on('idle', gmScheduleBuildings);
             gmInitLayers();
             drawInit();
+            gmLayoutOff = safeGetStorage('toliss_layout_telemetry') === '0';
+            addSatelliteSwitch(map, 'telemetry', [['Layout', () => { gmLayoutOff = !gmLayoutOff; safeSetStorage('toliss_layout_telemetry', gmLayoutOff ? '0' : '1'); gmApplyZoom(); return !gmLayoutOff; }, !gmLayoutOff]], () => [gmBase]);
             if (safeGetStorage('toliss_map_tall') === 'true') { document.getElementById('map-tall').checked = true; document.getElementById('map-outer').classList.add('tall'); }
             if (safeGetStorage('toliss_map_hdgup') === 'true') { document.getElementById('map-hdgup').checked = true; setMapHeadingUp(true); }
             
@@ -2714,17 +3042,19 @@
             if (aptGL) aptGL.on('idle', schedule);
             aptMap.on('moveend', schedule);
             aptMap.on('zoomend', aptApplyZoom);
+            aptLay._hidden = safeGetStorage('toliss_layout_reposition') === '0';
+            addSatelliteSwitch(aptMap, 'reposition', [['Layout', () => { aptLay._hidden = !aptLay._hidden; safeSetStorage('toliss_layout_reposition', aptLay._hidden ? '0' : '1'); aptApplyZoom(); return !aptLay._hidden; }, !aptLay._hidden]], () => [aptLay.base]);
         }
 
         function aptApplyZoom() {
             if (!aptMap || !aptLay) return;
             const z = aptMap.getZoom();
-            const show = (layer, minZ) => {
-                const want = z >= minZ;
+            const show = (layer, minZ, isLayout) => {
+                const want = z >= minZ && !(isLayout && aptLay._hidden);
                 if (want && !aptMap.hasLayer(layer)) layer.addTo(aptMap);
                 if (!want && aptMap.hasLayer(layer)) aptMap.removeLayer(layer);
             };
-            if (aptGround) { show(aptLay.base, 12); show(aptLay.rwyLbl, 13); show(aptLay.twyLbl, 15); }
+            if (aptGround) { show(aptLay.base, 12, true); show(aptLay.rwyLbl, 13, true); show(aptLay.twyLbl, 15, true); }
             show(aptLay.ptLbl, 16);
         }
 
@@ -3272,6 +3602,17 @@
             selectAirport(icao, safeName);
         }
         
+        // the airport nearest to the aircraft (filled in when no airport is chosen yet, or with the Nearest button)
+        function repoNearest(force) {
+            if (!force && aptIcao) return;
+            fetch('/api/nearest_airport').then(r => r.json()).then(res => {
+                if (res.status !== 'success' || !res.icao) { if (force) updateStatus(res.message || 'No nearby airport found.'); return; }
+                if (!force && aptIcao) return;                 // chosen meanwhile: leave it
+                const nm = airportDB && airportDB[res.icao] && airportDB[res.icao].name ? airportDB[res.icao].name : res.icao;
+                selectAirport(res.icao, nm);
+            }).catch(() => { if (force) updateStatus('The plugin could not be reached.'); });
+        }
+
         function selectAirport(icao, name) {
             const resDiv = document.getElementById('airport-search-results');
             const searchInp = document.getElementById('airport-search-input');
@@ -3300,6 +3641,7 @@
                 if (gm && gm.status === 'success') {
                     aptGround = gm.airport;
                     renderAirportDetail(aptGround, aptLay, aptLay.r, { skipStands: true });
+                    satApply(aptMap);
                 }
                 if (!data || data.status !== 'success' || !data.gates || !data.gates.length) {
                     if (lbl) lbl.innerText = `${icao} - Not Found`;
@@ -3365,14 +3707,19 @@
             repoMode = mode;
             document.getElementById('rp-tab-ground').classList.toggle('active', mode === 'ground');
             document.getElementById('rp-tab-appr').classList.toggle('active', mode === 'appr');
+            document.getElementById('rp-tab-quick').classList.toggle('active', mode === 'quick');
             document.getElementById('rp-ground-panel').style.display = mode === 'ground' ? 'block' : 'none';
             document.getElementById('rp-appr-panel').style.display = mode === 'appr' ? 'block' : 'none';
-            document.getElementById('rp-air-opts').style.display = mode === 'appr' ? 'block' : 'none';
+            document.getElementById('rp-quick-panel').style.display = mode === 'quick' ? 'block' : 'none';
+            document.getElementById('rp-air-opts').style.display = mode === 'appr' || mode === 'quick' ? 'block' : 'none';
+            if (mode === 'quick') qpFillRunways();
             if (!aptLay) return;
             aptLay.preview.clearLayers();
             if (mode === 'ground') {
                 aptLay.pts.addTo(aptMap);
                 if (aptSelIdx >= 0) selectRepoLocation(aptSelIdx, false);
+            } else if (mode === 'quick') {
+                aptMap.removeLayer(aptLay.pts);
             } else {
                 aptMap.removeLayer(aptLay.pts);
                 apShow();
@@ -3956,6 +4303,33 @@
                 await mcClearScratch();
                 return 'ready';
             });
+
+            if ((document.getElementById('ap-reset') || {}).checked) {
+                await mcStep(`Clear the flight plan (NEW DEST ${dest})`, async () => {
+                    await mcPress('Fpln', 600);
+                    let scr = await mcRead();
+                    // a temporary flight plan first: ERASE it
+                    if (/TMPY/.test(mcTitle(scr)) || /ERASE/.test((scr.lines[11] || '') + (scr.lines[12] || ''))) {
+                        const er = mcFind(scr, /ERASE/);
+                        if (er) { await mcPress(`LSK${er.n}${er.side}`, 600); scr = await mcRead(); }
+                    }
+                    // lateral revision at the first waypoint, NEW DEST: everything after it is deleted
+                    await mcPress('LSK1L', 700);
+                    scr = await mcRead();
+                    const lbl = mcLabel(scr, /NEW DEST/);
+                    if (!lbl) {
+                        const wasLatRev = /LAT REV/.test(mcTitle(scr));
+                        await mcPress('Fpln', 500);
+                        if (!wasLatRev) return 'no flight plan to clear';
+                        throw new Error('NEW DEST not offered on the LAT REV page');
+                    }
+                    scr = await mcEnter(dest, lbl.n, lbl.side, 'NEW DEST');
+                    const ins = mcFind(scr, /INSERT/);
+                    if (ins) await mcPress(`LSK${ins.n}${ins.side}`, 600);
+                    await mcPress('Fpln', 500);
+                    return `cleared, destination ${dest}`;
+                });
+            }
 
             if (!doAppr && !onGround) return;
             if (onGround && doInit) {
@@ -5665,7 +6039,7 @@
                 safeSetStorage('toliss_ap_act', 'true');
                 safeSetStorage('toliss_ap_act_default_062', 'done');
             }
-            ['ap-prog', 'ap-act', 'ap-config', 'ap-auto'].forEach(id => {
+            ['ap-prog', 'ap-act', 'ap-config', 'ap-auto', 'ap-reset'].forEach(id => {
                 const el = document.getElementById(id), v = safeGetStorage('toliss_' + id.replace('-', '_'));
                 if (el) el.checked = v === null || v === undefined ? id === 'ap-act' : v === 'true';   // approach phase on by default
             });
@@ -5674,6 +6048,518 @@
         });
 
         if (typeof Chart !== 'undefined') { Chart.defaults.font.family = getComputedStyle(document.documentElement).getPropertyValue('--font-ui').trim() || 'sans-serif'; }
+
+        // ===== Instructor station =====
+        const INS = { timer: null, st: null };
+        const INS_FIELDS = [
+            ['alt', 'Altitude', 'ft', 'alt_ft', [-1000, -100, 100, 1000]],
+            ['ias', 'Airspeed', 'kt IAS', 'ias', [-10, -1, 1, 10]],
+            ['hdg', 'Heading', '° magnetic', 'hdg_mag', [-10, -1, 1, 10]],
+            ['vs', 'Vertical speed', 'fpm', 'vs', [-500, -100, 100, 500]],
+            ['pitch', 'Pitch', '°', 'pitch', [-5, -1, 1, 5]],
+            ['roll', 'Bank', '° (right +)', 'roll', [-10, -5, 5, 10]]];
+        function insCountEntered() {
+            const n = INS_FIELDS.filter(f => (document.getElementById('ins-in-' + f[0]) || {}).value).length;
+            const b = document.getElementById('ins-apply-all');
+            if (b) { b.textContent = n ? `Set ${n} entered value${n > 1 ? 's' : ''}` : 'Set entered values'; b.disabled = !n; }
+        }
+        function insBuild() {
+            document.getElementById('ins-set').innerHTML = INS_FIELDS.map(([k, label, unit, sk, steps]) => `
+                <div class="ins-f"><label>${label} <span>now <b id="ins-now-${k}">---</b> ${unit}</span></label>
+                <div class="ins-row">
+                    <input type="number" id="ins-in-${k}" step="any" inputmode="decimal" placeholder="new value" oninput="insCountEntered()">
+                    <button class="mc-btn ap" onclick="insApply(['${k}'])">Set</button>
+                </div>
+                <div class="ins-steps">${steps.map(d => `<button class="mc-btn" onclick="insStep('${k}', ${d})">${d > 0 ? '+' : '−'}${Math.abs(d).toLocaleString()}</button>`).join('')}</div>
+                </div>`).join('');
+            document.getElementById('ins-rate').innerHTML = [1, 2, 4, 8].map(r => `<button class="perf-rwy" id="ins-r-${r}" onclick="insRate(${r})">×${r}</button>`).join('');
+            insCountEntered();
+        }
+        function insRender(st) {
+            if (!st || st.status === 'error') { document.getElementById('ins-status').textContent = 'No response from the sim'; return; }
+            INS.st = st;
+            document.getElementById('ins-status').textContent = st.paused ? 'Paused' : (st.on_ground ? 'On the ground' : 'In flight');
+            const cell = (l, v) => `<div class="tcell"><div class="tl">${l}</div><div class="tv">${v}</div></div>`;
+            document.getElementById('ins-live').innerHTML = cell('ALT', st.alt_ft.toLocaleString() + ' ft') + cell('AGL', st.agl_ft.toLocaleString() + ' ft') +
+                cell('IAS', Math.round(st.ias) + ' kt') + cell('TAS / GS', Math.round(st.tas) + ' / ' + Math.round(st.gs)) + cell('HDG', String(Math.round(st.hdg_mag) % 360 || 360).padStart(3, '0') + '°M') +
+                cell('V/S', (st.vs > 0 ? '+' : '') + st.vs + ' fpm') + cell('PITCH', st.pitch.toFixed(1) + '°') + cell('BANK', st.roll.toFixed(1) + '°') + cell('FOB', st.fob.toLocaleString() + ' kg');
+            INS_FIELDS.forEach(([k, , , sk]) => {
+                const v = st[sk]; const el = document.getElementById('ins-now-' + k);
+                if (el) el.textContent = k === 'hdg' ? String(Math.round(v) % 360 || 360).padStart(3, '0') : (Math.abs(v) < 100 && k !== 'vs' ? v.toFixed(1) : Math.round(v).toLocaleString());
+            });
+            document.getElementById('ins-f-pause').classList.toggle('on', !!st.paused);
+            document.getElementById('ins-f-alt').classList.toggle('on', !!st.alt_freeze);
+            document.getElementById('ins-f-fuel').classList.toggle('on', !!st.fuel_freeze);
+            [1, 2, 4, 8].forEach(r => { const b = document.getElementById('ins-r-' + r); if (b) b.classList.toggle('active', Math.round(st.sim_rate) === r); });
+            document.getElementById('ins-ground').style.display = st.on_ground ? '' : 'none';
+        }
+        function insPoll() {
+            if (!document.getElementById('instructor').classList.contains('active')) { clearInterval(INS.timer); INS.timer = null; return; }
+            fetch('/api/instructor/state').then(r => r.json()).then(insRender).catch(() => {});
+        }
+        function insStart() { if (!document.getElementById('ins-set').innerHTML) insBuild(); insPoll(); clearInterval(INS.timer); INS.timer = setInterval(insPoll, 500); }
+        function insCopy() {
+            if (!INS.st) return;
+            INS_FIELDS.forEach(([k, , , sk]) => { const v = INS.st[sk]; document.getElementById('ins-in-' + k).value = k === 'hdg' ? Math.round(v) % 360 : (k === 'alt' || k === 'vs' ? Math.round(v) : Math.round(v * 10) / 10); });
+            insCountEntered();
+        }
+        function insLevel() { ['pitch', 'roll', 'vs'].forEach(k => document.getElementById('ins-in-' + k).value = k === 'pitch' ? 2.5 : 0); insCountEntered(); insApply(['pitch', 'roll', 'vs']); }
+        function insOnGround() {
+            if (!(INS.st && INS.st.on_ground)) return false;
+            const msg = document.getElementById('ins-msg');
+            msg.textContent = 'The aircraft is on the ground: altitude, speed and attitude can only be set in flight. Use Slew or Reposition to move it on the ground.';
+            msg.style.color = '#ff9800';
+            return true;
+        }
+        function insStep(k, d) {
+            if (!INS.st || insOnGround()) return;
+            const sk = INS_FIELDS.find(f => f[0] === k)[3];
+            let v = Number(INS.st[sk]) + d;
+            if (k === 'hdg') v = ((Math.round(v) % 360) + 360) % 360 || 360;
+            document.getElementById('ins-in-' + k).value = k === 'alt' || k === 'vs' || k === 'hdg' ? Math.round(v) : Math.round(v * 10) / 10;
+            insCountEntered();
+            insApply([k]);
+        }
+        function insApply(keys) {
+            if (insOnGround()) return;
+            const body = {}, msg = document.getElementById('ins-msg');
+            keys.forEach(k => { const v = document.getElementById('ins-in-' + k).value; if (v !== '') body[k] = Number(v); });
+            if (!Object.keys(body).length) { msg.textContent = 'Enter a value first (or use Fill in current values).'; return; }
+            msg.textContent = INS.st && INS.st.paused ? 'Applying (briefly unpausing)...' : 'Applying...'; msg.style.color = '';
+            fetch('/api/instructor/set', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(r => r.json()).then(res => {
+                msg.textContent = res.status === 'success' ? (res.message || 'Applied.').replace(/\.$/, '') + ': ' + Object.entries(body).map(([k, v]) => `${INS_FIELDS.find(f => f[0] === k)[1].toLowerCase()} ${v}`).join(', ') + '.' : res.message;
+                msg.style.color = res.status === 'success' ? '' : '#f44336';
+                insRender(res);
+            }).catch(() => { msg.textContent = 'The plugin could not be reached.'; });
+        }
+        function insApplyAll() { insApply(INS_FIELDS.map(f => f[0]).filter(k => document.getElementById('ins-in-' + k).value !== '')); }
+        function insFreeze(what) {
+            const on = !(what === 'pause' ? INS.st && INS.st.paused : what === 'alt' ? INS.st && INS.st.alt_freeze : INS.st && INS.st.fuel_freeze);
+            fetch('/api/instructor/freeze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ what, on }) }).then(r => r.json()).then(insRender).catch(() => {});
+        }
+        function insRate(r) {
+            fetch('/api/instructor/rate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rate: r }) }).then(r2 => r2.json()).then(insRender).catch(() => {});
+        }
+
+        // ===== Slew =====
+        const SLW = { timer: null, beat: null, st: null, inp: { fwd: 0, side: 0, up: 0, turn: 0 }, map: null, marker: null, keys: new Set(), wired: false };
+        // rate slider 0..100 -> 0.5 .. 3000 m/s on a log scale
+        const slwRate = () => 0.5 * Math.pow(6000, Number(document.getElementById('slw-rate').value) / 100);
+        function slwRateText(mps) {
+            const kt = mps * 1.94384;
+            return kt < 10 ? kt.toFixed(1) + ' kt' : kt < 1000 ? Math.round(kt) + ' kt' : (kt / 1000).toFixed(1) + 'k kt';
+        }
+        function slwRateChanged() {
+            document.getElementById('slw-rate-txt').textContent = slwRateText(slwRate());
+            safeSetStorage('toliss_slew_rate', document.getElementById('slw-rate').value);
+            slwSend();
+        }
+        function slwPost(path, body) {
+            return fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) }).then(r => r.json());
+        }
+        function slwSend() {
+            if (!SLW.st || !SLW.st.slew) return;
+            slwPost('/api/slew/input', Object.assign({ rate: slwRate() }, SLW.inp)).catch(() => {});
+        }
+        function slwSetAxis(ax, v) {
+            SLW.inp[ax] = v;
+            const moving = Object.values(SLW.inp).some(x => x);
+            slwSend();
+            clearInterval(SLW.beat); SLW.beat = moving ? setInterval(slwSend, 250) : null;   // keep-alive while held
+        }
+        function slwWire() {
+            if (SLW.wired) return; SLW.wired = true;
+            document.querySelectorAll('#slw-pad button').forEach(b => {
+                const ax = b.dataset.ax, v = Number(b.dataset.v);
+                const down = e => { e.preventDefault(); b.classList.add('held'); slwSetAxis(ax, v); };
+                const up = e => { if (!b.classList.contains('held')) return; b.classList.remove('held'); slwSetAxis(ax, 0); };
+                b.addEventListener('pointerdown', down); ['pointerup', 'pointerleave', 'pointercancel'].forEach(t => b.addEventListener(t, up));
+            });
+            const keymap = e => ({ ArrowUp: ['fwd', 1], ArrowDown: ['fwd', -1], ArrowLeft: e.shiftKey ? ['side', -1] : ['turn', -1],
+                                   ArrowRight: e.shiftKey ? ['side', 1] : ['turn', 1], PageUp: ['up', 1], PageDown: ['up', -1] })[e.key];
+            document.addEventListener('keydown', e => {
+                if (!document.getElementById('slew').classList.contains('active') || /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
+                const k = keymap(e); if (!k) return;
+                e.preventDefault(); if (SLW.keys.has(e.key)) return; SLW.keys.add(e.key); slwSetAxis(k[0], k[1]);
+            });
+            document.addEventListener('keyup', e => {
+                if (!SLW.keys.has(e.key)) return; SLW.keys.delete(e.key);
+                const k = keymap(e) || ({ ArrowLeft: ['turn'], ArrowRight: ['turn'] })[e.key];
+                if (k) { slwSetAxis(k[0], 0); if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { SLW.inp.side = 0; SLW.inp.turn = 0; slwSend(); } }
+            });
+            const saved = safeGetStorage('toliss_slew_rate'); if (saved) document.getElementById('slw-rate').value = saved;
+            document.getElementById('slw-rate-txt').textContent = slwRateText(slwRate());
+        }
+        function slwMapInit() {
+            if (SLW.map || typeof L === 'undefined') return;
+            SLW.map = L.map('slw-map', { zoomControl: true, attributionControl: false, maxZoom: 19 }).setView([0, 0], 2);
+            try { L.maplibreGL({ style: 'https://tiles.openfreemap.org/styles/dark' }).addTo(SLW.map); } catch (e) {}
+            SLW.map.on('click', e => {
+                if (!SLW.st || !SLW.st.slew) { document.getElementById('slw-map-note').textContent = 'Start slew first, then tap the map to place the aircraft there.'; return; }
+                slwPost('/api/slew/place', { lat: e.latlng.lat, lon: e.latlng.lng }).then(slwRender);
+            });
+        }
+        function slwRender(st) {
+            if (!st || st.status === 'error' && !('lat' in st)) { document.getElementById('slw-status').textContent = (st && st.message) || 'No response from the sim'; return; }
+            SLW.st = st;
+            document.getElementById('slw-status').textContent = st.slew ? (st.slew_ground ? 'Slewing on the ground' : 'Slewing in the air') : (st.paused ? 'Paused' : (st.on_ground ? 'On the ground' : 'In flight'));
+            const cell = (l, v) => `<div class="tcell"><div class="tl">${l}</div><div class="tv">${v}</div></div>`;
+            document.getElementById('slw-live').innerHTML = cell('POSITION', Math.abs(st.lat).toFixed(3) + (st.lat < 0 ? 'S ' : 'N ') + Math.abs(st.lon).toFixed(3) + (st.lon < 0 ? 'W' : 'E')) + cell('ALT', st.alt_ft.toLocaleString() + ' ft') +
+                cell('AGL', st.agl_ft.toLocaleString() + ' ft') + cell('HDG', String(Math.round(st.hdg_mag) % 360 || 360).padStart(3, '0') + '°M') + cell('SLEW', st.slew ? 'ON' : 'OFF');
+            const t = document.getElementById('slw-toggle');
+            t.textContent = st.slew ? 'End slew' : 'Start slew'; t.classList.toggle('on', !!st.slew);
+            document.getElementById('slw-pad').classList.toggle('off', !st.slew);
+            document.getElementById('slw-resume-row').style.display = st.on_ground || (st.slew && st.slew_ground) ? 'none' : '';
+            slwMapInit();
+            if (SLW.map) {
+                const ll = [st.lat, st.lon];
+                const icon = L.divIcon({ className: '', html: `<svg width="28" height="28" viewBox="-14 -14 28 28" style="transform: rotate(${st.hdg_true}deg)"><path d="M0 -12 L8 10 L0 5 L-8 10 Z" fill="#ffb300" stroke="#000" stroke-width="1.5"/></svg>`, iconSize: [28, 28], iconAnchor: [14, 14] });
+                if (!SLW.marker) { SLW.marker = L.marker(ll, { icon, interactive: false }).addTo(SLW.map); SLW.map.setView(ll, st.on_ground ? 16 : 11); }
+                else { SLW.marker.setLatLng(ll); SLW.marker.setIcon(icon); if (!SLW.map.getBounds().pad(-0.15).contains(ll)) SLW.map.panTo(ll); }
+            }
+        }
+        function slwPoll() {
+            if (!document.getElementById('slew').classList.contains('active')) {
+                clearInterval(SLW.timer); SLW.timer = null; Object.keys(SLW.inp).forEach(k => SLW.inp[k] = 0); clearInterval(SLW.beat); return;
+            }
+            slwPost('/api/slew/state').then(slwRender).catch(() => {});
+        }
+        function slwStart() { slwWire(); slwPoll(); clearInterval(SLW.timer); SLW.timer = setInterval(slwPoll, 300); setTimeout(() => SLW.map && SLW.map.invalidateSize(), 300); }
+        function slwToggle() {
+            const on = !(SLW.st && SLW.st.slew);
+            const body = on ? { rate: slwRate(), resume_ias: Number(document.getElementById('slw-resume').value) || (SLW.st ? SLW.st.ias : 0) } : {};
+            document.getElementById('slw-status').textContent = on ? 'Starting slew...' : 'Ending slew...';
+            slwPost(on ? '/api/slew/on' : '/api/slew/off', body).then(res => {
+                document.getElementById('slw-map-note').textContent = res.message || '';
+                slwRender(res);
+            });
+        }
+
+        // ===== Quick positions (Reposition) =====
+        function qpBearing(lat1, lon1, lat2, lon2) {
+            const p1 = lat1 * Math.PI / 180, p2 = lat2 * Math.PI / 180, dl = (lon2 - lon1) * Math.PI / 180;
+            return (Math.atan2(Math.sin(dl) * Math.cos(p2), Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(dl)) * 180 / Math.PI + 360) % 360;
+        }
+        function qpFillRunways() {
+            const sel = document.getElementById('qp-rwy'), cur = sel.value;
+            const ends = finalRunwayEnds();
+            sel.innerHTML = ends.length ? ends.map(e => `<option value="${esc(e.n)}">${esc(e.n)}</option>`).join('') : '<option value="">No runways: choose an airport first</option>';
+            if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
+        }
+        async function qpGo(kind) {
+            const n = document.getElementById('qp-rwy').value;
+            const e = finalRunwayEnds().find(x => x.n === n);
+            if (!e) { updateStatus('Choose an airport and runway first.'); return; }
+            const hdg = qpBearing(e.lat, e.lon, e.olat, e.olon);
+            const pauseAir = !!(document.getElementById('rp-pause-air') || {}).checked;
+            if (kind === 'lineup') {
+                const g = (aptGates || []).find(x => x.type === 'RWY' && new RegExp('(^|\\s)' + n + '$').test(String(x.name).trim()));
+                const pos = g ? [g.lat, g.lon, g.hdg] : [...offsetLL(e.lat, e.lon, hdg, (e.disp || 0) + 60), hdg];
+                sendReposition({ lat: pos[0], lon: pos[1], hdg: pos[2], elev: aptElevFt, icao: aptIcao, type: 'RWY' },
+                    `Loading scenery at ${aptIcao}, then lining up on ${n}...`, `Lining up on runway ${n}...`, `Lined up on runway ${n}.`);
+                return;
+            }
+            if (kind === 'final5' || kind === 'final10') {
+                setRepoMode('appr');
+                apSelect('RWY:' + n);
+                apSetStart('final');
+                apDist = kind === 'final5' ? 5 : 10;
+                apBuildOptions(); apPreview();
+                relocateAircraft();
+                return;
+            }
+            // downwind / overhead: in the air, engines must be running
+            const st = await engState();
+            if (!st.running) { updateStatus('Start both engines before positioning in the air.'); return; }
+            const left = document.getElementById('qp-circuit').value === 'L';
+            let pos, h, alt, spd;
+            if (kind === 'downwind') {
+                pos = offsetLL(e.lat, e.lon, (hdg + (left ? -90 : 90) + 360) % 360, 3 * 1852);
+                h = (hdg + 180) % 360; alt = aptElevFt + 1500; spd = 180;
+            } else {
+                pos = [(e.lat + e.olat) / 2, (e.lon + e.olon) / 2];
+                h = hdg; alt = aptElevFt + 2000; spd = 200;
+            }
+            alt = Math.round(alt / 100) * 100;
+            sendReposition({ mode: 'air', lat: pos[0], lon: pos[1], hdg: h, alt_ft: alt, speed_kt: spd, path_deg: 0, pitch_deg: 2.5, pause: pauseAir, ls: false, icao: aptIcao },
+                `Moving to ${aptIcao}...`, kind === 'downwind' ? `Positioning on ${left ? 'left' : 'right'}-hand downwind for ${n}...` : `Positioning overhead runway ${n}...`,
+                kind === 'downwind' ? `On ${left ? 'left' : 'right'}-hand downwind for ${n}, ${alt.toLocaleString()} ft, ${spd} kt.` : `Overhead runway ${n}, ${alt.toLocaleString()} ft, ${spd} kt.`);
+            // FCU: altitude, speed and heading (magnetic) once the aircraft is in position
+            setTimeout(async () => {
+                try {
+                    const v = await simRead(['sim/flightmodel/position/psi', 'sim/flightmodel/position/mag_psi']);
+                    const varn = (Number(v['sim/flightmodel/position/psi']) || 0) - (Number(v['sim/flightmodel/position/mag_psi']) || 0);
+                    await simSet('sim/cockpit/autopilot/altitude', alt);
+                    await simSet('sim/cockpit/autopilot/airspeed', spd);
+                    await simCmd('AirbusFBW/PullSPDSel', 250);
+                    await simSet('sim/cockpit/autopilot/heading_mag', Math.round(((h - varn) % 360 + 360) % 360) || 360);
+                    await simCmd('AirbusFBW/PullHDGSel', 250);
+                } catch (err) {}
+            }, 3500);
+        }
+
+        // ===== Quick weather (Weather & Time) =====
+        // the wind shear button follows the state in the sim: orange when armed, red while it hits, normal afterwards
+        let qwTimer = null;
+        function qwShearShow(state) {
+            const b = document.getElementById('qw-shear'); if (!b) return;
+            b.classList.toggle('shear-armed', state === 'armed');
+            b.classList.toggle('shear-active', state === 'increase' || state === 'decrease');
+            b.textContent = state === 'armed' ? 'Wind shear ARMED (below 1,000 ft)' : (state === 'increase' || state === 'decrease') ? 'Wind shear ACTIVE' : 'Arm wind shear on approach';
+        }
+        function qwPoll() {
+            if (!document.getElementById('environment').classList.contains('active')) { clearInterval(qwTimer); qwTimer = null; return; }
+            fetch('/api/instructor/state').then(r => r.json()).then(st => { if (st && 'shear' in st) qwShearShow(st.shear); }).catch(() => {});
+        }
+        function qwStart() { qwPoll(); clearInterval(qwTimer); qwTimer = setInterval(qwPoll, 1000); }
+        // Clear sky: exactly what the Clear / CAVOK preset button does (X-Plane rebuilds clear weather itself)
+        function wxClearSky() {
+            applyWeatherPreset(0);
+            const msg = document.getElementById('qw-msg');
+            msg.style.color = '';
+            msg.textContent = "Clear sky: X-Plane's Clear / CAVOK weather (the same as the preset button). Clouds take a minute or so to clear. Winds are reset to X-Plane's, so press a wind button again if you need one.";
+        }
+        function wxQuick(item) {
+            const cb = document.getElementById('wx-real-world');
+            if (cb && cb.checked) { cb.checked = false; toggleRealWorldWx(false); }
+            const msg = document.getElementById('qw-msg');
+            msg.textContent = 'Applying (about a second)...'; msg.style.color = '';
+            fetch('/api/instructor/wx', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(item) }).then(r => r.json()).then(res => {
+                msg.textContent = res.message || (res.status === 'success' ? 'Applied.' : 'Could not apply.');
+                if (item.type === 'shear_arm' || item.type === 'shear_cancel') qwShearShow(res.status === 'success' && item.type === 'shear_arm' ? 'armed' : null);
+                msg.style.color = res.status === 'success' ? '' : '#f44336';
+            }).catch(() => { msg.textContent = 'The plugin could not be reached.'; msg.style.color = '#f44336'; });
+        }
+
+        // ===== Quick malfunctions (Malfunctions, ToLiss Pro) =====
+        const QM = [
+            { id: 'eng1_v1', label: 'Engine 1 failure at V1', re: /ENG(INE)?\s*1\b(?!.*FIRE).*(FAIL|FLAME|SEIZ|SHUT|LOSS)/i, cond: 3, v1: true },
+            { id: 'eng1_fire', label: 'Engine 1 fire (now)', re: /ENG(INE)?\s*1\b.*FIRE/i, cond: 1 },
+            { id: 'eng2_500', label: 'Engine 2 failure, 500 ft after takeoff', re: /ENG(INE)?\s*2\b(?!.*FIRE).*(FAIL|FLAME|SEIZ|SHUT|LOSS)/i, cond: 4, aboveField: 500 },
+            { id: 'eng2_now', label: 'Engine 2 failure (now)', re: /ENG(INE)?\s*2\b(?!.*FIRE).*(FAIL|FLAME|SEIZ|SHUT|LOSS)/i, cond: 1 },
+            { id: 'hyd_g', label: 'Green hydraulic loss (now)', re: /(HYD|HYDRAULIC).*\b(G|GREEN|GRN)\b.*(LO|LOSS|LEAK|FAIL|RSVR|RES)/i, cond: 1 },
+            { id: 'gen1', label: 'Generator 1 fault (now)', re: /\bGEN(ERATOR)?\s*1\b/i, cond: 1 },
+            { id: 'bleed1', label: 'Bleed 1 fault (now)', re: /(\bBLEED\s*1\b|ENG(INE)?\s*1\b.*BLEED)/i, cond: 1 },
+            { id: 'decomp', label: 'Cabin decompression (now)', re: /DECOMP|EXCESS(IVE)?\s*CAB(IN)?\s*ALT|CAB(IN)?\s*PRESS(URE)?\s*(LOSS|FAIL)/i, cond: 1 }];
+        const qmFind = q => (tolissFaultDefinitions || []).find(f => q.re.test(String(f.name || '')));
+        function qmRender() {
+            const grid = document.getElementById('qm-grid'); if (!grid) return;
+            const v1el = document.getElementById('qm-v1');
+            if (v1el && !v1el.value && typeof simbriefData !== 'undefined' && simbriefData && simbriefData.tlr) {
+                try {
+                    const to = simbriefData.tlr.takeoff, rw = Array.isArray(to.runway) ? to.runway : [to.runway];
+                    const plan = String((simbriefData.origin || {}).plan_rwy || '').toUpperCase();
+                    const r = rw.find(x => String(x.identifier).toUpperCase() === plan) || rw[0];
+                    if (r && r.speeds_v1) v1el.value = r.speeds_v1;
+                } catch (e) {}
+            }
+            grid.innerHTML = QM.map(q => {
+                const f = qmFind(q);
+                return `<button class="${f ? '' : 'missing'}" onclick="qmArm('${q.id}')"><b>${q.label}</b><span>${f ? esc(f.name) : "Not found in ToLiss's failure list"}</span></button>`;
+            }).join('');
+        }
+        async function qmArm(id) {
+            const q = QM.find(x => x.id === id), msg = document.getElementById('qm-msg');
+            const f = qmFind(q);
+            if (!f) { msg.textContent = `"${q.label}" was not found in ToLiss's failure list. Use the list below to choose it by hand.`; return; }
+            let parameter = 0;
+            if (q.v1) {
+                parameter = Number(document.getElementById('qm-v1').value);
+                if (!(parameter > 50)) { msg.textContent = 'Enter V1 first.'; return; }
+            }
+            if (q.aboveField) {
+                const v = await simRead(['sim/flightmodel/position/elevation', 'sim/flightmodel/position/y_agl']);
+                const field = ((Number(v['sim/flightmodel/position/elevation']) || 0) - (Number(v['sim/flightmodel/position/y_agl']) || 0)) / 0.3048;
+                parameter = Math.round(field + q.aboveField);
+            }
+            await failureAction('add', { fault_index: Number(f.index), condition: q.cond, phase: 5, parameter }, '');
+            await failureAction('apply', {}, '');
+            msg.textContent = `Armed: ${f.name}` + (q.cond === 3 ? ` at ${parameter} kt` : q.cond === 4 ? ` at ${parameter.toLocaleString()} ft` : ' (now)') + '.';
+            qmRender();
+        }
+
+        // ===== Built-in pushback =====
+        const PB = { fwd: false, side: 'L', st: null, timer: null, map: null, lay: null, gmKey: null, wasPushing: false };
+        const PB_RADIUS = 25;
+        function pbVal(k) { return Number(document.getElementById('pb-' + k).value) || 0; }
+        function pbSync(k, v, restoring) {
+            if (!restoring && PB.fixed && !(PB.st && PB.st.pushing)) { PB.fixed = null; PB.wasPushing = false; pbButtons(); }
+            const lim = { back: [0, 150], turn: [0, 180], final: [0, 100], speed: [1, 5] }[k];
+            const n = Math.max(lim[0], Math.min(lim[1], Number(v) || 0));
+            document.getElementById('pb-' + k).value = n;
+            const nb = document.getElementById('pb-' + k + '-n'); if (document.activeElement !== nb) nb.value = n;
+            safeSetStorage('toliss_pb_' + k, String(n));
+            pbPreview();
+        }
+        function pbSide(sd, restoring) {
+            if (!restoring && PB.fixed && !(PB.st && PB.st.pushing)) { PB.fixed = null; PB.wasPushing = false; pbButtons(); }
+            PB.side = sd; safeSetStorage('toliss_pb_side', sd);
+            ['L', 'R'].forEach(x => document.getElementById('pb-side-' + x).classList.toggle('active', x === sd));
+            pbPreview();
+        }
+        function pbSetDir(fwd, restoring) {
+            if (!restoring && PB.fixed && !(PB.st && PB.st.pushing)) { PB.fixed = null; PB.wasPushing = false; pbButtons(); }
+            PB.fwd = fwd;
+            document.querySelectorAll('#pb-dir button').forEach((b, i) => b.classList.toggle('active', (i === 1) === fwd));
+            document.getElementById('pb-l-back').textContent = fwd ? 'Straight forward' : 'Straight back';
+            document.getElementById('pb-side-L').textContent = fwd ? 'Turn left' : 'Tail left';
+            document.getElementById('pb-side-R').textContent = fwd ? 'Turn right' : 'Tail right';
+            document.getElementById('pb-start').textContent = fwd ? 'Start pull forward' : 'Start pushback';
+            document.getElementById('pb-presets').style.display = fwd ? 'none' : '';
+            pbPreview();
+        }
+        function pbPreset(back, turn, side, fin) { pbSetDir(false); pbSide(side); pbSync('back', back); pbSync('turn', turn); pbSync('final', fin); }
+        // the same path the plugin follows: metres east/north from the aircraft, heading in degrees true
+        function pbPath(hdg) {
+            const sgn = PB.fwd ? -1 : 1, dhs = PB.fwd ? (PB.side === 'L' ? -1 : 1) : (PB.side === 'L' ? 1 : -1), step = 1;
+            let e = 0, n = 0, h = hdg; const pts = [[0, 0, h]];
+            const move = (ds, dh) => { h = (h + dh + 360) % 360; const r = h * Math.PI / 180; e -= sgn * ds * Math.sin(r); n -= sgn * ds * Math.cos(r); pts.push([e, n, h]); };
+            for (let i = 0; i < Math.floor(pbVal('back') / step); i++) move(step, 0);
+            const arc = PB_RADIUS * pbVal('turn') * Math.PI / 180;
+            for (let i = 0; i < Math.floor(arc / step); i++) move(step, dhs * step / PB_RADIUS * 180 / Math.PI);
+            for (let i = 0; i < Math.floor(pbVal('final') / step); i++) move(step, 0);
+            return pts;
+        }
+        const pbLL = (lat, lon, e, n) => [lat + n / 111320, lon + e / (111320 * Math.cos(lat * Math.PI / 180))];
+        // A320-family outline, top view, in metres (x right, y forward) around the aircraft's reference point
+        const PB_SHAPE = [[0, 19], [1.2, 17.5], [2, 14], [2, 4], [17, -3], [17, -5], [2, -2], [2, -12], [1.5, -14], [6.5, -18], [6.5, -19.5], [0.8, -18], [0, -19.5],
+                          [-0.8, -18], [-6.5, -19.5], [-6.5, -18], [-1.5, -14], [-2, -12], [-2, -2], [-17, -5], [-17, -3], [-2, 4], [-2, 14], [-1.2, 17.5]];
+        function pbAircraft(lat, lon, hdg, style) {
+            const h = hdg * Math.PI / 180, c = Math.cos(h), sn = Math.sin(h);
+            const ll = PB_SHAPE.map(([x, y]) => pbLL(lat, lon, x * c + y * sn, -x * sn + y * c));
+            return L.polygon(ll, Object.assign({ interactive: false }, style));
+        }
+        function pbMapInit() {
+            if (PB.map || typeof L === 'undefined') return;
+            PB.map = L.map('pb-map', { zoomControl: true, attributionControl: false, preferCanvas: true, maxZoom: 20 }).setView([0, 0], 2);
+            try { const gl = L.maplibreGL({ style: 'https://tiles.openfreemap.org/styles/dark' }).addTo(PB.map); gmStyleBasemap(gl); } catch (e) {}
+            const pane = (name, z) => { PB.map.createPane(name); PB.map.getPane(name).style.zIndex = z; return name; };
+            PB.lay = { r: L.canvas({ pane: pane('pbBase', 350), padding: 0.5 }), base: L.layerGroup().addTo(PB.map), rwyLbl: L.layerGroup().addTo(PB.map),
+                       twyLbl: L.layerGroup().addTo(PB.map), standLbl: L.layerGroup().addTo(PB.map), path: L.layerGroup().addTo(PB.map), ac: L.layerGroup().addTo(PB.map) };
+            const layoutOn = safeGetStorage('toliss_pb_layout') !== '0';
+            const setLayout = on => { ['base', 'rwyLbl', 'twyLbl', 'standLbl'].forEach(k => on ? PB.lay[k].addTo(PB.map) : PB.map.removeLayer(PB.lay[k])); safeSetStorage('toliss_pb_layout', on ? '1' : '0'); return on; };
+            setLayout(layoutOn);
+            addSatelliteSwitch(PB.map, 'pushback', [['Layout', () => setLayout(!PB.map.hasLayer(PB.lay.base)), layoutOn]], () => [PB.lay.base]);
+        }
+        const PB_NOSE = 19.0;      // metres ahead of the aircraft's reference point (the nose; pushback lines are for the nose wheel)
+        const pbNose = (lat, lon, e, n, hdg) => { const h = hdg * Math.PI / 180; return pbLL(lat, lon, e + PB_NOSE * Math.sin(h), n + PB_NOSE * Math.cos(h)); };
+        // the plan, fixed on the ground when the push starts (stays on the map after the push, until a new one is planned)
+        // the line: from the tail of the aircraft now to the nose of the end outline, as one smooth curve: it starts
+        // on the tail's path and blends gradually into the nose's path, arriving at the nose where the push ends.
+        function pbLine(st) {
+            const pts = pbPath(st.hdg_true), N = Math.max(1, pts.length - 1);
+            return pts.map((p, i) => {
+                const h = p[2] * Math.PI / 180, t = i / N, w = t * t * (3 - 2 * t);          // smoothstep 0 -> 1
+                const off = -19.5 * (1 - w) + PB_NOSE * w;                                   // tail (-19.5 m) -> nose (+19 m)
+                return pbLL(st.lat, st.lon, p[0] + off * Math.sin(h), p[1] + off * Math.cos(h));
+            });
+        }
+        function pbFix(st) {
+            const pts = pbPath(st.hdg_true);
+            const end = pts[pts.length - 1];
+            const line = pbLine(st);
+            PB.fixed = { nose: line, endLL: pbLL(st.lat, st.lon, end[0], end[1]), endHdg: end[2], total: line.length - 1 };
+        }
+        function pbNewPlan() { PB.fixed = null; PB.wasPushing = false; document.getElementById('pb-msg').textContent = ''; document.getElementById('pb-bar').style.width = '0%'; pbPreview(); pbButtons(); }
+        function pbPreview() {
+            if (!PB.map || !PB.st) return;
+            const st = PB.st;
+            PB.lay.path.clearLayers(); PB.lay.ac.clearLayers();
+            if (PB.fixed) {
+                // the pushback as planned at Start: travelled part solid, the rest dashed
+                const f = PB.fixed, total = Math.max(1, f.total);
+                const done = st.pushing && !st.push_hold ? Math.min(f.total, Math.round(f.total * (st.push_s / Math.max(0.1, st.push_total)))) : (PB.stoppedAt !== undefined ? PB.stoppedAt : f.total);
+                if (done < f.total) L.polyline(f.nose.slice(done), { color: '#4fc3f7', weight: 3, dashArray: '6 6' }).addTo(PB.lay.path);
+                if (done > 0) L.polyline(f.nose.slice(0, done + 1), { color: '#4fc3f7', weight: 3, opacity: 0.9 }).addTo(PB.lay.path);
+                pbAircraft(f.endLL[0], f.endLL[1], f.endHdg, { color: '#4fc3f7', weight: 2, dashArray: '4 4', fillColor: '#4fc3f7', fillOpacity: 0.12 }).addTo(PB.lay.path);
+            } else {
+                const pts = pbPath(st.hdg_true);
+                if (pts.length > 1) {
+                    L.polyline(pbLine(st), { color: '#4fc3f7', weight: 3, dashArray: '6 6' }).addTo(PB.lay.path);
+                    const end = pts[pts.length - 1], endLL = pbLL(st.lat, st.lon, end[0], end[1]);
+                    pbAircraft(endLL[0], endLL[1], end[2], { color: '#4fc3f7', weight: 2, dashArray: '4 4', fillColor: '#4fc3f7', fillOpacity: 0.12 }).addTo(PB.lay.path);
+                }
+            }
+            pbAircraft(st.lat, st.lon, st.hdg_true, { color: '#000', weight: 1, fillColor: '#ffb300', fillOpacity: 0.95 }).addTo(PB.lay.ac);
+        }
+        function pbButtons() {
+            const b = document.getElementById('pb-new');
+            if (b) b.style.display = PB.fixed && !(PB.st && PB.st.pushing) ? '' : 'none';
+        }
+        function pbLoadGround(st) {
+            const key = st.lat.toFixed(2) + ',' + st.lon.toFixed(2);
+            if (PB.gmKey === key) return;
+            PB.gmKey = key;
+            fetch(`/api/ground_map?lat=${st.lat.toFixed(5)}&lon=${st.lon.toFixed(5)}`).then(r => r.json()).then(gm => {
+                if (gm && gm.status === 'success' && gm.airport) {
+                    ['base', 'rwyLbl', 'twyLbl', 'standLbl'].forEach(k => PB.lay[k].clearLayers());
+                    try { renderAirportDetail(gm.airport, PB.lay, PB.lay.r, {}); satApply(PB.map); } catch (e) {}
+                }
+            }).catch(() => {});
+        }
+        function pbRender(st) {
+            if (!st || !('lat' in st)) { document.getElementById('pb-status').textContent = (st && st.message) || 'No response from the sim'; return; }
+            const first = !PB.st;
+            PB.st = st;
+            pbMapInit();
+            if (PB.map && first) { PB.map.setView([st.lat, st.lon], 18); setTimeout(() => PB.map.invalidateSize(), 200); }
+            if (PB.map) pbLoadGround(st);
+            const status = st.pushing ? (st.push_hold ? 'Holding: set the parking brake' : st.push_await_brake ? 'Tug ready: waiting for the brake' : st.push_braked ? 'Stopped: parking brake set' : st.push_paused ? 'Paused' : (st.push_forward ? 'Pulling forward' : 'Pushing back') + ` · ${st.push_kt} kt`)
+                                      : (st.on_ground ? 'On the ground' + (st.park_brake ? ' · parking brake set' : '') : 'In flight');
+            document.getElementById('pb-status').textContent = status;
+            document.getElementById('pb-start').disabled = !!st.pushing || !st.on_ground;
+            // in the air: the whole planner is unavailable (a push in progress keeps its own controls)
+            const air = !st.on_ground && !st.pushing;
+            document.getElementById('pb-air').style.display = air ? '' : 'none';
+            document.getElementById('pb-left').classList.toggle('pb-disabled', air);
+            document.getElementById('pb-pause').disabled = !st.pushing;
+            document.getElementById('pb-pause').textContent = st.pushing && st.push_paused ? 'Resume' : 'Pause';
+            document.getElementById('pb-stop').disabled = !st.pushing;
+            document.getElementById('pb-stop').textContent = st.pushing && st.push_hold ? 'Release now' : 'Stop';
+            document.getElementById('pb-pause').disabled = !st.pushing || !!st.push_hold;
+            document.getElementById('pb-bar').style.width = st.pushing ? Math.round(100 * (st.push_hold ? 1 : st.push_s / Math.max(1, st.push_total))) + '%' : (PB.wasPushing ? '100%' : '0%');
+            const msg = document.getElementById('pb-msg');
+            if (st.pushing && st.push_hold) { msg.textContent = 'Holding the aircraft in place: set the parking brake. (Release now lets go without it.)'; msg.style.color = '#ff9800'; }
+            else if (st.pushing && st.push_await_brake) { msg.textContent = 'Release the parking brake to start the push.'; msg.style.color = '#ff9800'; }
+            else if (st.pushing && st.push_braked) { msg.textContent = 'Stopped: the parking brake was set during the push. Release it, then press Resume.'; msg.style.color = '#f44336'; }
+            else if (st.pushing) { msg.textContent = `${Math.round(st.push_s)} of ${Math.round(st.push_total)} m`; msg.style.color = ''; }
+            else if (PB.wasPushing && st.push_done) {
+                msg.textContent = st.push_done;
+                msg.style.color = /Released without/.test(st.push_done) ? '#ff9800' : '#4caf50';
+            }
+            else if (!st.on_ground) msg.textContent = '';
+            PB.wasPushing = PB.wasPushing && !st.push_done ? true : (st.pushing ? true : (PB.wasPushing && !!st.push_done));
+            if (st.pushing && PB.map) { PB.map.panTo([st.lat, st.lon], { animate: false }); }
+            pbPreview();
+            pbButtons();
+        }
+        function pbPoll() {
+            if (!document.getElementById('pushback').classList.contains('active')) { clearInterval(PB.timer); PB.timer = null; return; }
+            fetch('/api/instructor/state').then(r => r.json()).then(pbRender).catch(() => {});
+        }
+        function pbStart() {
+            const msg = document.getElementById('pb-msg'); msg.style.color = '';
+            if (!pbVal('back') && !pbVal('turn') && !pbVal('final')) { msg.textContent = 'Set a distance or a turn first.'; return; }
+            msg.textContent = 'Starting...';
+            PB.wasPushing = true;
+            PB.stoppedAt = undefined;
+            if (PB.st) pbFix(PB.st);
+            fetch('/api/push/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+                back_m: pbVal('back'), turn_deg: pbVal('turn'), side: PB.side, final_m: pbVal('final'), speed_kt: pbVal('speed'), forward: PB.fwd }) })
+                .then(r => r.json()).then(res => { if (res.status !== 'success') { PB.wasPushing = false; PB.fixed = null; msg.textContent = res.message; msg.style.color = '#f44336'; } pbRender(res); });
+        }
+        function pbPause() {
+            const paused = PB.st && PB.st.push_paused;
+            fetch('/api/push/' + (paused ? 'resume' : 'pause'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then(r => r.json()).then(pbRender);
+        }
+        function pbStop() {
+            if (PB.fixed && PB.st && PB.st.pushing && !PB.st.push_hold) PB.stoppedAt = Math.round(PB.fixed.total * (PB.st.push_s / Math.max(0.1, PB.st.push_total)));
+            fetch('/api/push/stop', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then(r => r.json()).then(pbRender); }
+        function pbStartPage() {
+            ['back', 'turn', 'final', 'speed'].forEach(k => { const v = safeGetStorage('toliss_pb_' + k); pbSync(k, v !== null && v !== undefined && v !== '' ? v : document.getElementById('pb-' + k).value, true); });
+            pbSide(safeGetStorage('toliss_pb_side') || 'L', true);
+            pbPoll(); clearInterval(PB.timer); PB.timer = setInterval(pbPoll, 400);
+        }
 
         // ===== Ops Centre (Hoppie ACARS) =====
         const OPS = { timer: null, lastId: 0, msgs: [], status: null };
@@ -5788,7 +6674,7 @@
                     html += items.map(([k, label, when]) => {
                         const [st, cls] = opsItemStatus(f, k, when);
                         const extra = k === 'stand' ? `<button class="mc-btn ops-reassign" onclick="opsStandOpen()">${f.stand ? 'Change stand' : 'Assign stand'}</button>` : '';
-                        return `<div class="ops-item"><div>${label}</div><div class="st ${cls}">${esc(st)}${extra}</div>
+                        return `<div class="ops-item"><div>${label}</div><div class="st ${cls}${extra ? ' has-btn' : ''}">${extra ? '<span>' + esc(st) + '</span>' : esc(st)}${extra}</div>
                             <label><input type="checkbox" ${f.auto[k] ? 'checked' : ''} onchange="opsAuto('${k}', this.checked)"> Auto</label>
                             <button class="mc-btn" onclick="opsAction('${k}')">Send now</button></div>`;
                     }).join('');
@@ -6094,6 +6980,7 @@
         // ===== Cockpit displays (PFD, E/WD) =====
         const DSP = { es: null, last: null, lastRx: 0, hist: [], raf: null, built: false, show: safeGetStorage('toliss_dsp_show') || 'both',
                       stick: safeGetStorage('toliss_dsp_stick') || 'always', frames: 0, fps: 0, fpsT: 0,
+                      fcu: safeGetStorage('toliss_dsp_fcu') !== 'false',
                       sdPage: 'ENG' };
         const AC = { g: '#19f25e', w: '#f2f2f2', b: '#2ec8ff', c: '#2ef2ff', a: '#ff9d00', r: '#ff3b30', m: '#ff66ff', y: '#ffe81a' };
         const SVGNS = 'http://www.w3.org/2000/svg';
@@ -6106,11 +6993,15 @@
         }
 
         function dspOptions() {
-            document.getElementById('dsp-show').innerHTML = [['all', 'PFD + E/WD + SD'], ['both', 'PFD + E/WD'], ['ecam', 'E/WD + SD'], ['pfd', 'PFD'], ['ewd', 'E/WD'], ['sd', 'SD']].map(o =>
+            if (['all', 'ecam', 'sd'].includes(DSP.show)) DSP.show = 'both';      // the SD is no longer offered
+            document.getElementById('dsp-show').innerHTML = [['both', 'PFD + E/WD'], ['pfd', 'PFD'], ['ewd', 'E/WD'], ['fcuonly', 'FCU only']].map(o =>
                 `<button class="perf-rwy${DSP.show === o[0] ? ' active' : ''}" onclick="DSP.show='${o[0]}'; safeSetStorage('toliss_dsp_show','${o[0]}'); dspOptions();">${o[1]}</button>`).join('');
             document.getElementById('dsp-stick').innerHTML = '<span class="rp-note" style="margin:0 4px 0 0;">Sidestick:</span>' + [['always', 'Always'], ['ground', 'On ground'], ['off', 'Off']].map(o =>
-                `<button class="perf-rwy${DSP.stick === o[0] ? ' active' : ''}" onclick="DSP.stick='${o[0]}'; safeSetStorage('toliss_dsp_stick','${o[0]}'); dspOptions();">${o[1]}</button>`).join('');
+                `<button class="perf-rwy${DSP.stick === o[0] ? ' active' : ''}" onclick="DSP.stick='${o[0]}'; safeSetStorage('toliss_dsp_stick','${o[0]}'); dspOptions();">${o[1]}</button>`).join('')
+                + `<span class="rp-note" style="margin:0 4px 0 12px;">FCU:</span><button class="perf-rwy${DSP.fcu ? ' active' : ''}" onclick="DSP.fcu=!DSP.fcu; safeSetStorage('toliss_dsp_fcu', String(DSP.fcu)); dspOptions();">${DSP.fcu ? 'Shown' : 'Hidden'}</button>`;
             const vis = dspVisible();
+            document.getElementById('dsp-fcu-unit').style.display = vis.fcu ? '' : 'none';
+            document.getElementById('dsp-grid').style.display = DSP.show === 'fcuonly' ? 'none' : '';
             document.getElementById('dsp-pfd-unit').style.display = vis.pfd ? '' : 'none';
             document.getElementById('dsp-ewd-unit').style.display = vis.ewd ? '' : 'none';
             document.getElementById('dsp-sd-unit').style.display = vis.sd ? '' : 'none';
@@ -6122,7 +7013,8 @@
 
         function dspVisible() {
             const m = DSP.show;
-            return { pfd: ['all', 'both', 'pfd'].includes(m), ewd: ['all', 'both', 'ecam', 'ewd'].includes(m), sd: ['all', 'ecam', 'sd'].includes(m) };
+            return { pfd: ['all', 'both', 'pfd'].includes(m), ewd: ['all', 'both', 'ecam', 'ewd'].includes(m), sd: false,
+                     fcu: m === 'fcuonly' || DSP.fcu };
         }
 
         function dspFullscreen() {
@@ -6133,7 +7025,7 @@
         }
 
         function dspStart() {
-            if (!DSP.built) { pfdBuild(); ewdBuild(); sdBuild(); DSP.built = true; }
+            if (!DSP.built) { pfdBuild(); ewdBuild(); sdBuild(); fcuBuild(); DSP.built = true; }
             dspOptions();
             if (!DSP.es) {
                 DSP.es = new EventSource('/api/stream');
@@ -6164,12 +7056,93 @@
                     if (vis.pfd) pfdUpdate(DSP.last);
                     if (vis.ewd) ewdUpdate(DSP.last);
                     if (vis.sd) sdUpdate(DSP.last);
+                    if (vis.fcu) fcuUpdate(DSP.last);
                 }
             } else {
                 st.textContent = DSP.last ? 'No new data (sim paused or not responding)' : 'Waiting for data from the sim...';
                 st.className = 'dsp-status stale';
             }
             DSP.raf = requestAnimationFrame(dspFrame);
+        }
+
+        // ---------- FCU and EFIS baro (display only) ----------
+        let FC = {};
+        const FCU_AMBER = '#ff9a2e', FCU_LIT = '#3dff6e', FCU_BODY = '#5c6873', FCU_LBL_ON = '#ffffff', FCU_LBL_OFF = '#9aa5af', FCU_BAR_OFF = '#2b322e';
+        function fcuBuild() {
+            const svg = document.getElementById('dsp-fcu');
+            svg.innerHTML = '';
+            FC = {};
+            const t = (x, y, txt, size, col, anchor, extra) => sv(svg, 'text', Object.assign({ x, y, fill: col || '#e8e8e8', 'font-size': size || 13, 'text-anchor': anchor || 'middle' }, extra || {}), txt);
+            // panels
+            [[0, 160], [170, 860], [1040, 160]].forEach(([x, w]) => {
+                sv(svg, 'rect', { x, y: 0, width: w, height: 190, rx: 8, fill: FCU_BODY, stroke: '#3e4851', 'stroke-width': 2 });
+                sv(svg, 'rect', { x: x + 3, y: 3, width: w - 6, height: 6, rx: 3, fill: 'rgba(255,255,255,0.10)' });     // top highlight
+            });
+            // a window: black LCD with amber digits, labels above, managed dot on the right
+            const win = (key, x, w, labels) => {
+                sv(svg, 'rect', { x: x - 3, y: 31, width: w + 6, height: 56, rx: 5, fill: '#2b3137' });                   // window frame
+                sv(svg, 'rect', { x, y: 34, width: w, height: 50, rx: 3, fill: '#050505' });
+                FC[key + '_labels'] = labels.map(([txt, lx]) => t(x + lx, 25, txt, 13, FCU_LBL_OFF, 'middle', { 'font-weight': 'bold' }));
+                FC[key] = t(x + w / 2 - 8, 72, '---', 36, FCU_AMBER, 'middle', { 'font-weight': 'bold', 'letter-spacing': '2' });
+                FC[key + '_dot'] = sv(svg, 'circle', { cx: x + w - 13, cy: 59, r: 6, fill: FCU_AMBER, display: 'none' });
+            };
+            // a push button with a green bar that lights
+            const btn = (key, x, y, w, label) => {
+                sv(svg, 'rect', { x, y: y + 2, width: w, height: 40, rx: 4, fill: '#2a2f34' });                          // shadow
+                sv(svg, 'rect', { x, y, width: w, height: 40, rx: 4, fill: '#454c54', stroke: '#2a2f34', 'stroke-width': 1.5 });
+                FC[key] = sv(svg, 'rect', { x: x + 8, y: y + 6, width: w - 16, height: 5, rx: 2, fill: FCU_BAR_OFF });
+                t(x + w / 2, y + 31, label, 13, '#ffffff', 'middle', { 'font-weight': 'bold' });
+            };
+            // EFIS baro, each side
+            [['capt', 0], ['fo', 1040]].forEach(([side, x0]) => {
+                t(x0 + 80, 20, side === 'capt' ? 'CAPT EFIS' : 'F/O EFIS', 11, '#e6e9ec', 'middle', { 'font-weight': 'bold' });
+                sv(svg, 'rect', { x: x0 + 12, y: 31, width: 136, height: 56, rx: 5, fill: '#2b3137' });
+                sv(svg, 'rect', { x: x0 + 15, y: 34, width: 130, height: 50, rx: 3, fill: '#050505' });
+                FC[side + '_baro_lbl'] = t(x0 + 22, 50, 'QNH', 11, '#aaa', 'start');
+                FC[side + '_baro'] = t(x0 + 80, 76, '----', 28, FCU_AMBER, 'middle', { 'font-weight': 'bold' });
+                btn(side + '_fd', x0 + 15, 110, 60, 'FD');
+                btn(side + '_ls', x0 + 85, 110, 60, 'LS');
+            });
+            // FCU
+            win('spd', 190, 150, [['SPD', 45], ['MACH', 105]]);
+            win('hdg', 370, 150, [['HDG', 32], ['TRK', 77], ['LAT', 122]]);
+            win('alt', 690, 170, [['ALT', 45], ['LVL/CH', 120]]);
+            win('vs', 880, 130, [['V/S', 40], ['FPA', 92]]);
+            btn('ap1', 540, 34, 60, 'AP1');
+            btn('ap2', 610, 34, 60, 'AP2');
+            btn('athr', 565, 92, 80, 'A/THR');
+            btn('loc', 410, 110, 70, 'LOC');
+            btn('exped', 715, 110, 80, 'EXPED');
+            btn('appr', 905, 110, 80, 'APPR');
+        }
+        function fcuUpdate(d) {
+            if (!FC.spd) fcuBuild();
+            const lit = (key, on) => FC[key] && FC[key].setAttribute('fill', on ? FCU_LIT : FCU_BAR_OFF);
+            const lbl = (key, idx) => (FC[key + '_labels'] || []).forEach((el, i) => el.setAttribute('fill', idx.includes(i) ? FCU_LBL_ON : FCU_LBL_OFF));
+            const dot = (key, on) => FC[key + '_dot'] && FC[key + '_dot'].setAttribute('display', on ? '' : 'none');
+            const mach = d.spd_is_mach >= 1;
+            const dial = d.fcu_spd_dial !== undefined ? d.fcu_spd_dial : d.fcu_spd;
+            FC.spd.textContent = d.spd_dashed >= 1 ? '---' : (dial === undefined ? '' : (mach ? '.' + String(Math.round(dial * 100) % 100).padStart(2, '0') : String(Math.round(dial)).padStart(3, '0')));
+            lbl('spd', [mach ? 1 : 0]); dot('spd', d.spd_managed >= 1);
+            const trk = d.hdgtrk >= 1;
+            FC.hdg.textContent = d.hdg_dashed >= 1 ? '---' : (d.fcu_hdg === undefined ? '' : String(Math.round(d.fcu_hdg) % 360).padStart(3, '0'));
+            lbl('hdg', [trk ? 1 : 0, 2]); dot('hdg', d.hdg_managed >= 1);
+            FC.alt.textContent = d.fcu_alt === undefined ? '' : String(Math.round(d.fcu_alt)).padStart(5, '0');
+            lbl('alt', [0, 1]); dot('alt', d.alt_managed >= 1);
+            if (d.vs_dashed >= 1) FC.vs.textContent = trk ? '--.-' : '-----';
+            else if (trk) { const f = Number(d.fcu_fpa || 0); FC.vs.textContent = (f < 0 ? '-' : '+') + Math.abs(f).toFixed(1); }
+            else { const v = Number(d.fcu_vs || 0); FC.vs.textContent = (v < 0 ? '-' : '+') + String(Math.round(Math.abs(v) / 100)).padStart(2, '0') + 'oo'; }
+            lbl('vs', [trk ? 1 : 0]);
+            lit('ap1', d.ap1 >= 1); lit('ap2', d.ap2 >= 1); lit('athr', d.athr >= 1);
+            lit('loc', d.loc_lt >= 1); lit('appr', d.appr_lt >= 1); lit('exped', d.exped_lt >= 1);
+            lit('capt_fd', d.fd1 >= 1); lit('fo_fd', d.fd2 >= 1); lit('capt_ls', d.ls >= 1); lit('fo_ls', d.ls_fo >= 1);
+            [['capt', d.baro, d.baro_std, d.baro_hpa], ['fo', d.baro_fo, d.baro_std_fo, d.baro_hpa_fo]].forEach(([side, b, std, hpa]) => {
+                if (b === undefined) { FC[side + '_baro'].textContent = '----'; return; }
+                const isStd = std !== undefined ? std >= 1 : Math.abs(b - 29.92) < 0.005;
+                const inHpa = hpa === undefined || hpa >= 1;
+                FC[side + '_baro'].textContent = isStd ? 'Std' : (inHpa ? String(Math.round(b * 33.8639)) : b.toFixed(2));
+                FC[side + '_baro_lbl'].textContent = isStd ? '' : 'QNH';
+            });
         }
 
         // ---------- PFD (laid out like the ToLiss PFD pop-out) ----------
@@ -7080,22 +8053,32 @@
                 ? `<button class="${cls || ''}" style="${style || ''}" onclick="mcduKey('${key}')">${label}</button>`
                 : `<button class="mk-blank" style="${style || ''}" tabindex="-1" aria-hidden="true"></button>`;
             document.getElementById('mcdu-fn').innerHTML = [
-                k('DIR', 'DirTo'), k('PROG', 'Prog'), k('PERF', 'Perf'), k('INIT', 'Init'), k('DATA', 'Data'), k('', null), k('BRT', 'KeyBright'),
-                k('F-PLN', 'Fpln'), k('RAD<br>NAV', 'RadNav'), k('FUEL<br>PRED', 'FuelPred'), k('SEC<br>F-PLN', 'SecFpln'), k('ATC<br>COMM', 'ATC'), k('MCDU<br>MENU', 'Menu'), k('DIM', 'KeyDim')
+                k('DIR', 'DirTo'), k('PROG', 'Prog'), k('PERF', 'Perf'), k('INIT', 'Init'), k('DATA', 'Data'), k('', null),
+                k('F-PLN', 'Fpln'), k('RAD<br>NAV', 'RadNav'), k('FUEL<br>PRED', 'FuelPred'), k('SEC<br>F-PLN', 'SecFpln'), k('ATC<br>COMM', 'ATC'), k('MCDU<br>MENU', 'Menu')
             ].join('');
-            const span = n => `grid-column: span ${n};`;
-            document.getElementById('mcdu-left').innerHTML = [
-                k('AIR<br>PORT', 'Airport', '', span(3)), k('', null, '', span(3)),
-                k('&larr;', 'SlewLeft', 'mk-arrow', span(3)), k('&uarr;', 'SlewUp', 'mk-arrow', span(3)),
-                k('&rarr;', 'SlewRight', 'mk-arrow', span(3)), k('&darr;', 'SlewDown', 'mk-arrow', span(3)),
-                ...['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(d => k(d, 'Key' + d, '', span(2))),
-                k('.', 'KeyDecimal', '', span(2)), k('0', 'Key0', '', span(2)), k('+/-', 'KeyPM', '', span(2))
-            ].join('');
+            document.getElementById('mcdu-brt').innerHTML = k('BRT', 'KeyBright') + k('DIM', 'KeyDim');
+            mcduAlign();
+            document.getElementById('mcdu-left').innerHTML =
+                '<div class="mcdu-lt">' + [k('AIR<br>PORT', 'Airport'), k('', null),
+                    k('&larr;', 'SlewLeft', 'mk-arrow'), k('&uarr;', 'SlewUp', 'mk-arrow'),
+                    k('&rarr;', 'SlewRight', 'mk-arrow'), k('&darr;', 'SlewDown', 'mk-arrow')].join('') + '</div>' +
+                '<div class="mcdu-num">' + [...['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(d => k(d, 'Key' + d, 'mk-num')),
+                    k('&bull;', 'KeyDecimal', 'mk-num'), k('0', 'Key0', 'mk-num'), k('+/&minus;', 'KeyPM', 'mk-num')].join('') + '</div>';
             const letters = [];
-            for (let c = 65; c <= 89; c++) letters.push(k(String.fromCharCode(c), 'Key' + String.fromCharCode(c)));
-            letters.push(k('Z', 'KeyZ'), k('/', 'KeySlash'), k('SP', 'KeySpace'), k('OVFY', 'KeyOverfly'), k('CLR', 'KeyClear', 'mk-clr'));
+            for (let c = 65; c <= 89; c++) {
+                const ch = String.fromCharCode(c);
+                letters.push(k('ENSW'.includes(ch) ? `<span class="box">${ch}</span>` : ch, 'Key' + ch));   // boxed, as on the real keys
+            }
+            letters.push(k('Z', 'KeyZ'), k('/', 'KeySlash'), k('SP', 'KeySpace', 'mk-word'), k('OVFY<br>&#9651;', 'KeyOverfly', 'mk-word'), k('CLR', 'KeyClear', 'mk-word'));
             document.getElementById('mcdu-alpha').innerHTML = letters.join('');
         }
+
+        // the lower-left keys line up under the function keys: AIRPORT under F-PLN, the blank key under RAD NAV
+        function mcduAlign() {
+            const key = document.querySelector('#mcdu-fn button'), body = document.querySelector('.mcdu-body');
+            if (key && body && key.offsetWidth) body.style.setProperty('--fnw', key.offsetWidth + 'px');
+        }
+        window.addEventListener('resize', () => { if (mcduBuilt) mcduAlign(); });
 
         function mcduSetSide(n) {
             mcduSide = n;
@@ -7279,7 +8262,7 @@
             if (proToggle) proToggle.checked = proEnabled;
             toggleTolissPro(proEnabled);
 
-            ['checklist', 'betterpushback', 'dispatch', 'vatsim', 'xpilot', 'ops', 'externallinks', 'fdr', 'displays'].forEach(name => {
+            ['checklist', 'dispatch', 'vatsim', 'xpilot', 'ops', 'externallinks', 'fdr', 'displays'].forEach(name => {
                 let saved = safeGetStorage(`toliss_int_${name}`);
                 const isEnabled = saved === null ? true : (saved === 'true');
                 const toggle = document.getElementById(`toggle-${name}`);
@@ -7337,6 +8320,26 @@
                 xpPoll();
             }
 
+            if (tabName === 'repositioning') {
+                repoNearest(false);
+            }
+
+            if (tabName === 'environment') {
+                qwStart();
+            }
+
+            if (tabName === 'pushback') {
+                pbStartPage();
+            }
+
+            if (tabName === 'slew') {
+                slwStart();
+            }
+
+            if (tabName === 'instructor') {
+                insStart();
+            }
+
             if (tabName === 'ops') {
                 opsStart();
             }
@@ -7354,6 +8357,7 @@
 
             if (tabName === 'mcdu') {
                 mcduBuild();
+                requestAnimationFrame(mcduAlign);
                 mcduPoll();
             }
 
@@ -7465,6 +8469,7 @@
                     fillFaultSystems();
                     renderFaultOptions();
                     renderDefinedFaults();
+                    qmRender();
                     if (showStatus) updateStatus('Failures refreshed.');
                 })
                 .catch(err => {

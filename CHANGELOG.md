@@ -16,6 +16,67 @@ as soon as the aircraft is positioned and finishes setting it up while paused, w
 
 ---
 
+## 0.66
+
+### IOS (Instructor Operating Station): new
+The Sim Control group is now the IOS, named and ordered like a full flight simulator's instructor station:
+Aircraft State, Slew, Reposition, Weather & Time, Situations and Malfunctions (the last two need ToLiss Pro).
+
+- **Aircraft State:** live altitude, height above ground, IAS/TAS/GS, heading, V/S, pitch, bank and fuel. In flight,
+  set altitude, airspeed (indicated, converted to true airspeed for the altitude, plus the wind), heading, vertical
+  speed, pitch and bank with immediate effect: step buttons apply at once; typed values apply with Set, or together
+  with "Set entered values". Works while paused (the EFB briefly unpauses, applies, pauses again and checks). On the
+  ground a notice explains that these are in-flight changes.
+- **Freezes:** Freeze (pauses X-Plane; with "X-Plane pause acts as freeze motion" on in the ToLiss ISCS, systems keep
+  running), altitude freeze and fuel freeze. **Sim rate** x1/x2/x4/x8.
+- **Slew:** move the aircraft freely with a hold-to-move pad or the keyboard (forward/back, sideways, turn,
+  climb/descend) at a crawl to very fast; tap the map to place it. On the ground it follows the terrain; in the air it
+  keeps its altitude (never below 50 ft). Ending slew hands back control at a chosen airspeed (or stopped on the
+  ground), and pauses again if it was paused.
+- **Reposition: quick positions:** lined up, 5 or 10 nm final, left/right downwind, overhead. The nearest airport is
+  filled in automatically (and with a Nearest button).
+- **Approach trainer:** optional "Clear the flight plan first" (erases a temporary plan, then NEW DEST at the first
+  waypoint) before programming the MCDU.
+- **Quick weather (Weather & Time):** wind relative to the aircraft's heading (headwind, crosswinds, gusts, tailwind,
+  calm), turbulence (range read from your X-Plane's DataRefs.txt, applied up to the aircraft's altitude), visibility
+  and cloud (low visibility, CAT I, CAT II, CAT IIIA), and Clear sky (X-Plane's Clear/CAVOK). Applied immediately
+  (also while paused) and read back, so the message says what X-Plane took.
+- **Armed wind shear:** hits as you descend through about 1,000 ft (a headwind gust, then a 25 kt tailwind with
+  turbulence), then the previous wind returns. The button shows orange when armed and red while it hits.
+- **Quick malfunctions (ToLiss Pro):** engine failure at V1 (from your SimBrief takeoff data), engine fire, engine
+  failure after takeoff or now, green hydraulic loss, generator, bleed and decompression, each found in ToLiss's own
+  failure list and armed with the right trigger.
+
+### Built-in pushback: new (replaces Better Pushback)
+- Plan the push with sliders or typed values: straight back, a turn with the tail left or right (0-180°), a final
+  straight and the towing speed; presets for the common pushes; or pull forward.
+- A map of the airport shows the plan before you start: a line from the tail to the nose at the end, and the
+  aircraft at true size where it will end up. Map or satellite view, with the airport layout on top (or hidden).
+- Works like a real tug: it starts when you release the parking brake and stops if you set it; Pause/Resume and Stop.
+  The aircraft accelerates gently, follows the path and stops smoothly, keeping its exact height above the ground.
+- After the push (or Stop) the aircraft is held in place until you set the parking brake, so idle thrust can't move
+  it. Available on the ground only. Counts as OOOI OUT for the Ops Centre.
+
+### Ops Centre
+- **Stand assignment:** stands named for freight, maintenance, general aviation and the like are never assigned;
+  the stand you park on is learned for your airline; **Change stand** assigns another automatically or one you choose
+  (with a map preview), can exclude an unsuitable stand and save a choice as a rule; the assigned stand is marked on
+  the moving map. Rules are kept in stand_rules.json.
+- **Block-in summary** is sent when the parking brake is set on stand (engines may still run), and messages are held
+  while the aircraft's ATSU is offline and sent when it is back.
+
+### Displays and maps
+- **FCU display** (Cockpit Displays): a display-only FCU with both EFIS baro windows, in Airbus colours.
+- **MCDU** laid out and coloured like the real unit: blue-grey bezel, function keys with BRT/DIM, AIRPORT and arrow
+  keys, round number keys, letter keys, and the annunciator lights in place (shown unlit).
+- **Satellite view** on the Pushback, Reposition and Map & Telemetry maps (Esri World Imagery), with the airport
+  layout's lines on top and a Layout switch.
+- The SD is removed from Cockpit Displays for now.
+
+### Also
+- **Settings:** a "support" link to Ko-fi.
+- Versions now continue as 0.66, 0.66.1 and so on.
+
 ## 0.65
 
 - **Change stand (Ops Centre):** the Stand assignment row has a **Change stand** button (**Assign stand** before one is
