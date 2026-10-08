@@ -626,6 +626,27 @@
             #draw-canvas { height: 60vh; }
             .telemetry-grid { grid-template-columns: 1fr; }
         }
+        .pb-reset-row { margin-top: 22px; padding-top: 14px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; }
+        .pb-reset-row button { margin: 0 !important; min-height: 32px; padding: 0 12px; background: transparent !important; color: var(--text-dim) !important; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; cursor: pointer; }
+        .pb-reset-row button:disabled { opacity: 0.4; cursor: default; }
+        /* replay and TCAS traffic (IOS) */
+        .replay-badge { background: #e65100; color: #fff; font-weight: bold; font-size: 12px; letter-spacing: 1px; padding: 6px 10px; border-radius: 6px; margin-right: 8px; cursor: pointer; white-space: nowrap; }
+        .rpl-bar { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 6px; margin-top: 12px; }
+        .rpl-bar button { min-height: 64px; padding: 4px 2px; margin: 0 !important; border: 1px solid var(--border); border-radius: 8px; background: var(--input-bg); color: var(--text-main); cursor: pointer; font-size: 22px; line-height: 1.1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; }
+        .rpl-bar button small { font-size: 10px; color: var(--text-dim); font-family: var(--font-mono); }
+        .rpl-bar button.active { border-color: var(--accent); background: rgba(79,195,247,0.15); }
+        .rpl-bar button:disabled { opacity: 0.35; cursor: default; }
+        .rpl-top { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+        .rpl-top button { flex: 1; min-width: 160px; }
+        .rpl-exit { background-color: #1565c0 !important; color: #fff !important; font-weight: bold; min-height: 44px; margin: 0 !important; }
+        @media (max-width: 700px) { .rpl-bar { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+        .tfc-sc { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 6px; margin: 8px 0 4px 0; }
+        .tfc-sc button { min-height: 44px; margin: 0 !important; border: 1px solid var(--border); border-radius: 6px; background: var(--input-bg); color: var(--text-main); cursor: pointer; font-size: 13px; }
+        .tfc-sc button.active { border-color: var(--accent); background: rgba(79,195,247,0.15); }
+        .tfc-list { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+        .tfc-list th, .tfc-list td { text-align: left; padding: 6px; border-bottom: 1px solid var(--border); }
+        .tfc-list td { font-family: var(--font-mono); }
+        .tfc-adv { font-weight: bold; padding: 2px 8px; border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -663,6 +684,8 @@
                 <div class="nav-item" id="nav-slew" onclick="switchTab('slew')">Slew</div>
                 <div class="nav-item active" id="nav-repositioning" onclick="switchTab('repositioning')">Reposition</div>
                 <div class="nav-item" id="nav-environment" onclick="switchTab('environment')">Weather &amp; Time</div>
+                <div class="nav-item" id="nav-traffic" onclick="switchTab('traffic')">TCAS Traffic</div>
+                <div class="nav-item" id="nav-replay" onclick="switchTab('replay')">Replay</div>
                 <div class="nav-item" id="nav-situations" onclick="switchTab('situations')" style="display:none;">Situations</div>
                 <div class="nav-item" id="nav-failures" onclick="switchTab('failures')" style="display:none;">Malfunctions</div>
             </div>
@@ -692,6 +715,7 @@
                 <button class="vector-toggle-btn" id="sidebar-toggle-btn" onclick="toggleSidebar()"></button>
             </div>
             <div class="top-bar-center" id="status-text">Plugin Connected</div>
+            <span class="replay-badge" id="replay-badge" style="display:none;" onclick="switchTab('replay')" title="X-Plane is in replay: open the replay controls">REPLAY</span>
             <button id="global-pause-btn" onclick="sendCommand('sim/operation/pause_toggle')">▶️ RUNNING</button>
         </div>
 
@@ -1123,7 +1147,13 @@
                                 <button class="perf-rwy" onclick="pbSide('R')" id="pb-side-R">Tail right</button>
                             </span>
                             <span><input type="number" id="pb-turn-n" min="0" max="180" step="5" oninput="pbSync('turn', this.value)"> °</span></label>
-                            <input type="range" id="pb-turn" min="0" max="180" step="5" value="90" oninput="pbSync('turn', this.value)"></div>
+                            <input type="range" id="pb-turn" min="0" max="180" step="5" value="90" oninput="pbSync('turn', this.value)">
+                            <label style="margin-top:6px;">Nose wheel steering
+                                <span class="perf-rwys" style="margin:0;">
+                                    <button class="perf-rwy" id="pb-t-gentle" onclick="pbTight('gentle')" title="45° nose wheel angle">Gentle</button>
+                                    <button class="perf-rwy active" id="pb-t-normal" onclick="pbTight('normal')" title="60° nose wheel angle">Normal</button>
+                                    <button class="perf-rwy" id="pb-t-tight" onclick="pbTight('tight')" title="80° nose wheel angle (Airbus towing limit 90°)">Tight</button>
+                                </span></label></div>
                         <div class="pb-f"><label>Then straight <span><input type="number" id="pb-final-n" min="0" max="100" step="1" oninput="pbSync('final', this.value)"> m</span></label>
                             <input type="range" id="pb-final" min="0" max="100" step="1" value="0" oninput="pbSync('final', this.value)"></div>
                         <div class="pb-f"><label>Towing speed <span><input type="number" id="pb-speed-n" min="1" max="5" step="0.5" oninput="pbSync('speed', this.value)"> kt</span></label>
@@ -1136,10 +1166,13 @@
                         <button class="mc-btn" id="pb-new" onclick="pbNewPlan()" style="display:none; width:100%; margin-top:6px;">Plan another push</button>
                         <div class="pb-progress"><div id="pb-bar"></div></div>
                         <div class="rp-note" id="pb-msg" style="min-height:18px;"></div>
+                        <div class="pb-reset-row">
+                            <button id="pb-reset" onclick="pbReset()" title="Back to 20 m straight, tail left 90°, 0 m final, 3 kt, Normal steering, push back">Reset settings to defaults</button>
+                        </div>
                     </div>
                     <div class="pb-right">
                         <div id="pb-map" class="pb-map"></div>
-                        <div class="rp-note">The line runs from the tail now to the nose at the end (the outline shows where the aircraft ends up). Once you start, the plan stays on the map: the travelled part turns solid. Check the path is clear: there is no collision detection.</div>
+                        <div class="rp-note">The dashed line is the path of the aircraft's nose (hidden where it passes under the aircraft or the outline); the outline shows where the aircraft ends up. The push follows a towing model: the tug steers the nose wheel (within Airbus's 90° towing limit) and the aircraft pivots about its main gear. Once you start, the plan stays on the map: the travelled part turns solid. Check the path is clear: there is no collision detection.</div>
                     </div>
                 </div>
                 <div class="rp-note" style="margin-top:10px;">As with a real tug, the push starts when you release the parking brake, and stops if you set it during the push. You can start the engines during the push. The tug model isn't shown, and X-Plane may not animate the wheels while the EFB moves the aircraft.</div>
@@ -1278,6 +1311,68 @@
 
                 <h4 class="ins-h">Sim rate</h4>
                 <div class="perf-rwys" id="ins-rate" style="margin:0;"></div>
+            </div>
+
+            <!-- REPLAY (X-Plane's replay, IOS) -->
+            <div id="replay" class="tab-content">
+                <div class="dsp-bar">
+                    <h3 style="margin:0; border:none; padding:0;">Replay <span class="ios-tag">IOS</span></h3>
+                    <span class="dsp-status" id="rpl-status"></span>
+                </div>
+                <div class="tstrip">
+                    <div class="tcell" style="grid-column: span 3;"><div class="tl">Mode</div><div class="tv" id="rpl-mode">---</div></div>
+                </div>
+                <div class="rpl-top">
+                    <button class="mc-btn" id="rpl-toggle" onclick="rplCmd('toggle')">Replay mode on</button>
+                    <button class="rpl-exit" id="rpl-exit" onclick="rplCmd('exit')">Exit to Real-Time</button>
+                </div>
+                <div class="rpl-bar" id="rpl-bar">
+                    <button data-c="start" onclick="rplCmd('start')" title="Go to the start of the recording">⏮<small>Start</small></button>
+                    <button data-c="fast_rev" onclick="rplCmd('fast_rev')" title="Fast reverse">◀◀<small>Fast rev</small></button>
+                    <button data-c="rev" onclick="rplCmd('rev')" title="Reverse at normal speed">◀<small>Reverse</small></button>
+                    <button data-c="slow_rev" onclick="rplCmd('slow_rev')" title="Slow reverse">◁<small>Slow rev</small></button>
+                    <button data-c="pause" onclick="rplCmd('pause')" title="Freeze the replay">⏸<small>Pause</small></button>
+                    <button data-c="slow_fwd" onclick="rplCmd('slow_fwd')" title="Slow forward">▷<small>Slow fwd</small></button>
+                    <button data-c="play" onclick="rplCmd('play')" title="Play forward at normal speed">▶<small>Play</small></button>
+                    <button data-c="fast_fwd" onclick="rplCmd('fast_fwd')" title="Fast forward">▶▶<small>Fast fwd</small></button>
+                    <button data-c="end" onclick="rplCmd('end')" title="Go to the end of the recording (the latest recorded moment)">⏭<small>End</small></button>
+                </div>
+                <div class="rp-note" id="rpl-msg" style="min-height:18px;"></div>
+                <div class="rp-note">These are X-Plane's own replay controls: X-Plane records the flight continuously and plays it back. Pressing a playback button enters replay if needed. <b>Exit to Real-Time</b> leaves replay and returns to the live flight where the aircraft actually is now (X-Plane does not resume flying from a rewound point). The EFB's Flight Recorder is separate and keeps recording. Replay is not available during a pushback or slew. Buttons this X-Plane version does not have are greyed out.</div>
+            </div>
+
+            <!-- TCAS TRAFFIC (IOS) -->
+            <div id="traffic" class="tab-content">
+                <div class="dsp-bar">
+                    <h3 style="margin:0; border:none; padding:0;">TCAS Traffic <span class="ios-tag">IOS</span></h3>
+                    <span class="dsp-status" id="tfc-status"></span>
+                </div>
+                <div class="tstrip">
+                    <div class="tcell" style="grid-column: span 2;"><div class="tl">Traffic</div><div class="tv" id="tfc-own">---</div></div>
+                    <div class="tcell"><div class="tl">Intruders</div><div class="tv" id="tfc-n">0</div></div>
+                    <div class="tcell"><div class="tl">Height above ground</div><div class="tv" id="tfc-agl">---</div></div>
+                    <div class="tcell"><div class="tl">X-Plane TCAS</div><div class="tv" id="tfc-adv">---</div></div>
+                </div>
+                <div class="ins-ground" id="tfc-warn" style="display:none; margin-top:10px;"></div>
+                <div style="margin-top:12px; font-size:13px; color:var(--text-dim);">Scenario</div>
+                <div class="tfc-sc" id="tfc-sc"></div>
+                <div class="rp-row">
+                    <label class="rp-field">Time to closest approach (s)<input type="number" id="tfc-cpa" min="15" max="180" step="5" value="50" onchange="tfcSave()"></label>
+                    <label class="rp-field">Horizontal miss (nm)<input type="number" id="tfc-miss" min="0" max="5" step="0.1" value="0" onchange="tfcSave()"></label>
+                    <label class="rp-field">Intruder at closest approach (ft, + above / − below)<input type="number" id="tfc-vert" min="-3000" max="3000" step="100" value="0" onchange="tfcSave()"></label>
+                    <label class="rp-field">Intruder speed (kt, blank = auto)<input type="number" id="tfc-spd" min="60" max="600" step="10" placeholder="auto" onchange="tfcSave()"></label>
+                </div>
+                <div class="rpl-top">
+                    <button class="rp-go" id="tfc-add" onclick="tfcAdd()">Inject intruder</button>
+                    <button class="mc-btn" id="tfc-clear" onclick="tfcClear()">Remove all</button>
+                </div>
+                <div class="rp-note" id="tfc-msg" style="min-height:18px;"></div>
+                <table class="tfc-list" id="tfc-list" style="display:none;">
+                    <thead><tr><th>Intruder</th><th>Scenario</th><th>Range</th><th>Rel. alt</th><th>Position</th><th>CPA</th><th>Speed / V/S</th><th></th></tr></thead>
+                    <tbody id="tfc-rows"></tbody>
+                </table>
+                <div class="rp-note">The intruder flies a straight path planned to reach the closest point of approach after the time you set, using your present track, speed and climb or descent; it is removed a minute after it passes. Typical results: 0 nm and 0 ft in about 45–50 s gives a TA, then an RA. A larger miss distance or vertical separation gives a TA only. Several intruders at once make a multi-threat encounter.
+                    <br><b>Needs:</b> X-Plane 12.4.1 or later; the aircraft's TCAS in TA/RA. TCAS gives no RAs on the ground or below about 1,000 ft above the ground. Only one plugin can supply traffic: disconnect xPilot or turn off LiveTraffic first (the EFB gives the traffic back as soon as another plugin asks for it). The intruders appear on TCAS and the ND, not out of the window.</div>
             </div>
 
             <!-- SLEW -->
@@ -1782,7 +1877,7 @@
                 <div style="line-height: 1.5; color: var(--text-muted); font-size: 13px;">
                     <p>A web-based, remote interface for the ToLiss line of aircraft in X-Plane 12.</p>
                     <p>By Soarbywire &middot; <a href="https://soarbywire.com" target="_blank" rel="noopener">soarbywire.com</a></p>
-                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.66 Release Beta</p>
+                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.67 Release Beta</p>
                     <p style="font-size: 11px; color: #ff9800; margin-top: 5px;"><strong>Caution:</strong> Some features may not work as intended.</p>
                     <p style="font-size: 11px; color: var(--text-dim); margin-top: 5px;">New versions are published on <a href="https://github.com/soarbywire/toliss-efb/releases" target="_blank" rel="noopener">GitHub</a> and the X-Plane.org forums, and can be installed from <b>Updates</b> above.</p>
                     <div class="lic">
@@ -5496,6 +5591,7 @@
                     simHdg = Math.round(d["sim/cockpit2/gauges/indicators/heading_vacuum_deg_mag_pilot"] || 0) || 0;
                     simTrueHdg = Number(d["sim/flightmodel/position/psi"]) || 0;
                     simOnGround = Number(d["sim/flightmodel/failures/onground_any"]) === 1;
+                    { const rb = document.getElementById('replay-badge'); if (rb) rb.style.display = Number(d["sim/time/is_in_replay"]) >= 1 ? '' : 'none'; }
                     simLat = d["sim/flightmodel/position/latitude"] || 0;
                     simLon = d["sim/flightmodel/position/longitude"] || 0;
 
@@ -6380,7 +6476,6 @@
 
         // ===== Built-in pushback =====
         const PB = { fwd: false, side: 'L', st: null, timer: null, map: null, lay: null, gmKey: null, wasPushing: false };
-        const PB_RADIUS = 25;
         function pbVal(k) { return Number(document.getElementById('pb-' + k).value) || 0; }
         function pbSync(k, v, restoring) {
             if (!restoring && PB.fixed && !(PB.st && PB.st.pushing)) { PB.fixed = null; PB.wasPushing = false; pbButtons(); }
@@ -6389,45 +6484,104 @@
             document.getElementById('pb-' + k).value = n;
             const nb = document.getElementById('pb-' + k + '-n'); if (document.activeElement !== nb) nb.value = n;
             safeSetStorage('toliss_pb_' + k, String(n));
-            pbPreview();
+            if (!restoring) pbSaveSettings();
+            pbAskPlan();
         }
         function pbSide(sd, restoring) {
             if (!restoring && PB.fixed && !(PB.st && PB.st.pushing)) { PB.fixed = null; PB.wasPushing = false; pbButtons(); }
-            PB.side = sd; safeSetStorage('toliss_pb_side', sd);
+            PB.side = sd; safeSetStorage('toliss_pb_side', sd); if (!restoring) pbSaveSettings();
             ['L', 'R'].forEach(x => document.getElementById('pb-side-' + x).classList.toggle('active', x === sd));
-            pbPreview();
+            pbAskPlan();
         }
         function pbSetDir(fwd, restoring) {
             if (!restoring && PB.fixed && !(PB.st && PB.st.pushing)) { PB.fixed = null; PB.wasPushing = false; pbButtons(); }
-            PB.fwd = fwd;
+            PB.fwd = fwd; safeSetStorage('toliss_pb_fwd', fwd ? '1' : '0'); if (!restoring) pbSaveSettings();
             document.querySelectorAll('#pb-dir button').forEach((b, i) => b.classList.toggle('active', (i === 1) === fwd));
             document.getElementById('pb-l-back').textContent = fwd ? 'Straight forward' : 'Straight back';
             document.getElementById('pb-side-L').textContent = fwd ? 'Turn left' : 'Tail left';
             document.getElementById('pb-side-R').textContent = fwd ? 'Turn right' : 'Tail right';
             document.getElementById('pb-start').textContent = fwd ? 'Start pull forward' : 'Start pushback';
             document.getElementById('pb-presets').style.display = fwd ? 'none' : '';
-            pbPreview();
+            pbAskPlan();
+        }
+        // settings are kept by the plugin (config.json), so every device and every session gets the same ones
+        const PB_DEFAULTS = { back: 20, turn: 90, final: 0, speed: 3, side: 'L', tight: 'normal', fwd: false };
+        let pbSaveTimer = null;
+        const pbSettingsNow = () => ({ back: pbVal('back'), turn: pbVal('turn'), final: pbVal('final'), speed: pbVal('speed'), side: PB.side, tight: PB.tight, fwd: !!PB.fwd });
+        function pbSaveSettings() {
+            clearTimeout(pbSaveTimer);
+            pbSaveTimer = setTimeout(() => {
+                fetch('/api/push/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ settings: pbSettingsNow() }) }).catch(() => {});
+            }, 600);
+        }
+        function pbApplySettings(s, restoring) {
+            ['back', 'turn', 'final', 'speed'].forEach(k => pbSync(k, s[k] !== undefined && s[k] !== null ? s[k] : PB_DEFAULTS[k], restoring));
+            pbSetDir(!!s.fwd, restoring);
+            pbSide(s.side === 'R' ? 'R' : 'L', restoring);
+            pbTight(['gentle', 'normal', 'tight'].includes(s.tight) ? s.tight : 'normal', restoring);
+        }
+        function pbReset() {
+            if (PB.st && PB.st.pushing) return;
+            pbApplySettings(PB_DEFAULTS, false);
+            const msg = document.getElementById('pb-msg'); msg.style.color = ''; msg.textContent = 'Settings reset to the defaults.';
         }
         function pbPreset(back, turn, side, fin) { pbSetDir(false); pbSide(side); pbSync('back', back); pbSync('turn', turn); pbSync('final', fin); }
-        // the same path the plugin follows: metres east/north from the aircraft, heading in degrees true
-        function pbPath(hdg) {
-            const sgn = PB.fwd ? -1 : 1, dhs = PB.fwd ? (PB.side === 'L' ? -1 : 1) : (PB.side === 'L' ? 1 : -1), step = 1;
-            let e = 0, n = 0, h = hdg; const pts = [[0, 0, h]];
-            const move = (ds, dh) => { h = (h + dh + 360) % 360; const r = h * Math.PI / 180; e -= sgn * ds * Math.sin(r); n -= sgn * ds * Math.cos(r); pts.push([e, n, h]); };
-            for (let i = 0; i < Math.floor(pbVal('back') / step); i++) move(step, 0);
-            const arc = PB_RADIUS * pbVal('turn') * Math.PI / 180;
-            for (let i = 0; i < Math.floor(arc / step); i++) move(step, dhs * step / PB_RADIUS * 180 / Math.PI);
-            for (let i = 0; i < Math.floor(pbVal('final') / step); i++) move(step, 0);
-            return pts;
+        // ---- the plan comes from the plugin's towing model, so the map shows exactly what the push will do ----
+        PB.tight = 'normal';
+        function pbTight(t, restoring) {
+            if (!restoring && PB.fixed && !(PB.st && PB.st.pushing)) { PB.fixed = null; PB.wasPushing = false; pbButtons(); }
+            PB.tight = t; safeSetStorage('toliss_pb_tight', t); if (!restoring) pbSaveSettings();
+            ['gentle', 'normal', 'tight'].forEach(x => document.getElementById('pb-t-' + x).classList.toggle('active', x === t));
+            pbAskPlan();
+        }
+        const pbParams = () => ({ back_m: pbVal('back'), turn_deg: pbVal('turn'), side: PB.side, final_m: pbVal('final'), forward: PB.fwd, tightness: PB.tight });
+        let pbPlanTimer = null;
+        function pbAskPlan() {
+            clearTimeout(pbPlanTimer);
+            pbPlanTimer = setTimeout(() => {
+                pbPlanTimer = null;
+                if (!PB.st) return;
+                const at = [PB.st.lat, PB.st.lon], params = pbParams();
+                fetch('/api/push/plan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(params) })
+                    .then(r => r.json()).then(res => {
+                        if (!res.cg) return;
+                        PB.plan = Object.assign({}, res, { at, key: JSON.stringify(params) });
+                        PB.geom = res.geom;
+                        pbPreview();
+                    }).catch(() => {});
+            }, 150);
         }
         const pbLL = (lat, lon, e, n) => [lat + n / 111320, lon + e / (111320 * Math.cos(lat * Math.PI / 180))];
-        // A320-family outline, top view, in metres (x right, y forward) around the aircraft's reference point
+        // A320-family outline, top view, in metres (x right, y forward), scaled to the loaded aircraft's length and span
         const PB_SHAPE = [[0, 19], [1.2, 17.5], [2, 14], [2, 4], [17, -3], [17, -5], [2, -2], [2, -12], [1.5, -14], [6.5, -18], [6.5, -19.5], [0.8, -18], [0, -19.5],
                           [-0.8, -18], [-6.5, -19.5], [-6.5, -18], [-1.5, -14], [-2, -12], [-2, -2], [-17, -5], [-17, -3], [-2, 4], [-2, 14], [-1.2, 17.5]];
-        function pbAircraft(lat, lon, hdg, style) {
+        function pbShapeLL(lat, lon, hdg) {
+            const g = PB.geom || {}, sx = (g.span || 34) / 34, sy = (g.length || 38.5) / 38.5;
             const h = hdg * Math.PI / 180, c = Math.cos(h), sn = Math.sin(h);
-            const ll = PB_SHAPE.map(([x, y]) => pbLL(lat, lon, x * c + y * sn, -x * sn + y * c));
-            return L.polygon(ll, Object.assign({ interactive: false }, style));
+            return PB_SHAPE.map(([x, y]) => { x *= sx; y *= sy; return pbLL(lat, lon, x * c + y * sn, -x * sn + y * c); });
+        }
+        function pbAircraft(lat, lon, hdg, style) {
+            return L.polygon(pbShapeLL(lat, lon, hdg), Object.assign({ interactive: false }, style));
+        }
+        // the nose tip, as drawn by the outline (PB_SHAPE's nose is 19 m ahead on a 38.5 m aircraft)
+        const pbNoseAhead = () => 19 * ((PB.geom && PB.geom.length) || 38.5) / 38.5;
+        function pbInside(pt, poly) {
+            let inside = false;
+            for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+                const [yi, xi] = poly[i], [yj, xj] = poly[j];
+                if ((yi > pt[0]) !== (yj > pt[0]) && pt[1] < (xj - xi) * (pt[0] - yi) / (yj - yi) + xi) inside = !inside;
+            }
+            return inside;
+        }
+        // the parts of a line that are not under an aircraft shape (the line is drawn beneath both aircraft)
+        function pbVisibleRuns(pts, polys) {
+            const runs = []; let run = [];
+            pts.forEach(p => {
+                if (polys.some(poly => pbInside(p, poly))) { if (run.length > 1) runs.push(run); run = []; }
+                else run.push(p);
+            });
+            if (run.length > 1) runs.push(run);
+            return runs;
         }
         function pbMapInit() {
             if (PB.map || typeof L === 'undefined') return;
@@ -6441,50 +6595,46 @@
             setLayout(layoutOn);
             addSatelliteSwitch(PB.map, 'pushback', [['Layout', () => setLayout(!PB.map.hasLayer(PB.lay.base)), layoutOn]], () => [PB.lay.base]);
         }
-        const PB_NOSE = 19.0;      // metres ahead of the aircraft's reference point (the nose; pushback lines are for the nose wheel)
-        const pbNose = (lat, lon, e, n, hdg) => { const h = hdg * Math.PI / 180; return pbLL(lat, lon, e + PB_NOSE * Math.sin(h), n + PB_NOSE * Math.cos(h)); };
+        function pbPlanLL(plan) {
+            const [la, lo] = plan.at, c = plan.cg[plan.cg.length - 1], na = pbNoseAhead();
+            const nose = plan.cg.map(p => { const h = p[2] * Math.PI / 180; return pbLL(la, lo, p[0] + na * Math.sin(h), p[1] + na * Math.cos(h)); });
+            return { nose, endLL: pbLL(la, lo, c[0], c[1]), endHdg: c[2] };
+        }
         // the plan, fixed on the ground when the push starts (stays on the map after the push, until a new one is planned)
-        // the line: from the tail of the aircraft now to the nose of the end outline, as one smooth curve: it starts
-        // on the tail's path and blends gradually into the nose's path, arriving at the nose where the push ends.
-        function pbLine(st) {
-            const pts = pbPath(st.hdg_true), N = Math.max(1, pts.length - 1);
-            return pts.map((p, i) => {
-                const h = p[2] * Math.PI / 180, t = i / N, w = t * t * (3 - 2 * t);          // smoothstep 0 -> 1
-                const off = -19.5 * (1 - w) + PB_NOSE * w;                                   // tail (-19.5 m) -> nose (+19 m)
-                return pbLL(st.lat, st.lon, p[0] + off * Math.sin(h), p[1] + off * Math.cos(h));
-            });
+        function pbFix() {
+            if (!PB.plan) return;
+            const p = pbPlanLL(PB.plan);
+            PB.fixed = { nose: p.nose, endLL: p.endLL, endHdg: p.endHdg, total: p.nose.length - 1 };
         }
-        function pbFix(st) {
-            const pts = pbPath(st.hdg_true);
-            const end = pts[pts.length - 1];
-            const line = pbLine(st);
-            PB.fixed = { nose: line, endLL: pbLL(st.lat, st.lon, end[0], end[1]), endHdg: end[2], total: line.length - 1 };
-        }
-        function pbNewPlan() { PB.fixed = null; PB.wasPushing = false; document.getElementById('pb-msg').textContent = ''; document.getElementById('pb-bar').style.width = '0%'; pbPreview(); pbButtons(); }
+        function pbNewPlan() { PB.fixed = null; PB.wasPushing = false; document.getElementById('pb-msg').textContent = ''; document.getElementById('pb-bar').style.width = '0%'; pbAskPlan(); pbPreview(); pbButtons(); }
+        const PB_END_STYLE = { color: '#4fc3f7', weight: 2, dashArray: '4 4', fillColor: '#4fc3f7', fillOpacity: 0.12 };
         function pbPreview() {
             if (!PB.map || !PB.st) return;
             const st = PB.st;
             PB.lay.path.clearLayers(); PB.lay.ac.clearLayers();
+            // the nose's path, drawn beneath both aircraft: hidden where it passes under the aircraft or the end outline
+            const cur = pbShapeLL(st.lat, st.lon, st.hdg_true);
+            const DASH = { color: '#4fc3f7', weight: 3, dashArray: '6 6', interactive: false }, SOLID = { color: '#4fc3f7', weight: 3, opacity: 0.9, interactive: false };
+            const draw = (pts, polys, style) => pbVisibleRuns(pts, polys).forEach(r => L.polyline(r, style).addTo(PB.lay.path));
             if (PB.fixed) {
                 // the pushback as planned at Start: travelled part solid, the rest dashed
-                const f = PB.fixed, total = Math.max(1, f.total);
+                const f = PB.fixed, end = pbShapeLL(f.endLL[0], f.endLL[1], f.endHdg);
                 const done = st.pushing && !st.push_hold ? Math.min(f.total, Math.round(f.total * (st.push_s / Math.max(0.1, st.push_total)))) : (PB.stoppedAt !== undefined ? PB.stoppedAt : f.total);
-                if (done < f.total) L.polyline(f.nose.slice(done), { color: '#4fc3f7', weight: 3, dashArray: '6 6' }).addTo(PB.lay.path);
-                if (done > 0) L.polyline(f.nose.slice(0, done + 1), { color: '#4fc3f7', weight: 3, opacity: 0.9 }).addTo(PB.lay.path);
-                pbAircraft(f.endLL[0], f.endLL[1], f.endHdg, { color: '#4fc3f7', weight: 2, dashArray: '4 4', fillColor: '#4fc3f7', fillOpacity: 0.12 }).addTo(PB.lay.path);
-            } else {
-                const pts = pbPath(st.hdg_true);
-                if (pts.length > 1) {
-                    L.polyline(pbLine(st), { color: '#4fc3f7', weight: 3, dashArray: '6 6' }).addTo(PB.lay.path);
-                    const end = pts[pts.length - 1], endLL = pbLL(st.lat, st.lon, end[0], end[1]);
-                    pbAircraft(endLL[0], endLL[1], end[2], { color: '#4fc3f7', weight: 2, dashArray: '4 4', fillColor: '#4fc3f7', fillOpacity: 0.12 }).addTo(PB.lay.path);
-                }
+                if (done < f.total) draw(f.nose.slice(done), [cur, end], DASH);
+                if (done > 0) draw(f.nose.slice(0, done + 1), [cur, end], SOLID);
+                pbAircraft(f.endLL[0], f.endLL[1], f.endHdg, PB_END_STYLE).addTo(PB.lay.path);
+            } else if (PB.plan) {
+                const p = pbPlanLL(PB.plan), end = pbShapeLL(p.endLL[0], p.endLL[1], p.endHdg);
+                if (p.nose.length > 1) draw(p.nose, [cur, end], DASH);
+                pbAircraft(p.endLL[0], p.endLL[1], p.endHdg, PB_END_STYLE).addTo(PB.lay.path);
             }
             pbAircraft(st.lat, st.lon, st.hdg_true, { color: '#000', weight: 1, fillColor: '#ffb300', fillOpacity: 0.95 }).addTo(PB.lay.ac);
         }
         function pbButtons() {
             const b = document.getElementById('pb-new');
             if (b) b.style.display = PB.fixed && !(PB.st && PB.st.pushing) ? '' : 'none';
+            const rs = document.getElementById('pb-reset');
+            if (rs) rs.disabled = !!(PB.st && PB.st.pushing);
         }
         function pbLoadGround(st) {
             const key = st.lat.toFixed(2) + ',' + st.lon.toFixed(2);
@@ -6496,6 +6646,12 @@
                     try { renderAirportDetail(gm.airport, PB.lay, PB.lay.r, {}); satApply(PB.map); } catch (e) {}
                 }
             }).catch(() => {});
+        }
+        function pbPlanStale(st) {
+            const p = PB.plan;
+            if (!p) return true;
+            const moved = Math.hypot((st.lat - p.at[0]) * 111320, (st.lon - p.at[1]) * 111320 * Math.cos(st.lat * Math.PI / 180));
+            return moved > 2 || Math.abs(((st.hdg_true - p.hdg0 + 540) % 360) - 180) > 2;
         }
         function pbRender(st) {
             if (!st || !('lat' in st)) { document.getElementById('pb-status').textContent = (st && st.message) || 'No response from the sim'; return; }
@@ -6530,6 +6686,7 @@
             else if (!st.on_ground) msg.textContent = '';
             PB.wasPushing = PB.wasPushing && !st.push_done ? true : (st.pushing ? true : (PB.wasPushing && !!st.push_done));
             if (st.pushing && PB.map) { PB.map.panTo([st.lat, st.lon], { animate: false }); }
+            if (!st.pushing && !PB.fixed && st.on_ground && pbPlanStale(st) && !pbPlanTimer) pbAskPlan();
             pbPreview();
             pbButtons();
         }
@@ -6545,7 +6702,7 @@
             PB.stoppedAt = undefined;
             if (PB.st) pbFix(PB.st);
             fetch('/api/push/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
-                back_m: pbVal('back'), turn_deg: pbVal('turn'), side: PB.side, final_m: pbVal('final'), speed_kt: pbVal('speed'), forward: PB.fwd }) })
+                ...pbParams(), speed_kt: pbVal('speed') }) })
                 .then(r => r.json()).then(res => { if (res.status !== 'success') { PB.wasPushing = false; PB.fixed = null; msg.textContent = res.message; msg.style.color = '#f44336'; } pbRender(res); });
         }
         function pbPause() {
@@ -6556,10 +6713,108 @@
             if (PB.fixed && PB.st && PB.st.pushing && !PB.st.push_hold) PB.stoppedAt = Math.round(PB.fixed.total * (PB.st.push_s / Math.max(0.1, PB.st.push_total)));
             fetch('/api/push/stop', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then(r => r.json()).then(pbRender); }
         function pbStartPage() {
-            ['back', 'turn', 'final', 'speed'].forEach(k => { const v = safeGetStorage('toliss_pb_' + k); pbSync(k, v !== null && v !== undefined && v !== '' ? v : document.getElementById('pb-' + k).value, true); });
-            pbSide(safeGetStorage('toliss_pb_side') || 'L', true);
+            // this browser's copy first (instant), then the plugin's saved settings (shared by all devices)
+            const local = {};
+            ['back', 'turn', 'final', 'speed'].forEach(k => { const v = safeGetStorage('toliss_pb_' + k); local[k] = v !== null && v !== undefined && v !== '' ? Number(v) : PB_DEFAULTS[k]; });
+            local.side = safeGetStorage('toliss_pb_side') || 'L'; local.tight = safeGetStorage('toliss_pb_tight') || 'normal'; local.fwd = safeGetStorage('toliss_pb_fwd') === '1';
+            pbApplySettings(local, true);
+            if (!PB.settingsLoaded) {
+                fetch('/api/push/settings').then(r => r.json()).then(res => {
+                    PB.settingsLoaded = true;
+                    if (PB.st && PB.st.pushing) return;
+                    if (res.settings) pbApplySettings(res.settings, true);
+                    else pbSaveSettings();          // first time: the plugin keeps this browser's settings
+                }).catch(() => {});
+            }
             pbPoll(); clearInterval(PB.timer); PB.timer = setInterval(pbPoll, 400);
         }
+
+        // ===== Replay (X-Plane's replay, IOS) =====
+        const RPL = { timer: null, st: null };
+        function rplRender(st) {
+            if (!st || st.status === 'error') { if (st && st.message) document.getElementById('rpl-msg').textContent = st.message; return; }
+            RPL.st = st;
+            const on = !!st.in_replay;
+            const mode = document.getElementById('rpl-mode');
+            mode.textContent = st.mode_text || (on ? 'Replay' : 'Real-time (live)'); mode.style.color = on ? '#ff9800' : '#4caf50';
+            document.getElementById('rpl-status').textContent = st.state_known === false ? 'X-Plane does not report the replay state' : '';
+            document.getElementById('rpl-toggle').textContent = on ? 'Replay mode off' : 'Replay mode on';
+            const avail = st.available || [];
+            document.getElementById('rpl-toggle').disabled = !avail.includes('toggle');
+            document.getElementById('rpl-exit').disabled = !on;
+            document.querySelectorAll('#rpl-bar button').forEach(b => { b.disabled = !avail.includes(b.dataset.c); b.classList.toggle('active', on && st.mode === b.dataset.c); });
+            if (st.message !== undefined && st.message !== '') document.getElementById('rpl-msg').textContent = st.message;
+            const rb = document.getElementById('replay-badge'); if (rb && st.state_known !== false) rb.style.display = on ? '' : 'none';
+        }
+        function rplPoll() {
+            if (!document.getElementById('replay').classList.contains('active')) { clearInterval(RPL.timer); RPL.timer = null; return; }
+            fetch('/api/replay/state').then(r => r.json()).then(rplRender).catch(() => {});
+        }
+        function rplCmd(cmd) {
+            const msg = document.getElementById('rpl-msg'); msg.style.color = '';
+            fetch('/api/replay/cmd', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cmd }) })
+                .then(r => r.json()).then(res => { msg.textContent = res.message || ''; msg.style.color = res.status === 'success' ? '' : '#f44336'; rplRender(res); })
+                .catch(() => { msg.textContent = 'No response from the sim.'; msg.style.color = '#f44336'; });
+        }
+        function rplStart() { rplPoll(); clearInterval(RPL.timer); RPL.timer = setInterval(rplPoll, 700); }
+
+        // ===== TCAS training traffic (IOS) =====
+        const TFC = { timer: null, sc: 'head_on', built: false };
+        function tfcBuild(scen) {
+            if (TFC.built || !scen) return;
+            TFC.built = true;
+            TFC.sc = safeGetStorage('toliss_tfc_sc') || 'head_on';
+            if (!scen[TFC.sc]) TFC.sc = 'head_on';
+            document.getElementById('tfc-sc').innerHTML = Object.entries(scen).map(([k, l]) => `<button data-k="${k}" onclick="tfcPick('${k}')">${l}</button>`).join('');
+            tfcPick(TFC.sc);
+            try { const s = JSON.parse(safeGetStorage('toliss_tfc') || '{}'); ['cpa', 'miss', 'vert', 'spd'].forEach(k => { if (s[k] !== undefined) document.getElementById('tfc-' + k).value = s[k]; }); } catch (e) {}
+        }
+        function tfcPick(k) { TFC.sc = k; safeSetStorage('toliss_tfc_sc', k); document.querySelectorAll('#tfc-sc button').forEach(b => b.classList.toggle('active', b.dataset.k === k)); }
+        function tfcSave() { const s = {}; ['cpa', 'miss', 'vert', 'spd'].forEach(k => s[k] = document.getElementById('tfc-' + k).value); safeSetStorage('toliss_tfc', JSON.stringify(s)); }
+        const TFC_ADV = { 0: ['Clear', '#4caf50'], 1: ['TA', '#ffb300'], 2: ['RA', '#f44336'] };
+        function tfcRender(st) {
+            if (!st || st.status === 'error' && !st.intruders) { if (st && st.message) document.getElementById('tfc-msg').textContent = st.message; return; }
+            tfcBuild(st.scenarios);
+            const set = (id, t, c) => { const el = document.getElementById(id); el.textContent = t; el.style.color = c || ''; };
+            set('tfc-own', st.owned ? 'Supplied by the EFB' : 'X-Plane / other plugin', st.owned ? '#4fc3f7' : '');
+            set('tfc-n', String((st.intruders || []).length));
+            set('tfc-agl', st.on_ground ? 'On the ground' : `${Number(st.agl_ft).toLocaleString()} ft`, st.on_ground || st.agl_ft < 1000 ? '#ff9800' : '');
+            const adv = TFC_ADV[st.advisory];
+            set('tfc-adv', adv && st.owned ? adv[0] : '---', adv && st.owned ? adv[1] : '');
+            const warn = document.getElementById('tfc-warn');
+            const w = st.on_ground ? 'On the ground TCAS gives no advisories to practise: inject traffic once airborne.' : (st.agl_ft < 1000 ? 'Below about 1,000 ft above the ground TCAS gives TAs only, no RAs.' : '');
+            warn.textContent = w; warn.style.display = w ? '' : 'none';
+            const rows = st.intruders || [];
+            document.getElementById('tfc-list').style.display = rows.length ? '' : 'none';
+            document.getElementById('tfc-rows').innerHTML = rows.map(i => {
+                const ra = i.rel_alt_ft > 0 ? `+${i.rel_alt_ft}` : String(i.rel_alt_ft);
+                const thr = i.threat === 2 || i.threat === 3 ? ' <span class="tfc-adv" style="background:#f44336;color:#fff;">RA</span>' : (i.threat === 1 ? ' <span class="tfc-adv" style="background:#ffb300;color:#000;">TA</span>' : '');
+                return `<tr><td>${i.flight_id}${thr}</td><td style="font-family:inherit;">${i.label}</td><td>${i.range_nm.toFixed(1)} nm</td><td>${ra} ft</td><td>${i.clock} o'clock</td>` +
+                    `<td>${i.cpa_in_s > 0 ? 'in ' + i.cpa_in_s + ' s' : 'passed'}</td><td>${i.spd_kt} kt / ${i.vs_fpm > 0 ? '+' : ''}${i.vs_fpm}</td>` +
+                    `<td><button class="mc-btn" style="min-height:30px;padding:0 10px;" onclick="tfcRemove(${i.id})">Remove</button></td></tr>`;
+            }).join('');
+            document.getElementById('tfc-add').disabled = rows.length >= (st.max || 8);
+            document.getElementById('tfc-clear').disabled = !rows.length && !st.owned;
+            document.getElementById('tfc-status').textContent = st.message || '';
+        }
+        function tfcPoll() {
+            if (!document.getElementById('traffic').classList.contains('active')) { clearInterval(TFC.timer); TFC.timer = null; return; }
+            fetch('/api/traffic/state').then(r => r.json()).then(tfcRender).catch(() => {});
+        }
+        function tfcPost(path, body) {
+            const msg = document.getElementById('tfc-msg'); msg.style.color = '';
+            return fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) })
+                .then(r => r.json()).then(res => { msg.textContent = res.message || ''; msg.style.color = res.status === 'success' ? '' : '#f44336'; tfcRender(res); })
+                .catch(() => { msg.textContent = 'No response from the sim.'; msg.style.color = '#f44336'; });
+        }
+        function tfcAdd() {
+            tfcSave();
+            const num = id => { const v = document.getElementById(id).value; return v === '' ? null : Number(v); };
+            tfcPost('/api/traffic/add', { scenario: TFC.sc, cpa_s: num('tfc-cpa'), miss_nm: num('tfc-miss'), vert_ft: num('tfc-vert'), speed_kt: num('tfc-spd') });
+        }
+        function tfcRemove(id) { tfcPost('/api/traffic/remove', { id }); }
+        function tfcClear() { tfcPost('/api/traffic/clear', {}); }
+        function tfcStart() { tfcPoll(); clearInterval(TFC.timer); TFC.timer = setInterval(tfcPoll, 500); }
 
         // ===== Ops Centre (Hoppie ACARS) =====
         const OPS = { timer: null, lastId: 0, msgs: [], status: null };
@@ -8334,6 +8589,14 @@
 
             if (tabName === 'slew') {
                 slwStart();
+            }
+
+            if (tabName === 'replay') {
+                rplStart();
+            }
+
+            if (tabName === 'traffic') {
+                tfcStart();
             }
 
             if (tabName === 'instructor') {

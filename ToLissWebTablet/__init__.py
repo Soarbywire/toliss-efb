@@ -1,0 +1,1 @@
+EFB_VERSION = "0.67"

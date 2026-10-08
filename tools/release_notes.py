@@ -10,4 +10,4 @@ if not m:
     sys.exit(f"CHANGELOG.md has no '## {version}' section")
 print(m.group(1).strip())
 print("\n---\nInstall from **Settings → Updates** in the EFB, or manually: copy `PI_ToLissWebTablet.py` and the "
-      "`ToLissWebTablet` folder into `X-Plane 12/Resources/plugins/PythonPlugins/`.")
+      "`ToLissWebTablet` folder into `X-Plane 12/Resources/plugins/PythonPlugins/` (replace the files, keep your settings).")

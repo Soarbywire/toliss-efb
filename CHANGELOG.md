@@ -3,7 +3,7 @@
 ## Installation
 
 1. Copy `PI_ToLissWebTablet.py` to `X-Plane 12/Resources/plugins/PythonPlugins/`.
-2. Copy `index.html` to `X-Plane 12/Resources/plugins/PythonPlugins/ToLissWebTablet/`.
+2. Copy the `ToLissWebTablet` folder to the same `PythonPlugins` folder (replace the files; your settings and data in it are kept).
 3. Restart X-Plane, or use XPPython3's "Reload scripts".
 4. Check **Settings → About** shows the new version. The page is no longer cached by browsers, so a normal reload picks up updates.
 
@@ -13,6 +13,57 @@ They rebuild automatically when your scenery or navigation data (e.g. a Navigrap
 
 **Recommended ToLiss ISCS setting:** enable **"X-Plane pause acts as freeze motion"**. The approach trainer pauses the sim
 as soon as the aircraft is positioned and finishes setting it up while paused, which needs the aircraft systems to keep running.
+
+---
+
+## 0.67
+
+### A modular plugin
+The plugin is now a package: `PI_ToLissWebTablet.py` is a small loader and the EFB itself lives in the
+`ToLissWebTablet` folder, split into sections (core, features, services, sim and web) so each part can be worked on
+separately. Everything goes through one main-thread bridge: requests from the page never touch X-Plane directly.
+
+- **Updating from 0.66 or earlier:** the old updater only copies two files, so after **Install** and **Reload
+  scripts** the EFB finishes the update itself: it downloads 0.67 from GitHub, checks the checksum and adds the new
+  files (settings, learned stands, checklists, recordings and caches are kept). The EFB's address shows the progress;
+  when it says so, choose **Reload scripts** once more. If it can't download, it explains how to copy the files by hand.
+- **Updates now replace the whole package** and keep your data (including learned stands, `stand_rules.json`).
+  A full copy of the previous version is kept in `PythonPlugins/.tolissefb-backups` for **Undo last update**.
+  Updates wait until the flight recorder has stopped.
+- **Reload scripts** now always runs the newly installed code (XPPython3 otherwise keeps old modules loaded).
+
+### Pushback: towing model
+- The push follows a **towing model**: the tug steers the nose wheel and the aircraft pivots about its main gear
+  (turning radius = wheelbase ÷ tan(steering angle)), steering in and out smoothly. The wheelbase comes from the loaded
+  aircraft's gear positions, with type figures as a fallback.
+- **Nose wheel steering:** Gentle (45°), Normal (60°) or Tight (80°), within Airbus's 90° towing limit. Small turns
+  automatically use less steering.
+- **The map shows the plugin's own plan**, so the preview is exactly the path the push will take: a dashed line for
+  the **path of the aircraft's nose**, from the nose now to the nose of the outline where the aircraft ends up. The
+  line is drawn beneath both aircraft shapes, so it never crosses them (on a short straight push it is hidden
+  entirely and the outline alone shows the result).
+- The aircraft outlines are drawn to the loaded type's length and span (an A321 is longer than an A320).
+- **Settings are kept by the plugin** (in `config.json`), so every device and browser gets the same pushback
+  settings and they survive restarts and updates. Push back / pull forward is now remembered too.
+- **Reset settings to defaults** button (set apart below the push controls): 20 m straight back, tail left 90°, 0 m final, 3 kt, Normal steering, push back.
+
+### IOS: Replay (new)
+X-Plane's own replay, on the EFB: Replay mode on/off, Start, Fast reverse, Reverse, Slow reverse, Pause, Slow forward,
+Play, Fast forward and End, plus **Exit to Real-Time** (leaves replay and returns to the live flight). A playback
+button enters replay when needed. A **REPLAY** badge shows at the top of every page while X-Plane is in replay. Any
+command your X-Plane version lacks is greyed out. Replay is not available during a pushback or slew.
+
+### IOS: TCAS Traffic (new)
+Inject intruders into TCAS to practise traffic and resolution advisories (X-Plane 12.4.1 or later).
+- **Scenarios:** head-on, crossing from the left or right, overtaking from behind, climbing from below, descending
+  from above. Set the time to the closest point of approach, the horizontal miss distance, the intruder's height
+  above or below you at that point, and optionally its speed. Up to 8 intruders at once for multi-threat encounters.
+- Each intruder flies a straight path planned from your present track, speed and climb or descent, reports its
+  altitude (Mode C) with its own Mode S address, and is removed a minute after it passes.
+- The page lists each intruder's range, relative altitude, clock position, time to closest approach and TA/RA status.
+- Only one plugin can supply traffic: the EFB won't take it from xPilot or LiveTraffic (it says who has it), and
+  gives it back at once if another plugin asks (e.g. xPilot connecting). Intruders show on TCAS and the ND, not out of
+  the window. TCAS gives no RAs on the ground or below about 1,000 ft above the ground; the page warns.
 
 ---
 

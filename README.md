@@ -4,12 +4,13 @@ A web-based electronic flight bag for the ToLiss Airbus family in X-Plane 12. It
 opens in any browser on your network, including an iPad:
 
 - **Preflight:** SimBrief dispatch with takeoff and landing performance, weight & balance, ground services, and a
-  built-in pushback (planned on a map, works with the parking brake like a real tug).
+  built-in pushback (a towing model planned on a map, works with the parking brake like a real tug).
 - **Flight:** moving map with airport ground detail and satellite view, ToLiss checklists, an MCDU laid out like the
   real unit, live PFD / E/WD / FCU, and a flight data recorder with landing reports.
 - **IOS (Instructor Operating Station):** aircraft state (set speed, altitude, heading and attitude in flight),
   freezes, slew, repositioning with quick positions and an approach trainer, quick weather (wind, turbulence,
-  visibility, armed wind shear), and ToLiss situations and malfunctions.
+  visibility, armed wind shear), TCAS traffic injection for TA/RA practice, X-Plane replay controls, and ToLiss
+  situations and malfunctions.
 - **Network:** VATSIM radar, xPilot and nearby ATC, and an **Ops Centre** that acts as your airline's operations
   centre on the Hoppie ACARS network, dispatching the flight to the ToLiss MCDU (release, weather, NOTAMs, load sheets,
   takeoff data, ATIS, ETA and fuel updates, stand assignment, landing data and a block-in summary).
