@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version to publish, e.g. 0.60 (must match EFB_VERSION in the plugin and the version in index.html)"
+        description: "Version to publish, e.g. 0.67 (must match ToLissWebTablet/__init__.py, PI_ToLissWebTablet.py and index.html)"
         required: true
 
 permissions:
@@ -31,10 +31,9 @@ jobs:
       - name: Build the release zip and its SHA-256 checksum
         run: |
           DIR="build/ToLiss EFB $VERSION"
-          mkdir -p "$DIR/ToLissWebTablet"
-          cp PI_ToLissWebTablet.py "$DIR/"
-          cp ToLissWebTablet/index.html "$DIR/ToLissWebTablet/"
-          cp CHANGELOG.md LICENSE "$DIR/"
+          mkdir -p "$DIR"
+          cp PI_ToLissWebTablet.py CHANGELOG.md LICENSE "$DIR/"
+          cp -r ToLissWebTablet "$DIR/"
           cd build
           python3 ../tools/make_release.py "ToLiss EFB $VERSION"
 
