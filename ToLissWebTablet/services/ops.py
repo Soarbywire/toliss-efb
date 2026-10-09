@@ -1127,14 +1127,17 @@ class OpsCentre:
             rw = next((x for x in rw if str(x.get("identifier", "")).upper() == plan), rw[0] if rw else {})
         dry, wet = ld.get("distance_dry", {}) or {}, ld.get("distance_wet", {}) or {}
         lda = _ops_num(rw.get("length_lda") or rw.get("length"))
+        metres = str(self.plugin.config.get("dist_unit", "ft")).lower() == "m"
+        unit = "M" if metres else "FT"
+        dist = lambda ft: int(round(ft * 0.3048)) if metres else ft      # SimBrief's runway analysis is in feet
         lines = ["LANDING DATA", f'{self._cs()} {dest} RWY {rw.get("identifier", "")}'.strip(),
-                 f"LDA {lda} FT" if lda else "LDA ---",
+                 f"LDA {dist(lda)} {unit}" if lda else "LDA ---",
                  f'WIND {str(c.get("wind_direction", "---")).zfill(3)}/{c.get("wind_speed", "--")}  OAT {c.get("temperature", "--")}',
                  f'LW {_ops_num(c.get("planned_weight"))}',
                  f'CONF {dry.get("flap_setting", "FULL")}  VREF {dry.get("speeds_vref", "---")}'.replace("CONF CONF", "CONF")]
         for label, d in (("DRY", dry), ("WET", wet)):
             if d:
-                lines += [f'{label}: AUTOBRK {d.get("brake_setting", "--")}', f' RQD {_ops_num(d.get("factored_distance"))} FT']
+                lines += [f'{label}: AUTOBRK {d.get("brake_setting", "--")}', f' RQD {dist(_ops_num(d.get("factored_distance")))} {unit}']
         cautions = []
         letter, atis = self._atis(dest, arrival=True) if dest else (None, None)
         if atis:

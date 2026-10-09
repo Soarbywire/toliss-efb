@@ -637,6 +637,13 @@ def handle_get(req, plugin):
             req.end_headers()
             req.wfile.write(json.dumps(body).encode('utf-8'))
 
+        elif req.path == '/api/units':
+            body = {"status": "success", "dist_unit": "m" if str(plugin.config.get("dist_unit", "ft")).lower() == "m" else "ft"}
+            req.send_response(200)
+            req.send_header('Content-type', 'application/json')
+            req.end_headers()
+            req.wfile.write(json.dumps(body).encode('utf-8'))
+
         elif req.path == '/api/push/settings':
             saved = plugin.config.get("push_settings")
             body = {"status": "success", "settings": saved if isinstance(saved, dict) else None}

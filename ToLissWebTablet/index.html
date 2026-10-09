@@ -409,6 +409,8 @@
         .dsp-status.live { color: #4caf50; } .dsp-status.stale { color: #ff9800; }
         .dsp-opts { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
         .dsp-opts .perf-rwys { margin: 0; }
+        .dist-unit { gap: 6px; margin-bottom: 10px !important; }
+        .dist-unit .perf-rwy { padding: 4px 12px; font-size: 13px; }
         .dsp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #000; padding: 6px; border-radius: 8px; }
         .dsp-grid.one { grid-template-columns: minmax(0, 720px); justify-content: center; }
         .dsp-grid.three { grid-template-columns: 1fr 1fr 1fr; }
@@ -1432,6 +1434,10 @@
                         <label class="rp-field">Ops callsign<input type="text" id="ops-cs" maxlength="8" autocomplete="off" autocapitalize="characters" placeholder="e.g. QFAOPS" onchange="opsSaveFields()"></label>
                         <label class="rp-field">Aircraft callsign<input type="text" id="ops-acft" maxlength="8" autocomplete="off" autocapitalize="characters" placeholder="e.g. QFA431" onchange="opsSaveFields()"></label>
                     </div>
+                    <div class="rp-row" id="ops-units">
+                        <div class="perf-rwys dist-unit" style="margin:0;"><span style="font-size:12px;color:var(--text-dim);align-self:center;">Runway distances in landing data</span>
+                            <button class="perf-rwy active" data-u="ft" onclick="setDistUnit('ft')">FT</button><button class="perf-rwy" data-u="m" onclick="setDistUnit('m')">M</button></div>
+                    </div>
                     <div class="rp-row">
                         <button class="mc-btn" onclick="opsFromSimbrief()">Use SimBrief callsign</button>
                         <button class="rp-go" style="flex:1;" onclick="opsSaveConfig(true)">Save and connect</button>
@@ -1877,7 +1883,7 @@
                 <div style="line-height: 1.5; color: var(--text-muted); font-size: 13px;">
                     <p>A web-based, remote interface for the ToLiss line of aircraft in X-Plane 12.</p>
                     <p>By Soarbywire &middot; <a href="https://soarbywire.com" target="_blank" rel="noopener">soarbywire.com</a></p>
-                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.67 Release Beta</p>
+                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.67.1 Release Beta</p>
                     <p style="font-size: 11px; color: #ff9800; margin-top: 5px;"><strong>Caution:</strong> Some features may not work as intended.</p>
                     <p style="font-size: 11px; color: var(--text-dim); margin-top: 5px;">New versions are published on <a href="https://github.com/soarbywire/toliss-efb/releases" target="_blank" rel="noopener">GitHub</a> and the X-Plane.org forums, and can be installed from <b>Updates</b> above.</p>
                     <div class="lic">
@@ -5777,7 +5783,9 @@
                 .then(d => {
                     simbriefData = d;
                     
-                    let callsign = d.general.icao_airline + d.general.flight_number;
+                    // the flight number (airline's 2-letter code + number, e.g. QF431) and the ATC callsign from the OFP
+                    const fltNo = String((d.general.iata_airline || d.general.icao_airline || '') + (d.general.flight_number || ''));
+                    let callsign = String((d.atc && d.atc.callsign) || ((d.general.icao_airline || '') + (d.general.flight_number || '')));
                     let routeStr = `${d.origin.icao_code} ➔ ${d.destination.icao_code}`;
                     let altStr = d.alternate.icao_code;
                     let crz = d.general.initial_altitude;
@@ -5810,6 +5818,7 @@
 
                     if(sbContent) sbContent.innerHTML = `
                         <div class="telemetry-grid">
+                            <div class="tel-box"><div class="lbl">Flight</div><div class="val" style="color:#4caf50;">${fltNo}</div></div>
                             <div class="tel-box"><div class="lbl">Callsign</div><div class="val" style="color:#4caf50;">${callsign}</div></div>
                             <div class="tel-box"><div class="lbl">Route</div><div class="val" style="font-size:16px; margin-top:8px;">${routeStr}</div></div>
                             <div class="tel-box"><div class="lbl">Alternate</div><div class="val">${altStr}</div></div>
@@ -5892,7 +5901,30 @@
 
         function kv(k, v) { return `<div class="ps-k">${k}</div><div class="ps-v">${v}</div>`; }
         function up(x) { const v = sbVal(x); return v === '' ? '--' : esc(v.toUpperCase()); }
-        function lenS(x) { const f = sbNum(x); return f === null ? '--' : Math.round(f) + ' FT <small>' + Math.round(f * 0.3048) + ' M</small>'; }
+        // runway distances: SimBrief gives feet; shown in the unit chosen (kept by the plugin, shared with the Ops Centre)
+        let DIST_UNIT = (safeGetStorage('toliss_dist_unit') === 'm') ? 'm' : 'ft';
+        const dU = () => DIST_UNIT === 'm' ? 'M' : 'FT';
+        const dConv = ft => DIST_UNIT === 'm' ? Math.round(ft * 0.3048) : Math.round(ft);
+        function lenS(x) {
+            const f = sbNum(x); if (f === null) return '--';
+            return DIST_UNIT === 'm' ? Math.round(f * 0.3048) + ' M <small>' + Math.round(f) + ' FT</small>' : Math.round(f) + ' FT <small>' + Math.round(f * 0.3048) + ' M</small>';
+        }
+        function distUnitButtons() {
+            return `<div class="perf-rwys dist-unit" style="margin:0;"><span style="font-size:12px;color:var(--text-dim);align-self:center;">Runway distances</span>` +
+                ['ft', 'm'].map(u => `<button class="perf-rwy${DIST_UNIT === u ? ' active' : ''}" data-u="${u}" onclick="setDistUnit('${u}')">${u === 'm' ? 'M' : 'FT'}</button>`).join('') + '</div>';
+        }
+        function distUnitSync() {
+            document.querySelectorAll('.dist-unit button').forEach(b => b.classList.toggle('active', b.dataset.u === DIST_UNIT));
+            if (typeof simbriefData !== 'undefined' && simbriefData) { try { renderTakeoffPerf(); renderLandingPerf(); } catch (e) {} }
+        }
+        function setDistUnit(u, fromPlugin) {
+            DIST_UNIT = u === 'm' ? 'm' : 'ft'; safeSetStorage('toliss_dist_unit', DIST_UNIT);
+            distUnitSync();
+            if (!fromPlugin) fetch('/api/units', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dist_unit: DIST_UNIT }) }).catch(() => {});
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            fetch('/api/units').then(r => r.json()).then(res => { if (res.dist_unit) setDistUnit(res.dist_unit, true); }).catch(() => {});
+        });
         function windS(dir, spd) {
             const d = sbNum(dir), k = sbNum(spd);
             if (d === null && k === null) return '--';
@@ -5958,6 +5990,7 @@
             const thrustTxt = flex ? `FLEX ${esc(flex)}` : (thr ? esc(thr) : '--');
 
             el.innerHTML = `
+                ${distUnitButtons()}
                 ${rwyButtons('to', rwys, perfToRwy, planned)}
                 <div class="psheet">
                     <div class="ps-head"><span class="ps-title">TAKEOFF</span><span class="ps-apt">${up(d.origin.icao_code)} / RWY ${esc(perfToRwy)}</span></div>
@@ -6017,16 +6050,17 @@
             const lda = sbNum(r.length_lda);
             const dry = ld.distance_dry || {}, wet = ld.distance_wet || {};
 
-            function num(x) { const v = sbNum(x); return v === null ? '--' : Math.round(v); }
+            function num(x) { const v = sbNum(x); return v === null ? '--' : dConv(v); }
             function margin(dd) {
                 const f = sbNum(dd.factored_distance);
                 if (!isPlanned || lda === null || f === null) return '--';
-                const m = Math.round(lda - f);
+                const m = dConv(lda - f);
                 return `<span class="${m >= 0 ? 'ps-pos' : 'ps-neg'}">${m >= 0 ? '+' : ''}${m}</span>`;
             }
             const row = (k, a, b) => `<tr><td>${k}</td><td>${a}</td><td>${b}</td></tr>`;
 
             el.innerHTML = `
+                ${distUnitButtons()}
                 ${rwys.length ? rwyButtons('ldg', rwys, perfLdgRwy, planned) : ''}
                 <div class="psheet">
                     <div class="ps-head"><span class="ps-title">LANDING</span><span class="ps-apt">${up(d.destination.icao_code)}${perfLdgRwy ? ' / RWY ' + esc(perfLdgRwy) : ''}</span></div>
@@ -6054,9 +6088,9 @@
                             ${row('CONF', confS(dry.flap_setting), confS(wet.flap_setting))}
                             ${row('AUTOBRAKE', up(dry.brake_setting), up(wet.brake_setting))}
                             ${row('VREF', `<span class="ps-speed">${up(dry.speeds_vref)}</span>`, `<span class="ps-speed">${up(wet.speeds_vref)}</span>`)}
-                            ${row('ACT DIST (FT)', num(dry.actual_distance), num(wet.actual_distance))}
-                            ${row('FACT DIST (FT)', num(dry.factored_distance), num(wet.factored_distance))}
-                            ${row('MARGIN VS LDA (FT)', margin(dry), margin(wet))}
+                            ${row(`ACT DIST (${dU()})`, num(dry.actual_distance), num(wet.actual_distance))}
+                            ${row(`FACT DIST (${dU()})`, num(dry.factored_distance), num(wet.factored_distance))}
+                            ${row(`MARGIN VS LDA (${dU()})`, margin(dry), margin(wet))}
                         </table>
                         <div class="ps-note">Distances are for the planned runway${planned ? ' (' + esc(planned) + ')' : ''}.${!isPlanned && perfLdgRwy ? ' Select it to see the margin.' : ''}</div>
                     </div>

@@ -45,6 +45,16 @@ def handle_post(req, plugin):
             req.end_headers()
             req.wfile.write(b'{"status":"success"}')
 
+        elif req.path == '/api/units':
+            # runway distance unit for the performance sheets and the Ops Centre's landing data (SimBrief gives feet)
+            if str(data.get("dist_unit", "")).lower() in ("ft", "m"):
+                plugin.config["dist_unit"] = str(data["dist_unit"]).lower()
+                plugin.save_config(plugin.config)
+            req.send_response(200)
+            req.send_header('Content-type', 'application/json')
+            req.end_headers()
+            req.wfile.write(json.dumps({"status": "success", "dist_unit": plugin.config.get("dist_unit", "ft")}).encode('utf-8'))
+
         elif req.path == '/api/push/settings':
             # the pushback page's settings, kept in config.json so every device and every session shares them
             s = data.get("settings") if isinstance(data, dict) else None

@@ -16,6 +16,18 @@ as soon as the aircraft is positioned and finishes setting it up while paused, w
 
 ---
 
+## 0.67.1
+
+### Fixes
+- **Dispatch & OFP:** the box labelled "Callsign" showed the flight number. It now shows both: **Flight** (e.g. QF431)
+  and **Callsign**, the ATC callsign from your SimBrief OFP (e.g. QFA43T).
+- **Runway distances in feet or metres:** a new **Runway distances: FT / M** setting, on the Takeoff and Landing
+  performance sheets and in the Ops Centre setup (one setting, shared by both and every device). It applies to the
+  runway lengths, the actual and factored landing distances and the margin on the sheets, and to the Ops Centre's
+  **landing data** message (LDA and required distances). Elevations stay in feet. The default is feet.
+
+---
+
 ## 0.67
 
 ### A modular plugin
