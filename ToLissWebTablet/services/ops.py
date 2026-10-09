@@ -276,7 +276,12 @@ class OpsCentre:
         self.auto = {k: bool(saved_auto.get(k, k not in OPS_AUTO_OFF_BY_DEFAULT)) for k in OPS_AUTO_KEYS}
         self.ofp = None
         self.ofp_user = cfg.get("simbrief_user", "")
+        self.autoload = bool(cfg.get("ops_autoload", False))    # load the latest SimBrief plan at start (off by default)
         self.flight = self._new_flight(None)
+        self._saved_flight = self._load_flight()                 # the last dispatched flight, carried over a reload
+        self._flight_saved_json = None
+        self._next_autoload = 0.0
+        self._autoload_tries = 0
         self.queue = []
         self.next_send = 0.0
         self._last_auto = 0.0
@@ -308,11 +313,59 @@ class OpsCentre:
         except Exception as e:
             self.plugin.log.xplane(f"ToLiss EFB: ops log save failed: {e}\n")
 
+    # the dispatched flight's progress, so a reload (or an X-Plane restart) carries on without re-sending anything
+    def _flight_path(self):
+        return os.path.join(os.path.dirname(self._log_path()), "flight.json")
+
+    @staticmethod
+    def _json_default(o):
+        return {"__set__": sorted(o, key=str)} if isinstance(o, set) else str(o)
+
+    def _load_flight(self):
+        try:
+            with open(self._flight_path(), 'r', encoding='utf-8') as f:
+                fl = json.load(f, object_hook=lambda d: set(d["__set__"]) if set(d) == {"__set__"} else d)
+            return fl if isinstance(fl, dict) and fl.get("ofp_id") else None
+        except Exception:
+            return None
+
+    def _save_flight(self):
+        try:
+            with self.lock:
+                if not self.flight.get("ofp_id"):
+                    return
+                text = json.dumps(self.flight, default=self._json_default)
+            if text == self._flight_saved_json:
+                return
+            tmp = self._flight_path() + ".tmp"
+            with open(tmp, 'w', encoding='utf-8') as f:
+                f.write(text)
+            os.replace(tmp, self._flight_path())
+            self._flight_saved_json = text
+        except Exception as e:
+            self.plugin.log.xplane(f"ToLiss EFB: ops flight save failed: {e}\n")
+
+    # the latest SimBrief plan, fetched by the plugin itself (when "load automatically" is ticked)
+    def fetch_ofp(self):
+        user = (self.ofp_user or "").strip()
+        if not user:
+            return False, "No SimBrief username saved yet: fetch the plan once from Dispatch & OFP."
+        param = "userid" if user.isdigit() else "username"
+        url = f"https://www.simbrief.com/api/xml.fetcher.php?{param}={urllib.parse.quote(user)}&json=1"
+        try:
+            req = urllib.request.Request(url, headers={'User-Agent': f'ToLissEFB/{EFB_VERSION}'})
+            with urllib.request.urlopen(req, timeout=15) as r:
+                ofp = json.loads(r.read().decode("utf-8"))
+            self.set_ofp(ofp)
+            return bool(self.ofp), "loaded" if self.ofp else "SimBrief returned no flight plan."
+        except Exception as e:
+            return False, f"SimBrief: {e}"
+
     def save_config(self):
         try:
             self.plugin.config.update({"ops_logon": self.logon, "ops_callsign": self.ops_callsign,
                                        "ops_aircraft": self.aircraft, "ops_enabled": self.enabled,
-                                       "ops_auto": self.auto, "simbrief_user": self.ofp_user})
+                                       "ops_auto": self.auto, "simbrief_user": self.ofp_user, "ops_autoload": self.autoload})
             self.plugin.save_config(self.plugin.config)
         except Exception:
             pass
@@ -328,9 +381,11 @@ class OpsCentre:
         with urllib.request.urlopen(req, timeout=20) as r:
             return r.read().decode("utf-8", errors="replace")
 
-    def _add(self, direction, frm, to, mtype, text, status="ok"):
+    def _add(self, direction, frm, to, mtype, text, status="ok", kind=None):
         entry = {"id": int(time.time() * 1000) + len(self.log), "t": int(time.time()), "dir": direction,
                  "from": frm, "to": to, "type": mtype, "text": text, "status": status}
+        if kind:
+            entry["kind"] = kind          # which automatic message it is (final, stand, ...): the DCDU offers the right responses
         with self.lock:
             self.log.append(entry)
             self.log = self.log[-500:]
@@ -361,7 +416,7 @@ class OpsCentre:
             self.error = f"Hoppie: {e}"
         self.last_poll = time.time()
 
-    def send(self, text, to=None, as_crew=False, log_id=None):
+    def send(self, text, to=None, as_crew=False, log_id=None, kind=None):
         # as_crew: send from the aircraft's callsign to the ops centre (ToLiss's ATSU has no AOC free-text page).
         # Only sending under the aircraft's name; collecting its messages stays with ToLiss.
         frm = self.aircraft if as_crew else self.ops_callsign
@@ -380,13 +435,13 @@ class OpsCentre:
             elif log_id is not None:
                 self._update_entry(log_id, "ok")       # a held message, now sent
             else:
-                self._add("out", frm, to, "telex", text)
+                self._add("out", frm, to, "telex", text, kind=kind)
             return True, "sent"
         except Exception as e:
             if log_id is not None:
                 self._update_entry(log_id, "failed")
             else:
-                self._add("in" if as_crew else "out", frm, to, "telex", text, status="failed")
+                self._add("in" if as_crew else "out", frm, to, "telex", text, status="failed", kind=kind)
             return False, f"Not sent: {e}"
 
     def _update_entry(self, entry_id, status):
@@ -396,7 +451,40 @@ class OpsCentre:
                     m["status"] = status
                     m["t"] = int(time.time())
                     m["rev"] = m.get("rev", 0) + 1
+                    m["rt"] = int(time.time())
         self._save_log()
+
+    # ---------- DCDU responses: the crew answers an uplink with a response key ----------
+    DCDU_RESPONSES = ("ACCEPT", "REJECT", "ROGER", "STBY", "UNABLE", "REQ CHANGE", "CLOSE")
+
+    def respond(self, entry_id, resp):
+        """A DCDU response key: send the answer to the ops centre as the crew, and record it on the message."""
+        resp = str(resp or "").upper()
+        if resp not in self.DCDU_RESPONSES:
+            return False, "Unknown response."
+        with self.lock:
+            m = next((x for x in self.log if x["id"] == entry_id), None)
+            if not m:
+                return False, "That message is no longer in the log."
+            if resp == "CLOSE":
+                m["dcdu"] = "closed"
+                m["rev"], m["rt"] = m.get("rev", 0) + 1, int(time.time())
+                self._save_log()
+                return True, "Closed."
+            first = next((l for l in str(m.get("text", "")).split("\n") if l.strip()), "")[:20].strip()
+            edno = re.search(r"EDNO\s+(\d+)", str(m.get("text", "")))
+            text = {"ACCEPT": f"LOADSHEET EDNO {edno.group(1) if edno else ''} ACCEPTED".replace("  ", " "),
+                    "REJECT": f"LOADSHEET EDNO {edno.group(1) if edno else ''} REJECTED".replace("  ", " "),
+                    "REQ CHANGE": "REQUEST STAND CHANGE",
+                    "STBY": f"STANDBY\nRE {first}", "UNABLE": f"UNABLE\nRE {first}", "ROGER": f"ROGER\nRE {first}"}[resp]
+            m["resp"], m["resp_status"] = resp, "sending"
+            m["rev"], m["rt"] = m.get("rev", 0) + 1, int(time.time())
+        ok, msg = self.send(text, as_crew=True)
+        with self.lock:
+            m["resp_status"] = "sent" if ok else "failed"
+            m["rev"], m["rt"] = m.get("rev", 0) + 1, int(time.time())
+        self._save_log()
+        return ok, ("Sent." if ok else msg)
 
     def _loop(self):
         import random as _r
@@ -404,6 +492,15 @@ class OpsCentre:
         while not stop_event.is_set():
             try:
                 now = time.time()
+                if self.autoload and not self.ofp and self.ofp_user and now >= self._next_autoload and self._autoload_tries < 10:
+                    self._autoload_tries += 1
+                    ok, msg = self.fetch_ofp()
+                    self._next_autoload = now + 60          # try again in a minute (e.g. no internet yet)
+                    if not ok:
+                        self.error = self.error or msg
+                if now - getattr(self, "_last_flight_save", 0) >= 5:
+                    self._last_flight_save = now
+                    self._save_flight()
                 if self.enabled and self.configured() and now >= self.next_poll:
                     self.poll()
                     self.next_poll = time.time() + _r.uniform(HOPPIE_POLL_MIN_S, HOPPIE_POLL_MAX_S)
@@ -442,7 +539,16 @@ class OpsCentre:
         ofp_id = str(_ops_g(ofp, "params", "request_id") or _ops_g(ofp, "params", "time_generated"))
         self.ofp = ofp
         if ofp_id != self.flight.get("ofp_id"):
-            self.flight = self._new_flight(ofp_id)
+            saved = self._saved_flight
+            if saved and saved.get("ofp_id") == ofp_id:
+                # the same plan as before the reload: carry on where it left off (nothing is sent again)
+                fresh = self._new_flight(ofp_id)
+                fresh.update(saved)
+                fresh["queued"] = []
+                self.flight = fresh
+            else:
+                self.flight = self._new_flight(ofp_id)
+            self._saved_flight = None
             self.queue = [q for q in self.queue if q[0] == "reply"]
 
     def _sim(self, names, timeout=1.5):
@@ -471,7 +577,7 @@ class OpsCentre:
         if self.aircraft_online is False:
             item = self.queue[0]
             if item[2] is None:
-                item[2] = self._add("out", self.ops_callsign, self.aircraft, "telex", item[1], status="waiting")["id"]
+                item[2] = self._add("out", self.ops_callsign, self.aircraft, "telex", item[1], status="waiting", kind=item[0])["id"]
             self.flight["holding"] = True
             if self.next_poll - time.time() > 30:
                 self.next_poll = time.time() + 30      # check sooner for the aircraft coming back online
@@ -480,7 +586,7 @@ class OpsCentre:
         key, text, log_id = self.queue.pop(0)
         # every automatic message is wrapped to the MCDU's 24 characters per line
         text = "\n".join(l for line in str(text).split("\n") for l in (ops_wrap(line) if len(line) > OPS_WIDTH else [line]))
-        ok, _ = self.send(text, log_id=log_id)
+        ok, _ = self.send(text, log_id=log_id, kind=key)
         if ok and key != "reply":
             self.flight["sent"][key] = int(time.time())
         if key in self.flight["queued"]:
@@ -1314,6 +1420,23 @@ class OpsCentre:
     def _crew_message(self, text):
         t = re.sub(r"\s+", " ", str(text or "").upper()).strip()
         o = self.ofp or {}
+        if re.search(r"(LOAD ?SHEET|LDSHT)\b.*\bREJECT", t):
+            if not self.flight.get("edno"):
+                self._queue("reply", "FINAL LOADSHEET NOT YET\nISSUED. IT FOLLOWS WHEN\nBOARDING IS COMPLETE")
+                return
+            self._queue("reply", f'LOADSHEET EDNO {self.flight["edno"]}\nREJECTED: NOTED\nREVISED LOADSHEET FOLLOWS')
+            self._queue("reply", self.msg_final())
+            return
+        if re.match(r"^(?:REQ(?:UEST)?\s+)?(STAND|GATE)\s+CHANGE\b", t):
+            if not self.ofp:
+                self._queue("reply", "NO FLIGHT PLAN LOADED")
+                return
+            ok, msg = self.change_stand("auto")
+            if not ok:
+                self._queue("reply", "NO OTHER SUITABLE STAND\nAVAILABLE\nCONTACT GROUND ON ARRIVAL")
+            elif not (self.flight.get("arrival_sent") or "stand" in self.flight["sent"]):
+                self._queue("stand", self.msg_stand(revised=True))
+            return
         if re.search(r"(LOAD ?SHEET|LDSHT|LS)\b.*\b(ACK|RECEIVED|RCVD|ACCEPT)", t) or re.search(r"\b(ACK|ACCEPT)\w*\b.*LOAD ?SHEET", t):
             if not self.flight.get("edno"):
                 self._queue("reply", "FINAL LOADSHEET NOT YET\nISSUED. IT FOLLOWS WHEN\nBOARDING IS COMPLETE")
@@ -1396,4 +1519,5 @@ class OpsCentre:
             return {"enabled": self.enabled, "configured": self.configured(), "logon_set": bool(self.logon),
                     "ops_callsign": self.ops_callsign, "aircraft": self.aircraft, "aircraft_online": self.aircraft_online,
                     "last_poll": int(self.last_poll), "next_poll_in": max(0, int(self.next_poll - time.time())) if self.enabled else None,
-                    "error": self.error, "unread": self.unread, "count": len(self.log)}
+                    "error": self.error, "unread": self.unread, "count": len(self.log), "autoload": self.autoload,
+                    "simbrief_user": self.ofp_user, "ofp_loaded": bool(self.ofp)}

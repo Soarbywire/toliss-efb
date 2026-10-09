@@ -165,7 +165,7 @@ def handle_post(req, plugin):
             req.wfile.write(json.dumps(result).encode('utf-8'))
             return
 
-        elif req.path in ('/api/ops/config', '/api/ops/send', '/api/ops/poll', '/api/ops/clear', '/api/ops/auto', '/api/ops/action', '/api/ops/stand'):
+        elif req.path in ('/api/ops/config', '/api/ops/send', '/api/ops/poll', '/api/ops/clear', '/api/ops/auto', '/api/ops/action', '/api/ops/stand', '/api/ops/respond'):
             ops = getattr(plugin, 'ops', None)
             result = {"status": "error", "message": "Ops Centre not available"}
             if ops and req.path == '/api/ops/config':
@@ -185,10 +185,18 @@ def handle_post(req, plugin):
                 if "enabled" in data:
                     ops.enabled = bool(data["enabled"]) and not problems
                     ops.next_poll = 0
+                if data.get("simbrief_user"):
+                    ops.ofp_user = str(data["simbrief_user"]).strip()[:40]
+                if "autoload" in data:
+                    ops.autoload = bool(data["autoload"])
+                    ops._autoload_tries, ops._next_autoload = 0, 0.0      # load it now if there is no plan yet
                 ops.save_config()
                 result = {"status": "error" if problems else "success", "message": " ".join(problems), **ops.status()}
             elif ops and req.path == '/api/ops/send':
                 ok, msg = ops.send(data.get("text", ""), data.get("to"), bool(data.get("as_crew")))
+                result = {"status": "success" if ok else "error", "message": msg}
+            elif ops and req.path == '/api/ops/respond':
+                ok, msg = ops.respond(int(data.get("id", 0) or 0), data.get("resp"))
                 result = {"status": "success" if ok else "error", "message": msg}
             elif ops and req.path == '/api/ops/poll':
                 if time.time() - ops.last_poll < 20:

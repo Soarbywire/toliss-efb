@@ -684,7 +684,8 @@ def handle_get(req, plugin):
             elif parsed.path == '/api/ops/config':
                 # the saved setup, to fill in the Ops Centre page (served only on your local network)
                 body = {"status": "success", "logon": ops.logon, "ops_callsign": ops.ops_callsign,
-                        "aircraft": ops.aircraft, "enabled": ops.enabled} if ops else {"status": "error"}
+                        "aircraft": ops.aircraft, "enabled": ops.enabled, "autoload": ops.autoload,
+                        "simbrief_user": ops.ofp_user, "ofp_loaded": bool(ops.ofp)} if ops else {"status": "error"}
             elif parsed.path == '/api/ops/stands':
                 try:
                     body = {"status": "success", **ops.stand_list()} if ops and ops.ofp else {"status": "error", "message": "Load a SimBrief flight plan first."}
@@ -699,7 +700,7 @@ def handle_get(req, plugin):
                 items = []
                 if ops:
                     with ops.lock:
-                        items = [dict(m) for m in ops.log if m["id"] > since or (m.get("rev") and m["t"] >= upd)]
+                        items = [dict(m) for m in ops.log if m["id"] > since or (m.get("rev") and max(m["t"], m.get("rt", 0)) >= upd)]
                         if qs.get("read", ["0"])[0] == "1":
                             ops.unread = 0
                 body = {"status": "success", "messages": items}

@@ -541,6 +541,13 @@
         .ops-timeline { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); padding: 6px 8px; margin-bottom: 8px; background: #000; border-radius: 6px; }
         .ops-timeline b { color: var(--accent); font-weight: normal; margin-left: auto; }
         .ops-phase { border-top: 1px solid var(--border); margin-top: 4px; }
+        .ops-flight-head { cursor: pointer; user-select: none; }
+        .ops-flight h4 .ops-fl-title { font-family: inherit; color: var(--text-main); font-weight: bold; }
+        .ops-fold { display: inline-block; width: 14px; color: var(--text-dim); }
+        .ops-fl-sum { font-size: 12px; color: var(--text-dim); }
+        .ops-phase.disabled { opacity: 0.55; }
+        .ops-phase.disabled .ops-phase-head { cursor: default; }
+        .ops-phase.disabled button, .ops-phase.disabled input { opacity: 0.4; cursor: default; pointer-events: none; }
         .ops-phase-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 2px; cursor: pointer; font-weight: bold; font-size: 14px; color: var(--text-main); }
         .ops-phase-head small { font-weight: normal; color: var(--text-dim); font-size: 12px; }
         .ops-phase-head em { font-style: normal; font-weight: normal; font-size: 11px; color: #111; background: var(--accent); border-radius: 8px; padding: 1px 7px; margin-left: 6px; }
@@ -631,6 +638,35 @@
         .pb-reset-row { margin-top: 22px; padding-top: 14px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; }
         .pb-reset-row button { margin: 0 !important; min-height: 32px; padding: 0 12px; background: transparent !important; color: var(--text-dim) !important; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; cursor: pointer; }
         .pb-reset-row button:disabled { opacity: 0.4; cursor: default; }
+        /* DCDU: the A320-family datalink display, in the same bezel and key colours as the MCDU and FCU */
+        .dcdu-body { --legend: #f4e7c0; width: 440px; max-width: 100%; margin: 0 auto; background: linear-gradient(#67737e, #56626c); border: 2px solid #3e4851; border-radius: 3px;
+                     padding: 10px 12px 14px 12px; box-sizing: border-box; box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 4px 14px rgba(0,0,0,0.45); }
+        .dcdu-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .dcdu-top .lbl { font: bold 10px var(--font-ui); color: var(--legend); letter-spacing: 1px; }
+        .dcdu-unit { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 8px; }
+        .dcdu-keys-side { display: grid; grid-template-rows: repeat(9, minmax(0, 1fr)); padding: 6px 0; }
+        .dcdu-keys-side button { grid-row: span 1; }
+        .dcdu-keys-side button:nth-child(1) { grid-row: 7; } .dcdu-keys-side button:nth-child(2) { grid-row: 9; }
+        .dcdu-screen { background: #000; border: 4px solid #2b3137; border-radius: 2px; padding: 6px 6px; font-family: "Consolas", "Menlo", "DejaVu Sans Mono", monospace;
+                       display: grid; grid-template-rows: repeat(9, 1fr); aspect-ratio: 1.75; container-type: inline-size; overflow: hidden; transition: filter 0.2s; }
+        .dcdu-row { display: flex; justify-content: space-between; align-items: center; white-space: pre; font-size: 4.6cqw; line-height: 1; min-width: 0; overflow: hidden; }
+        .dcdu-row.hdr { border-bottom: 1px solid #2a2a2a; }
+        .dcdu-row .mid { flex: 1; text-align: center; }
+        .dcdu-c { color: #2ef2ff; } .dcdu-g { color: #19f25e; } .dcdu-w { color: #f2f2f2; } .dcdu-a { color: #ff9d00; }
+        .dcdu-bezel-btn { margin: 0 !important; padding: 0; min-height: 0; height: 100%; max-height: 30px; width: 42px; align-self: center; justify-self: center; position: relative;
+                          background: linear-gradient(#3a3e43, #24272b); color: var(--legend); border: 1px solid #16181b; border-radius: 4px; font-size: 15px; line-height: 1;
+                          box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), 0 2px 0 #3a444d; cursor: pointer; }
+        .dcdu-keys-side.l button::after, .dcdu-keys-side.r button::after { content: ''; position: absolute; top: 50%; width: 8px; height: 2px; background: #e8e2cf; }
+        .dcdu-keys-side.l button::after { left: 100%; margin-left: 1px; } .dcdu-keys-side.r button::after { right: 100%; margin-right: 1px; }
+        .dcdu-bezel-btn:active, .dcdu-bottom button:active { background: var(--accent); color: #111; }
+        .dcdu-bottom { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin-top: 10px; }
+        .dcdu-bottom button { margin: 0 !important; padding: 0; min-height: 34px; font: bold 10px var(--font-ui); letter-spacing: 0.3px; background: linear-gradient(#3a3e43, #24272b); color: var(--legend);
+                              border: 1px solid #16181b; border-radius: 5px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), 0 2px 0 #3a444d; cursor: pointer; }
+        .dcdu-bottom button.brt { background: linear-gradient(#202225, #0f1012); }
+        .dcdu-paper { margin: 10px auto 0 auto; width: 300px; max-width: 100%; background: #f6f3ea; color: #222; font: 12px/1.35 "Consolas", "Menlo", monospace; white-space: pre-wrap;
+                      padding: 10px 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.4); border-top: 3px dashed #bbb; }
+        .dcdu-wrap { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; align-items: flex-start; }
+        .dcdu-wrap .mcdu-body { margin: 0; }
         /* replay and TCAS traffic (IOS) */
         .replay-badge { background: #e65100; color: #fff; font-weight: bold; font-size: 12px; letter-spacing: 1px; padding: 6px 10px; border-radius: 6px; margin-right: 8px; cursor: pointer; white-space: nowrap; }
         .rpl-bar { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 6px; margin-top: 12px; }
@@ -1257,9 +1293,11 @@
                     <div class="perf-rwys" style="margin: 0;">
                         <button class="perf-rwy active" id="mcdu-side-1" onclick="mcduSetSide(1)">MCDU 1 (CAPT)</button>
                         <button class="perf-rwy" id="mcdu-side-2" onclick="mcduSetSide(2)">MCDU 2 (F/O)</button>
+                        <button class="perf-rwy" id="mcdu-dcdu-btn" onclick="mcduToggleDcdu()" title="Show the DCDU with your Ops Centre messages next to the MCDU">DCDU</button>
                     </div>
                 </div>
 
+                <div class="dcdu-wrap">
                 <div class="mcdu-body">
                     <div class="mcdu-ann-top" aria-hidden="true">
                         <span class="ann amber">FM1</span><span class="ann amber">IND</span><span class="ann green">RDY</span><span class="ann amber"></span><span class="ann amber">FM2</span>
@@ -1282,7 +1320,31 @@
                         </div>
                     </div>
                 </div>
+                <div id="mcdu-dcdu-slot" style="display:none;"></div>
+                </div>
                 <div class="rp-note" id="mcdu-diag">Connecting to the MCDU...</div>
+            </div>
+
+            <!-- DCDU (moved into the Ops Centre or MCDU page when shown) -->
+            <div id="dcdu-home" style="display:none;">
+                <div id="dcdu">
+                    <div class="dcdu-body">
+                        <div class="dcdu-top"><span class="lbl">DCDU</span><span class="ann green" id="dcdu-msg-light">MSG</span></div>
+                        <div class="dcdu-unit">
+                            <div class="dcdu-keys-side l"><button class="dcdu-bezel-btn" onclick="dcduKey('L1')"></button><button class="dcdu-bezel-btn" onclick="dcduKey('L2')"></button></div>
+                            <div class="dcdu-screen" id="dcdu-screen"></div>
+                            <div class="dcdu-keys-side r"><button class="dcdu-bezel-btn" onclick="dcduKey('R1')"></button><button class="dcdu-bezel-btn" onclick="dcduKey('R2')"></button></div>
+                        </div>
+                        <div class="dcdu-bottom">
+                            <button class="brt" onclick="dcduBright(1)">BRT</button><button class="brt" onclick="dcduBright(-1)">DIM</button>
+                            <button onclick="dcduNav('msg', -1)">MSG−</button><button onclick="dcduNav('msg', 1)">MSG+</button>
+                            <button onclick="dcduPrint()">PRINT</button>
+                            <button onclick="dcduNav('pge', -1)">PGE−</button><button onclick="dcduNav('pge', 1)">PGE+</button>
+                        </div>
+                    </div>
+                    <div class="dcdu-paper" id="dcdu-paper" style="display:none;"></div>
+                    <div class="rp-note" id="dcdu-note" style="text-align:center;"></div>
+                </div>
             </div>
 
             <!-- INSTRUCTOR STATION -->
@@ -1434,6 +1496,8 @@
                         <label class="rp-field">Ops callsign<input type="text" id="ops-cs" maxlength="8" autocomplete="off" autocapitalize="characters" placeholder="e.g. QFAOPS" onchange="opsSaveFields()"></label>
                         <label class="rp-field">Aircraft callsign<input type="text" id="ops-acft" maxlength="8" autocomplete="off" autocapitalize="characters" placeholder="e.g. QFA431" onchange="opsSaveFields()"></label>
                     </div>
+                    <label class="ops-autoload-row" style="display:flex; gap:8px; align-items:center; margin-top:10px; font-size:13px; cursor:pointer;">
+                        <input type="checkbox" class="ops-autoload" onchange="opsSetAutoload(this.checked)"> Load my latest SimBrief flight plan automatically (when X-Plane starts and when the EFB opens)</label>
                     <div class="rp-row" id="ops-units">
                         <div class="perf-rwys dist-unit" style="margin:0;"><span style="font-size:12px;color:var(--text-dim);align-self:center;">Runway distances in landing data</span>
                             <button class="perf-rwy active" data-u="ft" onclick="setDistUnit('ft')">FT</button><button class="perf-rwy" data-u="m" onclick="setDistUnit('m')">M</button></div>
@@ -1448,7 +1512,13 @@
 
                 <div class="ops-flight" id="ops-flight"></div>
 
+                <div class="perf-rwys" id="ops-view" style="margin:10px 0 6px 0;">
+                    <span style="font-size:12px;color:var(--text-dim);align-self:center;">Message display</span>
+                    <button class="perf-rwy active" data-v="list" onclick="opsSetView('list')">List</button>
+                    <button class="perf-rwy" data-v="dcdu" onclick="opsSetView('dcdu')">DCDU</button>
+                </div>
                 <div class="ops-log" id="ops-log"><div class="perf-empty">No messages yet.</div></div>
+                <div id="ops-dcdu-slot" style="display:none;"></div>
                 <div class="ops-compose">
                     <select id="ops-tpl" onchange="opsTemplate(this)">
                         <option value="">Quick messages...</option>
@@ -1761,9 +1831,11 @@
                     <div style="margin-top: 15px; display:flex; gap: 10px; border-top: 1px solid var(--input-border); padding-top: 15px;">
                         <div style="flex:1;">
                             <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:5px;">SimBrief Username / Pilot ID</label>
-                            <input type="text" id="setting-simbrief" placeholder="e.g. JohnDoe" style="width:100%; padding:8px;" onchange="safeSetStorage('toliss_simbrief', this.value)">
+                            <input type="text" id="setting-simbrief" placeholder="e.g. JohnDoe" style="width:100%; padding:8px;" onchange="safeSetStorage('toliss_simbrief', this.value); opsSetAutoload(null)">
                         </div>
                     </div>
+                    <label style="display:flex; gap:8px; align-items:center; margin-top:12px; font-size:13px; color:var(--text-main); cursor:pointer;">
+                        <input type="checkbox" class="ops-autoload" onchange="opsSetAutoload(this.checked)"> Load my latest SimBrief flight plan automatically (when X-Plane starts and when the EFB opens)</label>
                 </div>
 
                 <hr style="border: 0; border-top: 1px solid var(--border); margin: 30px 0 25px 0;">
@@ -1883,7 +1955,7 @@
                 <div style="line-height: 1.5; color: var(--text-muted); font-size: 13px;">
                     <p>A web-based, remote interface for the ToLiss line of aircraft in X-Plane 12.</p>
                     <p>By Soarbywire &middot; <a href="https://soarbywire.com" target="_blank" rel="noopener">soarbywire.com</a></p>
-                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.67.1 Release Beta</p>
+                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.67.3 Release Beta</p>
                     <p style="font-size: 11px; color: #ff9800; margin-top: 5px;"><strong>Caution:</strong> Some features may not work as intended.</p>
                     <p style="font-size: 11px; color: var(--text-dim); margin-top: 5px;">New versions are published on <a href="https://github.com/soarbywire/toliss-efb/releases" target="_blank" rel="noopener">GitHub</a> and the X-Plane.org forums, and can be installed from <b>Updates</b> above.</p>
                     <div class="lic">
@@ -6850,6 +6922,187 @@
         function tfcClear() { tfcPost('/api/traffic/clear', {}); }
         function tfcStart() { tfcPoll(); clearInterval(TFC.timer); TFC.timer = setInterval(tfcPoll, 500); }
 
+        // ===== DCDU: Ops Centre messages on an A320-family DCDU, with response keys =====
+        // Uplinks (ops centre -> aircraft) and the crew's downlinks; the keys answer as the crew over Hoppie.
+        const DCDU = { idx: -1, page: 0, recall: false, timer: null, seen: {}, bright: 1, lastUp: null, audio: null };
+        const DCDU_W = 26, DCDU_LINES = 6;
+        try { DCDU.seen = JSON.parse(safeGetStorage('toliss_dcdu_seen') || '{}') || {}; } catch (e) { DCDU.seen = {}; }
+        function dcduVisible() {
+            const slot = document.getElementById('dcdu') && document.getElementById('dcdu').parentElement;
+            return !!slot && slot.id !== 'dcdu-home' && slot.style.display !== 'none' && !!slot.closest('.tab-content.active');
+        }
+        function dcduMount(slotId, on) {
+            const d = document.getElementById('dcdu'), slot = document.getElementById(slotId);
+            if (on) { slot.appendChild(d); slot.style.display = ''; dcduStartPolling(); dcduRender(); }
+            else { slot.style.display = 'none'; if (d.parentElement === slot) document.getElementById('dcdu-home').appendChild(d); }
+        }
+        function opsSetView(v, restoring) {
+            if (!restoring) safeSetStorage('toliss_ops_view', v);
+            document.querySelectorAll('#ops-view button').forEach(b => b.classList.toggle('active', b.dataset.v === v));
+            document.getElementById('ops-log').style.display = v === 'dcdu' ? 'none' : '';
+            if (v === 'dcdu') { dcduMount('mcdu-dcdu-slot', false); dcduMount('ops-dcdu-slot', true); }
+            else dcduMount('ops-dcdu-slot', false);
+        }
+        function mcduToggleDcdu(force) {
+            const on = force !== undefined ? force : document.getElementById('mcdu-dcdu-slot').style.display === 'none';
+            safeSetStorage('toliss_mcdu_dcdu', on ? '1' : '0');
+            document.getElementById('mcdu-dcdu-btn').classList.toggle('active', on);
+            if (on) { dcduMount('ops-dcdu-slot', false); dcduMount('mcdu-dcdu-slot', true); } else dcduMount('mcdu-dcdu-slot', false);
+        }
+        // the messages the DCDU shows
+        function dcduKind(m) {
+            if (m.kind) return m.kind;
+            const t = String(m.text || '');
+            if (/^LOADSHEET FINAL/.test(t)) return 'final';
+            if (/^(REVISED )?STAND ASSIGNMENT/.test(t)) return 'stand';
+            return m.dir === 'out' ? 'free' : 'crew';
+        }
+        function dcduMsgs() {
+            const acft = OPS.status && OPS.status.aircraft;
+            return OPS.msgs.filter(m => m.type !== 'event' && m.status !== 'waiting' &&
+                (m.dir === 'out' ? m.status !== 'failed' : (!acft || m.from === acft)))
+                .filter(m => DCDU.recall || m.dcdu !== 'closed');
+        }
+        function dcduActions(m) {
+            if (!m || m.dir !== 'out') return [];
+            if (m.resp) return m.resp_status === 'failed' ? dcduOpenActions(m) : [['R2', 'CLOSE']];
+            return dcduOpenActions(m);
+        }
+        function dcduOpenActions(m) {
+            const k = dcduKind(m), t = String(m.text || '');
+            if (k === 'final') return [['L2', 'REJECT'], ['R2', 'ACCEPT']];
+            if (k === 'stand' && !/NOT AVBL/.test(t)) return [['L2', 'REQ CHANGE'], ['R2', 'ROGER']];
+            if ((k === 'free' || k === 'reply') && /\?|PLEASE|ADVISE|CONFIRM|REPORT/.test(t)) return [['L1', 'STBY'], ['L2', 'UNABLE'], ['R2', 'ROGER']];
+            return [['R2', 'ROGER']];
+        }
+        function dcduWrap(text) {
+            const out = [];
+            String(text || '').split('\n').forEach(line => {
+                let l = line.replace(/\s+$/, '');
+                if (!l) { out.push(''); return; }
+                while (l.length > DCDU_W) { let cut = l.lastIndexOf(' ', DCDU_W); if (cut < 8) cut = DCDU_W; out.push(l.slice(0, cut)); l = l.slice(cut).replace(/^\s+/, ''); }
+                out.push(l);
+            });
+            while (out.length && out[out.length - 1] === '') out.pop();
+            return out;
+        }
+        const dcduEsc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+        function dcduRow(left, mid, right, cls) {
+            return `<div class="dcdu-row${cls ? ' ' + cls : ''}"><span>${left || ''}</span><span class="mid">${mid || ''}</span><span>${right || ''}</span></div>`;
+        }
+        function dcduRender() {
+            const scr = document.getElementById('dcdu-screen');
+            if (!scr) return;
+            const list = dcduMsgs();
+            if (DCDU.idx < 0 || DCDU.idx >= list.length) {
+                // the oldest open uplink first, as the real unit queues them; otherwise the latest message
+                const open = list.findIndex(m => m.dir === 'out' && !m.resp);
+                DCDU.idx = open >= 0 ? open : list.length - 1; DCDU.page = 0;
+            }
+            const m = list[DCDU.idx];
+            const light = document.getElementById('dcdu-msg-light');
+            const unseen = list.some(x => x.dir === 'out' && !x.resp && !DCDU.seen[x.id]);
+            light.classList.toggle('lit', unseen);
+            if (!m) {
+                scr.innerHTML = dcduRow('', '<span class="dcdu-w">NO ACTIVE MESSAGE</span>', '', 'hdr') + dcduRow() + dcduRow() + dcduRow() + dcduRow() + dcduRow() + dcduRow() +
+                    dcduRow('', '', '') + dcduRow(OPS.msgs.some(x => x.dcdu === 'closed') ? '<span class="dcdu-w">*RECALL</span>' : '', '', '');
+                DCDU.keys = OPS.msgs.some(x => x.dcdu === 'closed') ? { L2: 'RECALL' } : {};
+                document.getElementById('dcdu-note').textContent = OPS.status && !OPS.status.configured ? 'Set up the Ops Centre (Hoppie) to receive messages.' : '';
+                return;
+            }
+            if (m.dir === 'out' && !m.resp && !DCDU.seen[m.id]) { DCDU.seen[m.id] = 1; safeSetStorage('toliss_dcdu_seen', JSON.stringify(Object.fromEntries(Object.entries(DCDU.seen).slice(-300)))); }
+            const up = m.dir === 'out';
+            const lines = dcduWrap(m.text);
+            const pages = Math.max(1, Math.ceil(lines.length / DCDU_LINES));
+            DCDU.page = Math.min(DCDU.page, pages - 1);
+            let status, sc;
+            if (!up) { status = 'SENT'; sc = 'dcdu-g'; }
+            else if (!m.resp) { status = 'OPEN'; sc = 'dcdu-c'; }
+            else if (m.resp_status === 'sending') { status = 'SENDING'; sc = 'dcdu-w'; }
+            else if (m.resp_status === 'failed') { status = m.resp + ' FAILED'; sc = 'dcdu-a'; }
+            else { status = m.resp + ' SENT'; sc = 'dcdu-g'; }
+            if (m.dcdu === 'closed') { status = 'CLOSED'; sc = 'dcdu-w'; }
+            const who = up ? 'FROM ' + m.from : 'TO ' + m.to;
+            const body = lines.slice(DCDU.page * DCDU_LINES, DCDU.page * DCDU_LINES + DCDU_LINES);
+            const bc = !up ? 'dcdu-w' : (m.resp && m.resp_status !== 'failed' ? 'dcdu-g' : 'dcdu-c');
+            let html = dcduRow(`<span class="dcdu-w">${opsUtc(m.t)} ${dcduEsc(who)}</span>`, '', `<span class="${sc}">${dcduEsc(status)}</span>`, 'hdr');
+            for (let i = 0; i < DCDU_LINES; i++) html += dcduRow(`<span class="${bc}">${dcduEsc(body[i] || '')}</span>`, '', '');
+            const acts = DCDU.recall && m.dcdu === 'closed' ? [] : dcduActions(m);
+            DCDU.keys = {};
+            acts.forEach(([k, label]) => DCDU.keys[k] = label);
+            if (DCDU.recall) DCDU.keys.L2 = DCDU.keys.L2 || 'RETURN';
+            const p = k => DCDU.keys[k] ? (k[0] === 'L' ? '*' + DCDU.keys[k] : DCDU.keys[k] + '*') : '';
+            const cnt = `<span class="dcdu-w">MSG ${DCDU.idx + 1}/${list.length}${pages > 1 ? '  PGE ' + (DCDU.page + 1) + '/' + pages : ''}</span>`;
+            html += dcduRow(`<span class="dcdu-c">${dcduEsc(p('L1'))}</span>`, cnt, `<span class="dcdu-c">${dcduEsc(p('R1'))}</span>`);
+            html += dcduRow(`<span class="dcdu-c">${dcduEsc(p('L2'))}</span>`, DCDU.recall ? '<span class="dcdu-a">RECALL</span>' : '', `<span class="dcdu-c">${dcduEsc(p('R2'))}</span>`);
+            scr.innerHTML = html;
+            document.getElementById('dcdu-note').textContent = '';
+        }
+        function dcduKey(k) {
+            const label = DCDU.keys && DCDU.keys[k];
+            if (!label) return;
+            const list = dcduMsgs(), m = list[DCDU.idx];
+            if (label === 'RECALL') { DCDU.recall = true; DCDU.idx = dcduMsgs().length - 1; DCDU.page = 0; dcduRender(); return; }
+            if (label === 'RETURN') { DCDU.recall = false; DCDU.idx = -1; dcduRender(); return; }
+            if (!m) return;
+            const note = document.getElementById('dcdu-note');
+            if (label !== 'CLOSE') { m.resp = label; m.resp_status = 'sending'; dcduRender(); }
+            opsPost('/api/ops/respond', { id: m.id, resp: label }).then(res => {
+                note.textContent = res.status === 'success' ? '' : (res.message || 'Not sent.');
+                note.style.color = res.status === 'success' ? '' : '#f44336';
+                if (label === 'CLOSE' && res.status === 'success') { m.dcdu = 'closed'; DCDU.idx = -1; }
+                dcduFetch();
+            }).catch(() => { note.textContent = 'No response from the EFB.'; note.style.color = '#f44336'; });
+        }
+        function dcduNav(what, d) {
+            const list = dcduMsgs();
+            if (what === 'msg') { if (!list.length) return; DCDU.idx = Math.max(0, Math.min(list.length - 1, DCDU.idx + d)); DCDU.page = 0; }
+            else { const m = list[DCDU.idx]; if (!m) return; const pages = Math.max(1, Math.ceil(dcduWrap(m.text).length / DCDU_LINES)); DCDU.page = Math.max(0, Math.min(pages - 1, DCDU.page + d)); }
+            dcduRender();
+        }
+        function dcduBright(d) { DCDU.bright = Math.max(0.35, Math.min(1, DCDU.bright + d * 0.15)); document.getElementById('dcdu-screen').style.filter = `brightness(${DCDU.bright})`; }
+        // PRINT: the cockpit printer, as a strip of paper under the unit
+        function dcduPrint() {
+            const m = dcduMsgs()[DCDU.idx], paper = document.getElementById('dcdu-paper');
+            if (!m) return;
+            paper.textContent = `${opsUtc(m.t)} ${m.dir === 'out' ? 'FROM ' + m.from : 'TO ' + m.to}\n${'-'.repeat(28)}\n${m.text}\n${'-'.repeat(28)}`;
+            paper.style.display = '';
+        }
+        // the chime for a new uplink (a browser only plays sound after the page has been touched once)
+        document.addEventListener('pointerdown', () => { try { if (!DCDU.audio) DCDU.audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }, { once: true });
+        function dcduChime() {
+            const a = DCDU.audio; if (!a) return;
+            try { [880, 660].forEach((f, i) => { const o = a.createOscillator(), g = a.createGain(); o.frequency.value = f; o.connect(g); g.connect(a.destination);
+                const t0 = a.currentTime + i * 0.18; g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.25, t0 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.16); o.start(t0); o.stop(t0 + 0.17); }); } catch (e) {}
+        }
+        function dcduFetch() {
+            fetch('/api/ops/log?since=' + OPS.lastId + '&updated=' + (OPS.lastT || 0) + '&read=1').then(r => r.json()).then(res => {
+                const items = res.messages || [];
+                items.forEach(m => {
+                    const i = OPS.msgs.findIndex(x => x.id === m.id);
+                    if (i >= 0) OPS.msgs[i] = m; else OPS.msgs.push(m);
+                    OPS.lastId = Math.max(OPS.lastId, m.id);
+                    OPS.lastT = Math.max(OPS.lastT || 0, m.t, m.rt || 0);
+                });
+                OPS.msgs = OPS.msgs.slice(-500);
+                const ups = OPS.msgs.filter(m => m.dir === 'out' && m.status === 'ok');
+                const newest = ups.length ? ups[ups.length - 1].id : 0;
+                if (DCDU.lastUp !== null && newest > DCDU.lastUp) {
+                    dcduChime();
+                    const list = dcduMsgs(), cur = list[DCDU.idx];
+                    if (!cur || cur.resp || cur.dir !== 'out') DCDU.idx = -1;      // show the new message unless one is being answered
+                }
+                DCDU.lastUp = newest;
+                if (items.length || !DCDU.rendered) { DCDU.rendered = true; document.getElementById('ops').classList.contains('active') ? opsRenderLog() : dcduRender(); }
+            }).catch(() => {});
+        }
+        function dcduStartPolling() {
+            if (!OPS.status) fetch('/api/ops/status').then(r => r.json()).then(st => { OPS.status = st; dcduRender(); }).catch(() => {});
+            dcduFetch();
+            clearInterval(DCDU.timer);
+            DCDU.timer = setInterval(() => { if (dcduVisible()) dcduFetch(); else { clearInterval(DCDU.timer); DCDU.timer = null; } }, 3000);
+        }
+
         // ===== Ops Centre (Hoppie ACARS) =====
         const OPS = { timer: null, lastId: 0, msgs: [], status: null };
         const opsPost = (path, body) => fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) }).then(r => r.json());
@@ -6870,6 +7123,7 @@
         }
 
         function opsRenderLog() {
+            dcduRender();
             const el = document.getElementById('ops-log');
             if (!OPS.msgs.length) { el.innerHTML = '<div class="perf-empty">No messages yet. Messages you send appear on the aircraft&#39;s MCDU (ATSU AOC page).</div>'; return; }
             const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
@@ -6930,12 +7184,26 @@
 
         function opsTogglePhase(id, open) { OPS.open[id] = open; if (OPS.lastFlight) opsRenderFlight(OPS.lastFlight); }
 
+        OPS.flightOpen = safeGetStorage('toliss_ops_flight_open') !== '0';
+        function opsToggleFlight() {
+            OPS.flightOpen = !OPS.flightOpen; safeSetStorage('toliss_ops_flight_open', OPS.flightOpen ? '1' : '0');
+            opsRenderFlight(OPS.lastFlight);
+        }
         function opsRenderFlight(f) {
             const el = document.getElementById('ops-flight');
             OPS.lastFlight = f;
             try { opsUpdateMapStand(f); } catch (e) {}
+            const tog = `<span class="ops-fold">${OPS.flightOpen ? '▾' : '▸'}</span>`;
             if (!f || !f.loaded) {
-                el.innerHTML = '<h4>Flight</h4><div class="rp-note" style="margin:0;">Load your SimBrief flight plan (Dispatch &amp; OFP) to start. With the ops centre connected, the flight is dispatched automatically: pre-flight messages, in-flight updates, and the arrival package.</div>';
+                // no plan yet: the list of what the ops centre will send, greyed out
+                let html = `<h4 class="ops-flight-head" onclick="opsToggleFlight()"><span class="ops-fl-title">${tog} Flight</span><span>no flight plan loaded</span></h4>`;
+                if (!OPS.flightOpen) { el.innerHTML = html + '<div class="ops-fl-sum">Load your SimBrief flight plan (Dispatch &amp; OFP) to start.</div>'; return; }
+                html += '<div class="rp-note" style="margin:0 0 6px 0;">Load your SimBrief flight plan (Dispatch &amp; OFP) to start, or tick <b>Load my latest SimBrief flight plan automatically</b> in the Setup. With the ops centre connected, the flight is then dispatched automatically:</div>';
+                OPS_PHASES.forEach(ph => {
+                    html += `<div class="ops-phase disabled"><div class="ops-phase-head"><span>${ph.title}</span><small>${ph.items.length} messages</small></div>` +
+                        ph.items.map(([k, label, when]) => `<div class="ops-item"><div>${label}</div><div class="st">${esc(when || '')}</div><label><input type="checkbox" disabled> Auto</label><button class="mc-btn" disabled>Send now</button></div>`).join('') + '</div>';
+                });
+                el.innerHTML = html;
                 return;
             }
             const cur = OPS_PHASE_ORDER.indexOf(f.phase || 'pre');
@@ -6944,8 +7212,19 @@
             const landed = !!o.on;   // after landing only the stand is still of interest
             const prog = [!landed && f.eta ? `ETA ${esc(f.dest)} ${opsUtc(f.eta)}` : '', !landed && f.dist_rem ? f.dist_rem + ' nm to go' : '',
                           !landed && f.efob !== null && f.efob !== undefined ? 'EFOB ' + f.efob.toLocaleString() + ' kg' : '', f.stand ? 'Stand ' + esc(f.stand) : ''].filter(Boolean).join(' · ');
-            let html = `<h4>Flight <span>${esc(f.callsign)} ${esc(f.route.replace('-', ' → '))}${f.acft ? ' · ' + esc(f.acft) : ''}${f.generated ? ' · OFP ' + opsUtc(f.generated) : ''}</span></h4>
-                <div class="ops-timeline"><span>OUT ${t('out')}</span><span>OFF ${t('off')}</span><span>ON ${t('on')}</span><span>IN ${t('in')}</span>${prog ? `<b>${prog}</b>` : ''}</div>`;
+            let html = `<h4 class="ops-flight-head" onclick="opsToggleFlight()"><span class="ops-fl-title">${tog} Flight</span><span>${esc(f.callsign)} ${esc(f.route.replace('-', ' → '))}${f.acft ? ' · ' + esc(f.acft) : ''}${f.generated ? ' · OFP ' + opsUtc(f.generated) : ''}</span></h4>`;
+            if (!OPS.flightOpen) {
+                // folded: one line with where things stand
+                const ph = OPS_PHASES[Math.min(cur, 2)];
+                const sentN = ph.items.filter(([k]) => f.sent[k]).length;
+                const next = ph.items.find(([k]) => !f.sent[k] && f.auto[k]);
+                const parts = [cur === 3 ? 'Flight complete' : ph.title, `${sentN} of ${ph.items.length} sent`];
+                if (next && cur < 3) parts.push(`next: ${next[1]}${next[2] ? ' (' + next[2].replace(/^Sends /, '').toLowerCase() + ')' : ''}`);
+                if (prog) parts.push(prog);
+                el.innerHTML = html + `<div class="ops-fl-sum">${parts.join(' · ')}</div>`;
+                return;
+            }
+            html += `<div class="ops-timeline"><span>OUT ${t('out')}</span><span>OFF ${t('off')}</span><span>ON ${t('on')}</span><span>IN ${t('in')}</span>${prog ? `<b>${prog}</b>` : ''}</div>`;
             OPS_PHASES.forEach((ph, i) => {
                 const items = ph.items;
                 const sentCount = items.filter(([k]) => f.sent[k]).length;
@@ -7098,7 +7377,7 @@
                         const i = OPS.msgs.findIndex(x => x.id === m.id);
                         if (i >= 0) OPS.msgs[i] = m; else OPS.msgs.push(m);
                         OPS.lastId = Math.max(OPS.lastId, m.id);
-                        OPS.lastT = Math.max(OPS.lastT || 0, m.t);
+                        OPS.lastT = Math.max(OPS.lastT || 0, m.t, m.rt || 0);
                     });
                     OPS.msgs = OPS.msgs.slice(-500);
                     opsRenderLog();
@@ -7107,6 +7386,32 @@
                 OPS.rendered = true;
             }).catch(() => {});
         }
+
+        // "Load my latest SimBrief flight plan automatically": kept by the plugin (off by default)
+        function opsSetAutoload(on) {
+            const body = {};
+            const user = safeGetStorage('toliss_simbrief');
+            if (user) body.simbrief_user = user;
+            if (on !== null && on !== undefined) {
+                body.autoload = !!on;
+                document.querySelectorAll('.ops-autoload').forEach(c => c.checked = !!on);
+            }
+            opsPost('/api/ops/config', body).then(res => {
+                if (on && (typeof simbriefData === 'undefined' || !simbriefData) && safeGetStorage('toliss_simbrief')) fetchSimbrief();
+            }).catch(() => {});
+        }
+        // when the EFB opens: tick the boxes, and load the plan if asked to
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => fetch('/api/ops/config').then(r => r.json()).then(c => {
+                if (c.status !== 'success') return;
+                document.querySelectorAll('.ops-autoload').forEach(x => x.checked = !!c.autoload);
+                if (!safeGetStorage('toliss_simbrief') && c.simbrief_user) {
+                    safeSetStorage('toliss_simbrief', c.simbrief_user);
+                    const sb = document.getElementById('setting-simbrief'); if (sb && !sb.value) sb.value = c.simbrief_user;
+                }
+                if (c.autoload && safeGetStorage('toliss_simbrief') && (typeof simbriefData === 'undefined' || !simbriefData)) fetchSimbrief();
+            }).catch(() => {}), 800);
+        });
 
         // fill the setup fields from the plugin's saved settings (not while someone is typing in them)
         function opsLoadFields() {
@@ -7137,6 +7442,7 @@
 
         function opsStart() {
             clearInterval(OPS.timer);
+            opsSetView(safeGetStorage('toliss_ops_view') === 'dcdu' ? 'dcdu' : 'list', true);
             opsLoadFields();
             opsRefresh();
             OPS.timer = setInterval(() => {
@@ -8653,6 +8959,7 @@
             }
 
             if (tabName === 'mcdu') {
+                if (safeGetStorage('toliss_mcdu_dcdu') === '1') mcduToggleDcdu(true);
                 mcduBuild();
                 requestAnimationFrame(mcduAlign);
                 mcduPoll();

@@ -16,6 +16,40 @@ as soon as the aircraft is positioned and finishes setting it up while paused, w
 
 ---
 
+## 0.67.3
+
+### Ops Centre
+- **Load my latest SimBrief flight plan automatically** (a tickbox in the Ops Centre setup and in Settings, off by
+  default). When ticked, the plugin loads your latest SimBrief plan when X-Plane starts (or after Reload scripts),
+  retrying for a while if SimBrief can't be reached, and the EFB shows it on Dispatch & OFP when it opens. A plan you
+  regenerate mid-session is still loaded with Fetch Latest OFP.
+- **No repeated messages after a reload:** the dispatched flight's progress is saved, so loading the same plan again
+  (automatically or by hand) carries on where it left off.
+- **The Flight box folds:** tap its header to fold it to one line (the current phase, how many messages are sent and
+  what comes next); the choice is remembered on each device.
+- **The list of messages is always shown:** with no flight plan loaded, the phases and their messages appear greyed
+  out, with a note on how to start, instead of disappearing.
+
+---
+
+## 0.67.2
+
+### Ops Centre: DCDU (new)
+Ops Centre messages on an A320-family DCDU (as on the A320, A321neo and A321XLR), in the same bezel and key colours
+as the EFB's MCDU and FCU.
+- **Where:** Ops Centre → **Message display: List / DCDU**, or the **DCDU** button on the MCDU page to show it next to
+  the MCDU.
+- **The screen:** time and sender, the message status (OPEN, SENDING, ROGER SENT, CLOSED...), the text in cyan while
+  open and green once answered, long messages in pages, and the MSG count. Your own messages to the ops centre show as SENT.
+- **Response keys beside the screen**, to suit each message: the final load sheet ACCEPT / REJECT (a rejection brings a
+  revised load sheet), the stand assignment ROGER / REQ CHANGE (the ops centre assigns another stand), questions ROGER /
+  STBY / UNABLE, and everything else ROGER. Answered messages can be CLOSED; RECALL brings closed ones back.
+- **Keys:** MSG−/MSG+, PGE−/PGE+, PRINT (onto a cockpit-printer strip under the unit) and BRT/DIM.
+- A **MSG** light and a chime for a new message. Responses go to the ops centre over Hoppie as the crew and are kept in
+  the Ops Centre log, so every device shows the same state. ToLiss's own DCDU and CPDLC are not used.
+
+---
+
 ## 0.67.1
 
 ### Fixes
