@@ -1,7 +1,7 @@
 # Releasing a new ToLiss EFB version
 
 Releases are published by a GitHub Actions workflow in this repository. The EFB's built-in updater
-(Settings → Updates) checks the latest release of `soarbywire/toliss-efb` and installs it for users.
+(Settings → Updates) checks the latest release of `Soarbywire/toliss-efb` and installs it for users.
 
 ## One-time setup
 

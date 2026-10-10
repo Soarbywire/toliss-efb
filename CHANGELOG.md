@@ -16,6 +16,22 @@ as soon as the aircraft is positioned and finishes setting it up while paused, w
 
 ---
 
+## 0.67.5
+
+### Ops Centre
+- **A new flight plan starts a clean message list:** when you load a different SimBrief plan, the previous flight's
+  messages move to a new **Previous flights** section (folded, under the messages; the last 5 flights are kept), so
+  nothing from the last flight can be mistaken for the new one. The list, the DCDU and the unread count start afresh,
+  and a note on the Flight box says how many messages were moved. Messages still waiting to be sent for the old
+  plan are cancelled. Fetching the same plan again, or a reload, changes nothing.
+- **Clear messages** now also deletes the Previous flights.
+- Messages sent to the aircraft stay in ToLiss's own ATSU (AOC → RECEIVED MESSAGES) as before; delete them there.
+
+### Other
+- Updates now use the repository's new address on GitHub (Soarbywire/toliss-efb); the old one still redirects.
+
+---
+
 ## 0.67.4
 
 ### Airport frequencies (new)

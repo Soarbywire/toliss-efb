@@ -341,6 +341,47 @@ class OpsCentre:
         except Exception as e:
             self.plugin.log.xplane(f"ToLiss EFB: ops log save failed: {e}\n")
 
+    # ---- previous flights: the messages of earlier plans, kept apart from the current flight's ----
+    ARCHIVE_KEEP = 5
+
+    def _archive_path(self):
+        return os.path.join(os.path.dirname(self._log_path()), "previous_flights.json")
+
+    def load_archive(self):
+        try:
+            with open(self._archive_path(), 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            return data if isinstance(data, list) else []
+        except Exception:
+            return []
+
+    def _archive_messages(self, label):
+        """Move the whole log to the archive (newest flight first); returns how many messages were moved."""
+        with self.lock:
+            msgs = [m for m in self.log if m.get("status") != "waiting"]
+            self.log = []
+            self.unread = 0
+        if msgs:
+            arch = self.load_archive()
+            arch.insert(0, {"label": label, "date": msgs[0].get("t", int(time.time())), "end": msgs[-1].get("t", int(time.time())),
+                            "messages": msgs})
+            arch = arch[:self.ARCHIVE_KEEP]
+            try:
+                tmp = self._archive_path() + ".tmp"
+                with open(tmp, 'w', encoding='utf-8') as f:
+                    json.dump(arch, f)
+                os.replace(tmp, self._archive_path())
+            except Exception as e:
+                self.plugin.log.xplane(f"ToLiss EFB: could not save previous flights: {e}\n")
+        self._save_log()
+        return len(msgs)
+
+    def clear_archive(self):
+        try:
+            os.remove(self._archive_path())
+        except OSError:
+            pass
+
     # the dispatched flight's progress, so a reload (or an X-Plane restart) carries on without re-sending anything
     def _flight_path(self):
         return os.path.join(os.path.dirname(self._log_path()), "flight.json")
@@ -575,9 +616,17 @@ class OpsCentre:
                 fresh["queued"] = []
                 self.flight = fresh
             else:
+                # a different plan, so a new flight: move the previous flight's messages to "Previous flights" and
+                # cancel anything still waiting to be sent for it, so nothing can be mistaken for the new flight's
+                prev = self.flight.get("label") or (saved or {}).get("label") or "Earlier messages"
+                archived = self._archive_messages(prev) if self.log else 0
                 self.flight = self._new_flight(ofp_id)
+                self.queue = []
+                if archived:
+                    self.flight["archived_prev"] = {"label": prev, "count": archived}
+            self.flight["label"] = f"{self._cs()} {self._route()}".strip()
+            self.flight.setdefault("date", int(time.time()))
             self._saved_flight = None
-            self.queue = [q for q in self.queue if q[0] == "reply"]
 
     def _sim(self, names, timeout=1.5):
         try:
@@ -1524,7 +1573,8 @@ class OpsCentre:
     def _flight_status_locked(self):
         o = self.ofp or {}
         fl = self.flight
-        return {"loaded": bool(self.ofp), "callsign": self._cs() if self.ofp else "", "route": self._route() if self.ofp else "",
+        return {"archived_prev": fl.get("archived_prev"),
+                "loaded": bool(self.ofp), "callsign": self._cs() if self.ofp else "", "route": self._route() if self.ofp else "",
                 "generated": _ops_num(_ops_g(o, "params", "time_generated")), "auto": self.auto, "sent": fl["sent"],
                 "queued": list(fl["queued"]), "ack": fl["ack"], "atis_letter": fl["atis_letter"],
                 "airborne": fl["airborne"], "beacon_seen": fl["beacon_seen"], "oooi": fl["oooi"],

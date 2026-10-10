@@ -225,7 +225,9 @@ def handle_post(req, plugin):
                 with ops.lock:
                     ops.log = []
                     ops.unread = 0
+                    ops.flight.pop("archived_prev", None)
                 ops._save_log()
+                ops.clear_archive()              # previous flights' messages too
                 result = {"status": "success"}
             req.send_response(200)
             req.send_header('Content-type', 'application/json')

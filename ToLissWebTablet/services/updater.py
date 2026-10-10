@@ -18,7 +18,7 @@ import zipfile
 from .. import EFB_VERSION
 
 
-UPDATE_REPO = "soarbywire/toliss-efb"
+UPDATE_REPO = "Soarbywire/toliss-efb"
 UPDATE_API = "https://api.github.com/repos/{repo}/releases/latest"
 UPDATE_WEB = "https://github.com/{repo}/releases/latest"
 UPDATE_DL = "https://github.com/{repo}/releases/download/v{ver}/{name}"

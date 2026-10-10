@@ -547,6 +547,11 @@
         .ops-fold { display: inline-block; width: 14px; color: var(--text-dim); }
         .ops-fl-sum { font-size: 12px; color: var(--text-dim); }
         .ops-phase.disabled { opacity: 0.55; }
+        .ops-prev { margin-top: 10px; border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; background: var(--slider-bg); }
+        .ops-prev > summary { cursor: pointer; font-size: 13px; font-weight: bold; color: var(--text-muted); padding: 4px 0; }
+        .ops-prev details { border-top: 1px solid var(--border); padding: 6px 0; }
+        .ops-prev details summary { cursor: pointer; font-size: 13px; color: var(--text-main); }
+        .ops-note { font-size: 12px; color: #111; background: #ffb300; border-radius: 6px; padding: 5px 8px; margin: 0 0 8px 0; }
         .ops-phase.disabled .ops-phase-head { cursor: default; }
         .ops-phase.disabled button, .ops-phase.disabled input { opacity: 0.4; cursor: default; pointer-events: none; }
         .ops-phase-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 2px; cursor: pointer; font-weight: bold; font-size: 14px; color: var(--text-main); }
@@ -1520,6 +1525,10 @@
                 </div>
                 <div class="ops-log" id="ops-log"><div class="perf-empty">No messages yet.</div></div>
                 <div id="ops-dcdu-slot" style="display:none;"></div>
+                <details class="ops-prev" id="ops-prev" ontoggle="if (this.open) opsLoadArchive()">
+                    <summary>Previous flights</summary>
+                    <div id="ops-prev-list"><div class="perf-empty">Loading...</div></div>
+                </details>
                 <div class="ops-compose">
                     <select id="ops-tpl" onchange="opsTemplate(this)">
                         <option value="">Quick messages...</option>
@@ -1979,9 +1988,9 @@
                 <div style="line-height: 1.5; color: var(--text-muted); font-size: 13px;">
                     <p>A web-based, remote interface for the ToLiss line of aircraft in X-Plane 12.</p>
                     <p>By Soarbywire &middot; <a href="https://soarbywire.com" target="_blank" rel="noopener">soarbywire.com</a></p>
-                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.67.4 Release Beta</p>
+                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.67.5 Release Beta</p>
                     <p style="font-size: 11px; color: #ff9800; margin-top: 5px;"><strong>Caution:</strong> Some features may not work as intended.</p>
-                    <p style="font-size: 11px; color: var(--text-dim); margin-top: 5px;">New versions are published on <a href="https://github.com/soarbywire/toliss-efb/releases" target="_blank" rel="noopener">GitHub</a> and the X-Plane.org forums, and can be installed from <b>Updates</b> above.</p>
+                    <p style="font-size: 11px; color: var(--text-dim); margin-top: 5px;">New versions are published on <a href="https://github.com/Soarbywire/toliss-efb/releases" target="_blank" rel="noopener">GitHub</a> and the X-Plane.org forums, and can be installed from <b>Updates</b> above.</p>
                     <div class="lic">
                         <h4>License &amp; Copyright</h4>
                         <p><b>&copy; 2026 Soarbywire. Some rights reserved.</b></p>
@@ -7121,6 +7130,7 @@
         }
         function dcduFetch() {
             fetch('/api/ops/log?since=' + OPS.lastId + '&updated=' + (OPS.lastT || 0) + '&read=1').then(r => r.json()).then(res => {
+                if (res.count !== undefined && res.count < OPS.msgs.length) { opsLogReset(); dcduRender(); return dcduFetch(); }
                 const items = res.messages || [];
                 items.forEach(m => {
                     const i = OPS.msgs.findIndex(x => x.id === m.id);
@@ -7166,13 +7176,35 @@
             if (!st.configured) document.getElementById('ops-setup').open = true;
         }
 
+        function opsMsgHtml(m) {
+            return m.type === 'event' ? `<div class="ops-event">${esc(m.text)} · ${esc(m.from)}</div>` : `<div class="ops-msg ${m.dir}${m.status === 'failed' ? ' failed' : ''}${m.status === 'waiting' ? ' waiting' : ''}">
+<div class="ops-meta"><b>${esc(m.from)}</b> → ${esc(m.to)} · ${opsUtc(m.t)}${m.type !== 'telex' ? ' · ' + esc(m.type.toUpperCase()) : ''}${m.status === 'failed' ? ' · <span style="color:#f44336">NOT SENT</span>' : ''}${m.status === 'waiting' ? ' · <span style="color:#ff9800">WAITING FOR THE AIRCRAFT (ATSU OFFLINE)</span>' : ''}${m.resp ? ' · <span style="color:#4caf50">' + esc(m.resp) + (m.resp_status === 'failed' ? ' NOT SENT' : ' SENT') + '</span>' : ''}</div><div class="ops-txt">${esc(m.text)}</div></div>`;
+        }
+        // previous flights (their messages were moved aside when a new plan was loaded)
+        function opsLoadArchive() {
+            const el = document.getElementById('ops-prev-list');
+            fetch('/api/ops/archive').then(r => r.json()).then(res => {
+                const fl = res.flights || [];
+                if (!fl.length) { el.innerHTML = '<div class="perf-empty">No previous flights.</div>'; return; }
+                el.innerHTML = fl.map(f => {
+                    const d = new Date(f.date * 1000);
+                    const when = d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) + ' ' + opsUtc(f.date);
+                    return `<details><summary>${esc(f.label)} · ${when} · ${f.messages.length} messages</summary><div class="ops-log" style="max-height:none;">${f.messages.map(opsMsgHtml).join('')}</div></details>`;
+                }).join('');
+            }).catch(() => { el.innerHTML = '<div class="perf-empty">Could not load the previous flights.</div>'; });
+        }
+        // the plugin moved the log aside (new plan) or cleared it: start the list afresh
+        function opsLogReset() {
+            OPS.msgs = []; OPS.lastId = 0; OPS.lastT = 0; OPS.firstRender = true;
+            if (typeof DCDU !== 'undefined') { DCDU.idx = -1; DCDU.recall = false; DCDU.lastUp = null; }
+            const p = document.getElementById('ops-prev'); if (p && p.open) opsLoadArchive();
+        }
         function opsRenderLog() {
             dcduRender();
             const el = document.getElementById('ops-log');
             if (!OPS.msgs.length) { el.innerHTML = '<div class="perf-empty">No messages yet. Messages you send appear on the aircraft&#39;s MCDU (ATSU AOC page).</div>'; return; }
             const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
-            el.innerHTML = OPS.msgs.map(m => m.type === 'event' ? `<div class="ops-event">${esc(m.text)} · ${esc(m.from)}</div>` : `<div class="ops-msg ${m.dir}${m.status === 'failed' ? ' failed' : ''}${m.status === 'waiting' ? ' waiting' : ''}">
-<div class="ops-meta"><b>${esc(m.from)}</b> → ${esc(m.to)} · ${opsUtc(m.t)}${m.type !== 'telex' ? ' · ' + esc(m.type.toUpperCase()) : ''}${m.status === 'failed' ? ' · <span style="color:#f44336">NOT SENT</span>' : ''}${m.status === 'waiting' ? ' · <span style="color:#ff9800">WAITING FOR THE AIRCRAFT (ATSU OFFLINE)</span>' : ''}</div><div class="ops-txt">${esc(m.text)}</div></div>`).join('');
+            el.innerHTML = OPS.msgs.map(opsMsgHtml).join('');
             if (atBottom || OPS.firstRender !== false) { el.scrollTop = el.scrollHeight; OPS.firstRender = false; }
         }
 
@@ -7268,6 +7300,7 @@
                 el.innerHTML = html + `<div class="ops-fl-sum">${parts.join(' · ')}</div>`;
                 return;
             }
+            if (f.archived_prev) html += `<div class="ops-note">New flight plan: ${f.archived_prev.count} message${f.archived_prev.count === 1 ? '' : 's'} for the previous plan (${esc(f.archived_prev.label)}) moved to <a href="#ops-prev" onclick="document.getElementById('ops-prev').open = true;" style="color:#111;"><b>Previous flights</b></a>.</div>`;
             html += `<div class="ops-timeline"><span>OUT ${t('out')}</span><span>OFF ${t('off')}</span><span>ON ${t('on')}</span><span>IN ${t('in')}</span>${prog ? `<b>${prog}</b>` : ''}</div>`;
             OPS_PHASES.forEach((ph, i) => {
                 const items = ph.items;
@@ -7415,6 +7448,7 @@
             if (!active) return;
             fetch('/api/ops/flight').then(r => r.json()).then(opsRenderFlight).catch(() => {});
             fetch('/api/ops/log?since=' + OPS.lastId + '&updated=' + (OPS.lastT || 0) + '&read=1').then(r => r.json()).then(res => {
+                if (res.count !== undefined && res.count < OPS.msgs.length) { opsLogReset(); opsRenderLog(); return opsRefresh(); }
                 const items = res.messages || [];
                 if (items.length) {
                     items.forEach(m => {
@@ -7542,9 +7576,10 @@
         }
 
         function opsClearLog() {
-            if (!confirm('Clear all Ops Centre messages? The flight\'s progress (Pre-flight, In flight, Arrival) is kept.')) return;
+            if (!confirm('Clear all Ops Centre messages, including Previous flights? The flight\'s progress (Pre-flight, In flight, Arrival) is kept.')) return;
             opsPost('/api/ops/clear').then(res => {
-                OPS.msgs = []; OPS.firstRender = true; opsRenderLog();
+                opsLogReset(); opsRenderLog();
+                const pl = document.getElementById('ops-prev-list'); if (pl) pl.innerHTML = '<div class="perf-empty">No previous flights.</div>';
                 const msg = document.getElementById('ops-send-msg');
                 msg.textContent = res.status === 'success' ? 'Messages cleared.' : (res.message || 'Could not clear the messages.');
                 msg.style.color = res.status === 'success' ? '' : '#f44336';

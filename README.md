@@ -18,7 +18,7 @@ opens in any browser on your network, including an iPad:
 ## Installation
 
 1. Install [XPPython3](https://xppython3.readthedocs.io/) for X-Plane 12.
-2. Download the latest `ToLiss_EFB_x_xx.zip` from [Releases](https://github.com/soarbywire/toliss-efb/releases).
+2. Download the latest `ToLiss_EFB_x_xx.zip` from [Releases](https://github.com/Soarbywire/toliss-efb/releases).
 3. Copy `PI_ToLissWebTablet.py` to `X-Plane 12/Resources/plugins/PythonPlugins/`
    and the `ToLissWebTablet` folder to the same `PythonPlugins` folder.
 4. Start X-Plane, load a ToLiss aircraft and open the address shown by the plugin in your browser.
