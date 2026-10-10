@@ -15,6 +15,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+from ..core.net import urlopen as net_urlopen
+
 import http.server
 import socketserver
 
@@ -111,7 +113,7 @@ def handle_get(req, plugin):
             if icao:
                 try:
                     s_req = urllib.request.Request(f"https://metar.vatsim.net/{icao}", headers={'User-Agent': 'ToLissEFB/1.0'})
-                    with urllib.request.urlopen(s_req, timeout=5) as response:
+                    with net_urlopen(s_req, timeout=5) as response:
                         metar_txt = response.read().decode('utf-8').strip()
                         req.send_response(200)
                         req.send_header('Content-type', 'application/json')
@@ -307,7 +309,7 @@ def handle_get(req, plugin):
                 param = "userid" if user.isdigit() else "username"
                 try:
                     s_req = urllib.request.Request(f"https://www.simbrief.com/api/xml.fetcher.php?{param}={user}&json=1", headers={'User-Agent': 'ToLissEFB/1.0'})
-                    with urllib.request.urlopen(s_req, timeout=10) as response:
+                    with net_urlopen(s_req, timeout=10) as response:
                         data = response.read()
                         try:
                             ops = getattr(plugin, 'ops', None)
@@ -619,6 +621,33 @@ def handle_get(req, plugin):
             finally:
                 plugin.stream_clients = max(0, getattr(plugin, 'stream_clients', 1) - 1)
             return
+
+        elif req.path.startswith('/api/airport_freqs'):
+            # real-world ATC frequencies for an airport (?icao=YSSY), or the airport nearest the aircraft (?near=1)
+            qs = urllib.parse.parse_qs(urllib.parse.urlparse(req.path).query)
+            icao = (qs.get("icao", [""])[0] or "").upper().strip()
+            body = None
+            try:
+                if not icao and qs.get("near"):
+                    v = plugin.bridge.call("read_datarefs", ["sim/flightmodel/position/latitude", "sim/flightmodel/position/longitude"], timeout=1.5)
+                    lat, lon = float(v.get("sim/flightmodel/position/latitude", 0)), float(v.get("sim/flightmodel/position/longitude", 0))
+                    icao = plugin.find_nearest_airport(lat, lon, 60000.0) if (lat or lon) else None
+                    if not icao:
+                        body = {"status": "error", "message": "No airport within 60 km of the aircraft."}
+                if icao and body is None:
+                    res = plugin.get_airport_freqs(icao) if getattr(plugin, 'db_ready', False) else None
+                    if res is None:
+                        body = {"status": "error", "message": f"{icao} is not in your scenery." if getattr(plugin, 'db_ready', False) else "The airport index is still loading."}
+                    else:
+                        body = {"status": "success", **res}
+                elif body is None:
+                    body = {"status": "error", "message": "No airport given."}
+            except Exception as exc:
+                body = {"status": "error", "message": f"Could not read the frequencies: {exc}"}
+            req.send_response(200)
+            req.send_header('Content-type', 'application/json')
+            req.end_headers()
+            req.wfile.write(json.dumps(body).encode('utf-8'))
 
         elif req.path.startswith('/api/nearest_airport'):
             try:

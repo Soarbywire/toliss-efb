@@ -15,6 +15,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+from ..core.net import urlopen as net_urlopen
+
 from .. import EFB_VERSION
 from ..services.airports import _gm_dist_m, parse_ground_map
 
@@ -221,6 +223,32 @@ def choose_stand(stands, acft_icao, airline, seed="", rules=None, domestic=True,
     return _r.Random(seed).choice(top)
 
 
+# QNH in the unit used at the airport: the METAR says (A2992 = inches of mercury, Q1013 = hectopascals);
+# without a METAR, by ICAO region (US incl. Pacific, Canada, Mexico, Puerto Rico, Japan, Colombia use inches)
+QNH_INHG_PREFIXES = ("K", "P", "C", "MM", "TJ", "TI", "MY", "RJ", "RO", "SK")
+
+
+def qnh_unit(icao, metar=None):
+    m = str(metar or "")
+    if re.search(r"(?:^|\s)A\d{4}(?:\s|=|$)", m):
+        return "inHg"
+    if re.search(r"(?:^|\s)Q\d{4}(?:\s|=|$)", m):
+        return "hPa"
+    return "inHg" if str(icao or "").upper().startswith(QNH_INHG_PREFIXES) else "hPa"
+
+
+def qnh_text(value, unit):
+    """SimBrief's altimeter in either unit (29.92 or 1013), written in the airport's unit."""
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return "--"
+    if v <= 0:
+        return "--"
+    hpa = v * 33.8639 if v < 40 else v
+    return f"{hpa / 33.8639:.2f}" if unit == "inHg" else str(int(round(hpa)))
+
+
 OPS_WIDTH = 24          # MCDU line width
 
 
@@ -354,7 +382,7 @@ class OpsCentre:
         url = f"https://www.simbrief.com/api/xml.fetcher.php?{param}={urllib.parse.quote(user)}&json=1"
         try:
             req = urllib.request.Request(url, headers={'User-Agent': f'ToLissEFB/{EFB_VERSION}'})
-            with urllib.request.urlopen(req, timeout=15) as r:
+            with net_urlopen(req, timeout=15) as r:
                 ofp = json.loads(r.read().decode("utf-8"))
             self.set_ofp(ofp)
             return bool(self.ofp), "loaded" if self.ofp else "SimBrief returned no flight plan."
@@ -378,7 +406,7 @@ class OpsCentre:
         data = urllib.parse.urlencode({"logon": self.logon, "from": frm or self.ops_callsign, "to": to,
                                        "type": mtype, "packet": packet}).encode("utf-8")
         req = urllib.request.Request(HOPPIE_URL, data=data, headers={'User-Agent': f'ToLissEFB/{EFB_VERSION}'})
-        with urllib.request.urlopen(req, timeout=20) as r:
+        with net_urlopen(req, timeout=20) as r:
             return r.read().decode("utf-8", errors="replace")
 
     def _add(self, direction, frm, to, mtype, text, status="ok", kind=None):
@@ -621,7 +649,7 @@ class OpsCentre:
     def _metar(self, icao):
         try:
             r = urllib.request.Request(f"https://metar.vatsim.net/{icao}", headers={'User-Agent': f'ToLissEFB/{EFB_VERSION}'})
-            with urllib.request.urlopen(r, timeout=8) as resp:
+            with net_urlopen(r, timeout=8) as resp:
                 t = resp.read().decode("utf-8", errors="ignore").strip()
                 return t or None
         except Exception:
@@ -630,7 +658,7 @@ class OpsCentre:
     def _taf(self, icao):
         try:
             r = urllib.request.Request(f"https://aviationweather.gov/api/data/taf?ids={icao}&format=raw", headers={'User-Agent': f'ToLissEFB/{EFB_VERSION}'})
-            with urllib.request.urlopen(r, timeout=8) as resp:
+            with net_urlopen(r, timeout=8) as resp:
                 t = resp.read().decode("utf-8", errors="ignore").strip()
                 return t or None
         except Exception:
@@ -743,7 +771,7 @@ class OpsCentre:
         flex = r.get("flex_temperature")
         thrust = f"FLEX {flex}" if flex not in (None, "", {}) and str(r.get("thrust_setting", "")).upper() != "TOGA" else "TOGA"
         lines = ["TAKEOFF DATA", f'{self._cs()} {_ops_g(o, "origin", "icao_code")} RWY {r.get("identifier", "")}',
-                 f'OAT {c.get("temperature", "--")} QNH {c.get("altimeter", "--")}',
+                 f'OAT {c.get("temperature", "--")} QNH {qnh_text(c.get("altimeter"), qnh_unit(_ops_g(o, "origin", "icao_code"), _ops_g(o, "origin", "metar")))}',
                  f'WIND {str(c.get("wind_direction", "---")).zfill(3)}/{c.get("wind_speed", "--")}',
                  f'TOW {_ops_num(c.get("planned_weight"))}',
                  f'{str(r.get("flap_setting", "")).replace("CONF ", "CONF ")}  {thrust}'.strip(),
@@ -1239,6 +1267,7 @@ class OpsCentre:
         lines = ["LANDING DATA", f'{self._cs()} {dest} RWY {rw.get("identifier", "")}'.strip(),
                  f"LDA {dist(lda)} {unit}" if lda else "LDA ---",
                  f'WIND {str(c.get("wind_direction", "---")).zfill(3)}/{c.get("wind_speed", "--")}  OAT {c.get("temperature", "--")}',
+                 f'QNH {qnh_text(c.get("altimeter"), qnh_unit(dest, _ops_g(o, "destination", "metar")))}',
                  f'LW {_ops_num(c.get("planned_weight"))}',
                  f'CONF {dry.get("flap_setting", "FULL")}  VREF {dry.get("speeds_vref", "---")}'.replace("CONF CONF", "CONF")]
         for label, d in (("DRY", dry), ("WET", wet)):

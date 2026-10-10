@@ -11,7 +11,7 @@ opens in any browser on your network, including an iPad:
   freezes, slew, repositioning with quick positions and an approach trainer, quick weather (wind, turbulence,
   visibility, armed wind shear), TCAS traffic injection for TA/RA practice, X-Plane replay controls, and ToLiss
   situations and malfunctions.
-- **Network:** VATSIM radar, xPilot and nearby ATC, and an **Ops Centre** that acts as your airline's operations
+- **Network:** VATSIM radar, xPilot and nearby ATC, real-world airport frequencies with one-tap tuning, and an **Ops Centre** that acts as your airline's operations
   centre on the Hoppie ACARS network, dispatching the flight to the ToLiss MCDU (release, weather, NOTAMs, load sheets,
   takeoff data, ATIS, ETA and fuel updates, stand assignment, landing data and a block-in summary).
 

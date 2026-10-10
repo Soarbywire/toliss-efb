@@ -7,6 +7,8 @@ import threading
 import time
 import urllib.request
 
+from ..core.net import urlopen as net_urlopen
+
 
 class VatsimCache:
     def __init__(self) -> None:
@@ -56,7 +58,7 @@ class VatsimService:
                     "https://data.vatsim.net/v3/vatsim-data.json",
                     headers={"User-Agent": "ToLissEFB/1.0"},
                 )
-                with urllib.request.urlopen(request, timeout=15) as response:
+                with net_urlopen(request, timeout=15) as response:
                     self.cache.update_data(json.loads(response.read().decode("utf-8")))
             except Exception as exc:
                 self.log.xplane(f"ToLiss EFB: VATSIM fetch error: {exc}")
@@ -69,7 +71,7 @@ class VatsimService:
                         "https://data.vatsim.net/v3/transceivers-data.json",
                         headers={"User-Agent": "ToLissEFB/1.0"},
                     )
-                    with urllib.request.urlopen(request, timeout=20) as response:
+                    with net_urlopen(request, timeout=20) as response:
                         raw = json.loads(response.read().decode("utf-8"))
                     transmitters = {}
                     for entry in raw:

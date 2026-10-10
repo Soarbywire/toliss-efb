@@ -158,6 +158,48 @@ def _gm_dist_m(lat1, lon1, lat2, lon2):
     return math.hypot(x, y) * 6371000.0
 
 
+# ATC frequencies in apt.dat: 50-56 (old, in 10 kHz) and 1050-1056 (8.33 kHz era, in kHz)
+APT_FREQ_TYPES = {0: "ATIS", 1: "CTAF", 2: "DEL", 3: "GND", 4: "TWR", 5: "APP", 6: "DEP"}
+APT_FREQ_ORDER = ["ATIS", "DEL", "GND", "TWR", "DEP", "APP", "CTAF"]
+
+
+def parse_airport_freqs(path, pos, max_lines=400000):
+    """The airport's radio stations (real-world frequencies from the scenery): [{type, name, khz, mhz}]."""
+    found = {}
+    with open(path, "rb") as f:
+        f.seek(pos)
+        f.readline()                                   # the airport's own header line
+        for n, raw in enumerate(f):
+            if n > max_lines:
+                break
+            parts = raw.split(None, 2)
+            if not parts:
+                continue
+            code = parts[0]
+            if code in (b"1", b"16", b"17", b"99"):    # the next airport (or the end of the file)
+                break
+            if not code.isdigit():
+                continue
+            c = int(code)
+            if 50 <= c <= 56 or 1050 <= c <= 1056:
+                try:
+                    v = int(parts[1])
+                except (IndexError, ValueError):
+                    continue
+                khz = v * 10 if c < 1000 else v
+                if not 108000 <= khz <= 137000:
+                    continue
+                typ = APT_FREQ_TYPES[c % 50 if c < 1000 else c - 1050]
+                name = parts[2].decode("utf-8", errors="ignore").strip() if len(parts) > 2 else typ
+                key = (c >= 1000, typ, khz)
+                found.setdefault(key, {"type": typ, "name": name, "khz": khz, "mhz": f"{khz / 1000:.3f}"})
+    # an airport with the newer 8.33 kHz rows lists every station there: the older rows are then duplicates
+    new = [v for k, v in found.items() if k[0]]
+    out = new if new else list(found.values())
+    out.sort(key=lambda x: (APT_FREQ_ORDER.index(x["type"]), x["name"], x["khz"]))
+    return out
+
+
 def parse_ground_map(path, pos):
     """Parse one airport block of an apt.dat starting at byte offset pos."""
     data = {"pavement": [], "lines": [], "runways": [], "stands": [], "labels": [], "boundary": [], "taxi": []}
@@ -381,6 +423,20 @@ class AirportMixin:
             if d < best_d:
                 best, best_d = icao, d
         return best
+    def get_airport_freqs(self, icao):
+        icao = str(icao or "").upper().strip()
+        cache = self.__dict__.setdefault("_freq_cache", {})
+        if icao in cache:
+            return cache[icao]
+        loc = getattr(self, 'apt_index', {}).get(icao)
+        if not loc:
+            return None
+        name = next((a["name"] for a in getattr(self, 'apt_lite_db', []) if a["icao"] == icao), icao)
+        res = {"icao": icao, "name": name, "freqs": parse_airport_freqs(loc[0], loc[1])}
+        if len(cache) >= 30:
+            cache.pop(next(iter(cache)))
+        cache[icao] = res
+        return res
     def get_ground_map(self, icao):
         cache = self.ground_map_cache
         if icao in cache:

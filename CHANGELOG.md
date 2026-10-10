@@ -16,6 +16,31 @@ as soon as the aircraft is positioned and finishes setting it up while paused, w
 
 ---
 
+## 0.67.4
+
+### Airport frequencies (new)
+- **xPilot & ATC → Airport frequencies:** the real-world radio stations of an airport (ATIS, Delivery, Ground, Tower,
+  Departure, Approach, CTAF), read from your scenery (custom scenery first, as on the map), with tabs for the
+  **current / nearest** airport, your **departure** and your **destination**. COM1 / COM2 buttons set the standby
+  frequency, and a green dot shows when a VATSIM controller is online on that frequency.
+- **Map & Telemetry → Frequencies** opens the same list for the airport you are at.
+
+### QNH in the airport's own unit
+- QNH is now shown the way it is used at each airport: inches of mercury where the METAR gives `A2992` (US, Canada,
+  Japan and others), hectopascals where it gives `Q1013`; without a METAR, by country.
+- Applies to the Ops Centre **takeoff data** (departure airport) and **landing data** (destination airport, now with a
+  QNH line), the **Takeoff / Landing performance sheets** (the airport's unit first, the other in small print), and the
+  **telemetry strip** (departure airport until airborne, then the destination; its label shows the unit).
+
+### Secure connections
+- If the computer's own security certificates reject a server (common with an out-of-date certificate store in the
+  Python inside XPPython3, e.g. on a Mac), the EFB retries with an up-to-date set (certifi if installed, else a copy of
+  Mozilla's certificates included with the EFB). This applies to Hoppie, SimBrief, VATSIM, METARs and updates.
+- If it still fails, the message now explains what to check (the computer's date and time, its certificates, or
+  antivirus HTTPS scanning) instead of the raw "CERTIFICATE_VERIFY_FAILED" error.
+
+---
+
 ## 0.67.3
 
 ### Ops Centre

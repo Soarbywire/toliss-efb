@@ -33,3 +33,11 @@ integrate this EFB into a commercial product, payware aircraft, or business envi
 a separate commercial license.
 
 Please contact me at https://soarbywire.com/contact/ to discuss commercial licensing options.
+
+
+Third-party components
+----------------------
+
+ToLissWebTablet/core/cacert.pem is Mozilla's collection of root certificates as packaged by certifi
+(https://github.com/certifi/python-certifi), used only to check secure connections. It is distributed under the
+Mozilla Public License 2.0 (https://mozilla.org/MPL/2.0/) and is not covered by the licence above.

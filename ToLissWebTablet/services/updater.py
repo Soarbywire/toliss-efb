@@ -11,6 +11,8 @@ import threading
 import time
 import urllib.error
 import urllib.request
+
+from ..core.net import urlopen as net_urlopen
 import zipfile
 
 from .. import EFB_VERSION
@@ -92,7 +94,7 @@ class Updater:
             url,
             headers={"User-Agent": f"ToLissEFB/{EFB_VERSION}", "Accept": "application/vnd.github+json"},
         )
-        with urllib.request.urlopen(request, timeout=20) as response:
+        with net_urlopen(request, timeout=20) as response:
             data = response.read(limit + 1 if limit else -1)
         if limit and len(data) > limit:
             raise ValueError("download is larger than expected")
@@ -122,7 +124,7 @@ class Updater:
         request = urllib.request.Request(
             UPDATE_WEB.format(repo=UPDATE_REPO), headers={"User-Agent": f"ToLissEFB/{EFB_VERSION}"}
         )
-        with urllib.request.urlopen(request, timeout=20) as response:
+        with net_urlopen(request, timeout=20) as response:
             final_url = response.geturl()
         match = re.search(r"/releases/tag/v?([\d.]+)", final_url)
         if not match:

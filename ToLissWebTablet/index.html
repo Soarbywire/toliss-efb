@@ -256,6 +256,7 @@
         .xp-list { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
         .xp-row { display: grid; grid-template-columns: 14px 1fr auto auto; gap: 10px; align-items: center; padding: 9px 12px; background: var(--slider-bg); border-bottom: 1px solid var(--border); }
         .xp-row:last-child { border-bottom: none; }
+        .af-head { padding: 8px 12px; font-size: 13px; font-weight: bold; color: var(--accent); background: var(--input-bg); border-bottom: 1px solid var(--border); font-family: var(--font-mono); }
         .xp-row.out { opacity: 0.55; }
         .xp-main { min-width: 0; cursor: pointer; }
         .xp-cs { font-family: var(--font-mono); font-weight: bold; font-size: 14px; color: var(--text-main); }
@@ -1552,6 +1553,18 @@
                 <div class="rp-note" style="margin-top:12px;"><b>Send to aircraft</b> sends from the ops centre; the message appears on the ToLiss MCDU (ATSU, AOC, RECEIVED MESSAGES). ToLiss's ATSU has no free-text page for company messages, so crew replies are sent here with <b>Send as crew</b>: they go from the aircraft's callsign to the ops centre, just as an MCDU message would. Messages are checked every 45 to 75 seconds, as Hoppie asks.</div>
             </div>
 
+            <div class="ops-modal" id="af-modal" style="display:none;" onclick="if (event.target === this) afCloseModal()">
+                <div class="ops-modal-box" style="max-width:640px;">
+                    <div class="dsp-bar"><h3 style="margin:0; border:none; padding:0;" id="af-modal-title">Airport frequencies</h3>
+                        <span class="perf-rwys af-tabs" style="margin:0;">
+                            <button class="perf-rwy" data-t="near" onclick="afTab('near')">Current / nearest</button>
+                            <button class="perf-rwy" data-t="dep" onclick="afTab('dep')">Departure</button>
+                            <button class="perf-rwy" data-t="dest" onclick="afTab('dest')">Destination</button>
+                            <button class="mc-btn" onclick="afCloseModal()" style="min-height:32px;">Close</button></span></div>
+                    <div id="af-modal-list" class="xp-list"></div>
+                    <div class="rp-note">Tune sets the standby frequency; swap it to active on the RMP. A green dot means a VATSIM controller is online on that frequency.</div>
+                </div>
+            </div>
             <div class="ops-modal" id="ops-stand-modal" style="display:none;" onclick="if (event.target === this) opsStandClose()">
                 <div class="ops-modal-box">
                     <h4 id="ops-stand-title">Change stand</h4>
@@ -1607,6 +1620,16 @@
                         <div class="xp-station" id="xp-com2-stn">No station</div>
                     </div>
                 </div>
+
+                <div class="xp-section-head">
+                    <span>Airport frequencies <small style="font-weight:normal;">(real world, from your scenery)</small></span>
+                    <span class="perf-rwys af-tabs" style="margin:0;">
+                        <button class="perf-rwy" data-t="near" onclick="afTab('near')">Current / nearest</button>
+                        <button class="perf-rwy" data-t="dep" onclick="afTab('dep')">Departure</button>
+                        <button class="perf-rwy" data-t="dest" onclick="afTab('dest')">Destination</button>
+                    </span>
+                </div>
+                <div id="af-list" class="xp-list"><div class="perf-empty">Loading...</div></div>
 
                 <div class="xp-section-head">
                     <span>Nearby ATC</span>
@@ -1700,7 +1723,7 @@
                     <div class="tcell"><div class="tl">V/S (fpm)</div><div class="tv" id="tel-vs">---</div></div>
                     <div class="tcell"><div class="tl">HDG (mag)</div><div class="tv" id="tel-hdg">---</div></div>
                     <div class="tcell"><div class="tl">Wind (mag / kt)</div><div class="tv" id="tel-wnd">---</div></div>
-                    <div class="tcell"><div class="tl">OAT / QNH (hPa)</div><div class="tv" id="tel-env">---</div></div>
+                    <div class="tcell"><div class="tl" id="tel-env-lbl">OAT / QNH (hPa)</div><div class="tv" id="tel-env">---</div></div>
                     <div class="tcell"><div class="tl">N1 (%)</div><div class="tv"><span id="tel-n1-1" style="color:#ff9800;">---</span><span class="tsep">/</span><span id="tel-n1-2" style="color:#ff9800;">---</span></div></div>
                     <div class="tcell tw"><div class="tl">AP / A/THR</div><div class="tv"><span id="tel-ap">---</span> <span class="tsep">/</span> <span id="tel-athr">---</span></div></div>
                     <div class="tcell tw"><div class="tl">COM1 active / standby</div><div class="tv"><span id="tel-com1">---</span> <span class="tsep" id="tel-com1stby">---</span></div></div>
@@ -1723,6 +1746,7 @@
                     <span>Moving Map</span>
                     <span class="map-tools">
                         <button onclick="gmGroundView()" class="map-tool-btn">Ground view</button>
+                        <button onclick="afOpenModal()" class="map-tool-btn" title="Real-world ATC frequencies for the airport you are at">Frequencies</button>
                         <button onclick="toggleDrawMode()" class="map-tool-btn" id="draw-btn">Draw</button>
                         <label><input type="checkbox" id="follow-plane" checked> Follow</label>
                         <label><input type="checkbox" id="map-hdgup" onchange="setMapHeadingUp(this.checked)"> Heading up</label>
@@ -1955,7 +1979,7 @@
                 <div style="line-height: 1.5; color: var(--text-muted); font-size: 13px;">
                     <p>A web-based, remote interface for the ToLiss line of aircraft in X-Plane 12.</p>
                     <p>By Soarbywire &middot; <a href="https://soarbywire.com" target="_blank" rel="noopener">soarbywire.com</a></p>
-                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.67.3 Release Beta</p>
+                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.67.4 Release Beta</p>
                     <p style="font-size: 11px; color: #ff9800; margin-top: 5px;"><strong>Caution:</strong> Some features may not work as intended.</p>
                     <p style="font-size: 11px; color: var(--text-dim); margin-top: 5px;">New versions are published on <a href="https://github.com/soarbywire/toliss-efb/releases" target="_blank" rel="noopener">GitHub</a> and the X-Plane.org forums, and can be installed from <b>Updates</b> above.</p>
                     <div class="lic">
@@ -5701,7 +5725,15 @@
                         document.getElementById('tel-hdg').innerText = `${simHdg}°`;
                         document.getElementById('tel-vs').innerText = `${vs}`;
                         document.getElementById('tel-wnd').innerText = `${String(wndDir).padStart(3, '0')}/${wndSpd}`;
-                        document.getElementById('tel-env').innerText = `${Math.round(d["sim/weather/aircraft/temperature_ambient_deg_c"] || 15)}° / ${qnhHpa}`;
+                        {
+                            const sb = typeof simbriefData !== 'undefined' ? simbriefData : null;
+                            if (!simOnGround) window._telAirborne = true;
+                            const apt = sb ? (window._telAirborne ? sb.destination : sb.origin) : null;
+                            const unit = apt ? qnhUnit(apt.icao_code, apt.metar) : 'hPa';
+                            const qTxt = unit === 'inHg' ? (pas / 3386.39).toFixed(2) : qnhHpa;
+                            document.getElementById('tel-env').innerText = `${Math.round(d["sim/weather/aircraft/temperature_ambient_deg_c"] || 15)}° / ${qTxt}`;
+                            const lbl = document.getElementById('tel-env-lbl'); if (lbl) lbl.textContent = `OAT / QNH (${unit})`;
+                        }
                         
                         let n1_1 = (d["sim/flightmodel/engine/ENGN_N1_[0]"] || 0).toFixed(1);
                         let n1_2 = (d["sim/flightmodel/engine/ENGN_N1_[1]"] || 0).toFixed(1);
@@ -5854,6 +5886,7 @@
                 })
                 .then(d => {
                     simbriefData = d;
+                    window._telAirborne = false;      // QNH unit on the telemetry strip: departure until airborne
                     
                     // the flight number (airline's 2-letter code + number, e.g. QF431) and the ATC callsign from the OFP
                     const fltNo = String((d.general.iata_airline || d.general.icao_airline || '') + (d.general.flight_number || ''));
@@ -6010,11 +6043,22 @@
             const cs = c === null ? '' : 'X' + Math.abs(Math.round(c));
             return [hs, cs].filter(Boolean).join(' / ');
         }
-        function qnhS(x) {
+        // QNH in the unit used at the airport: its METAR says (A2992 inches, Q1013 hPa); otherwise by ICAO region
+        const QNH_INHG_PREFIXES = ['K', 'P', 'C', 'MM', 'TJ', 'TI', 'MY', 'RJ', 'RO', 'SK'];
+        function qnhUnit(icao, metar) {
+            const m = String(metar || '');
+            if (/(^|\s)A\d{4}(\s|=|$)/.test(m)) return 'inHg';
+            if (/(^|\s)Q\d{4}(\s|=|$)/.test(m)) return 'hPa';
+            const i = String(icao || '').toUpperCase();
+            return QNH_INHG_PREFIXES.some(p => i.startsWith(p)) ? 'inHg' : 'hPa';
+        }
+        function qnhS(x, apt) {
             const v = sbNum(x);
             if (v === null) return '--';
             const hpa = v < 40 ? v * 33.8639 : v;
-            return Math.round(hpa) + ' HPA <small>' + (hpa / 33.8639).toFixed(2) + ' INHG</small>';
+            const unit = apt ? qnhUnit(apt.icao_code, apt.metar) : 'hPa';
+            return unit === 'inHg' ? (hpa / 33.8639).toFixed(2) + ' INHG <small>' + Math.round(hpa) + ' HPA</small>'
+                                   : Math.round(hpa) + ' HPA <small>' + (hpa / 33.8639).toFixed(2) + ' INHG</small>';
         }
         function confS(x) { const v = up(x); return v.replace(/^CONF\s*/, ''); }
         function tempS(x) { const v = sbNum(x); return v === null ? '--' : Math.round(v) + '°C'; }
@@ -6079,7 +6123,7 @@
                             ${kv('WIND', windS(c.wind_direction, c.wind_speed))}
                             ${kv('HW/XW', compS(r.headwind_component, r.crosswind_component))}
                             ${kv('OAT', tempS(c.temperature))}
-                            ${kv('QNH', qnhS(c.altimeter))}
+                            ${kv('QNH', qnhS(c.altimeter, d.origin))}
                             ${kv('RWY COND', up(c.surface_condition))}
                         </div>
                     </div>
@@ -6149,7 +6193,7 @@
                             ${kv('WIND', windS(c.wind_direction, c.wind_speed))}
                             ${kv('HW/XW', compS(r.headwind_component, r.crosswind_component))}
                             ${kv('OAT', tempS(c.temperature))}
-                            ${kv('QNH', qnhS(c.altimeter))}
+                            ${kv('QNH', qnhS(c.altimeter, d.destination))}
                             ${kv('RWY COND', up(c.surface_condition))}
                         </div>
                     </div>
@@ -8782,6 +8826,7 @@
             document.getElementById('xp-split').classList.toggle('on', Number(x["xpilot/audio/split_audio_channels"]) >= 1);
             set('xp-age', res.vatsim_age_s !== null && res.vatsim_age_s !== undefined ? `VATSIM data ${res.vatsim_age_s}s old` : 'VATSIM data loading...');
             xpRenderList(res.nearby || []);
+            if (AF.data[AF.tab]) afRender();
         }
 
         function xpRenderList(list) {
@@ -8807,6 +8852,55 @@
                 </div>`;
             }).join('');
         }
+
+        // ---- real-world airport frequencies (from the scenery's apt.dat) ----
+        const AF = { tab: safeGetStorage('toliss_af_tab') || 'near', data: {}, loading: {} };
+        function afIcao(t) {
+            const d = typeof simbriefData !== 'undefined' ? simbriefData : null;
+            if (t === 'dep') return d && d.origin && d.origin.icao_code || (OPS.lastFlight && OPS.lastFlight.route ? OPS.lastFlight.route.split('-')[0] : '');
+            if (t === 'dest') return d && d.destination && d.destination.icao_code || (OPS.lastFlight && OPS.lastFlight.route ? OPS.lastFlight.route.split('-')[1] : '');
+            return '';
+        }
+        function afTab(t) {
+            AF.tab = t; safeSetStorage('toliss_af_tab', t);
+            document.querySelectorAll('.af-tabs button[data-t]').forEach(b => b.classList.toggle('active', b.dataset.t === t));
+            afLoad(true);
+        }
+        function afLoad(force) {
+            const t = AF.tab, icao = afIcao(t);
+            if ((t === 'dep' || t === 'dest') && !icao) { AF.data[t] = { status: 'error', message: 'Load your SimBrief flight plan (Dispatch & OFP) to see the departure and destination.' }; afRender(); return; }
+            const key = t === 'near' ? 'near' : icao;
+            if (!force && AF.data[t] && AF.data[t].key === key && t !== 'near') { afRender(); return; }
+            if (AF.loading[t]) return;
+            AF.loading[t] = true;
+            fetch('/api/airport_freqs?' + (t === 'near' ? 'near=1' : 'icao=' + encodeURIComponent(icao))).then(r => r.json()).then(res => {
+                res.key = key; AF.data[t] = res; afRender();
+            }).catch(() => { AF.data[t] = { status: 'error', message: 'No response from the EFB.' }; afRender(); }).finally(() => { AF.loading[t] = false; });
+        }
+        const AF_LABEL = { ATIS: 'ATIS', DEL: 'Delivery', GND: 'Ground', TWR: 'Tower', DEP: 'Departure', APP: 'Approach', CTAF: 'CTAF / UNICOM' };
+        function afRender() {
+            const res = AF.data[AF.tab];
+            const online = new Set(((typeof xpLast !== 'undefined' && xpLast && xpLast.nearby) || []).map(a => Number(a.khz)));
+            const html = !res ? '<div class="perf-empty">Loading...</div>'
+                : res.status !== 'success' ? `<div class="perf-empty">${esc(res.message || 'Not available.')}</div>`
+                : `<div class="af-head">${esc(res.icao)} · ${esc(res.name || '')}</div>` + (!res.freqs.length ? '<div class="perf-empty">Your scenery lists no radio frequencies for this airport.</div>' :
+                    res.freqs.map(f => `<div class="xp-row">
+                        <span class="xp-dot${online.has(f.khz) ? ' on' : ''}" title="${online.has(f.khz) ? 'VATSIM controller online on this frequency' : ''}"></span>
+                        <div class="xp-main"><div><span class="xp-cs">${esc(AF_LABEL[f.type] || f.type)}</span></div><div class="xp-name">${esc(f.name)}</div></div>
+                        <div class="xp-f">${esc(f.mhz)}</div>
+                        <div class="xp-tune"><button onclick="xpTune(1, ${f.khz}, '${esc(f.name).replace(/'/g, '')}')">COM1</button><button onclick="xpTune(2, ${f.khz}, '${esc(f.name).replace(/'/g, '')}')">COM2</button></div>
+                    </div>`).join(''));
+            ['af-list', 'af-modal-list'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = html; });
+            const tt = document.getElementById('af-modal-title'); if (tt) tt.textContent = res && res.icao ? `${res.icao} frequencies` : 'Airport frequencies';
+        }
+        function afStart() { document.querySelectorAll('.af-tabs button[data-t]').forEach(b => b.classList.toggle('active', b.dataset.t === AF.tab)); afLoad(AF.tab === 'near'); }
+        function afOpenModal() {
+            document.getElementById('af-modal').style.display = '';
+            if (simOnGround || !afIcao('dest')) AF.tab = 'near';
+            afStart(); afLoad(true);
+            if (typeof xpLast === 'undefined' || !xpLast) fetch('/api/xpilot').then(r => r.json()).then(res => { xpLast = res; afRender(); }).catch(() => {});
+        }
+        function afCloseModal() { document.getElementById('af-modal').style.display = 'none'; }
 
         function xpToggleText(cs) {
             if (xpOpen.has(cs)) xpOpen.delete(cs); else xpOpen.add(cs);
@@ -8912,6 +9006,7 @@
             if (tabName === 'failures') { fetchFailures(false); }
             
             if (tabName === 'xpilot') {
+                afStart();
                 xpPoll();
             }
 
