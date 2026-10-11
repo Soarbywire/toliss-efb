@@ -359,7 +359,7 @@ def handle_get(req, plugin):
             a_count = 0
             o_count = 0
             for c in vatsim.get("controllers", []):
-                if c.get("facility") == 1:
+                if (c.get("facility") or 0) == 0:          # VATSIM facility 0 = observer (1 is FSS)
                     o_count += 1
                 else:
                     a_count += 1
@@ -382,7 +382,7 @@ def handle_get(req, plugin):
                 filtered["pilots"].append(p)
 
             for c in vatsim.get("controllers", []):
-                if c.get("facility") != 1:
+                if (c.get("facility") or 0) != 0:
                     filtered["controllers"].append(c)
 
             for a in vatsim.get("atis", []):

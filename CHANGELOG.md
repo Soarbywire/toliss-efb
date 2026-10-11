@@ -16,6 +16,21 @@ as soon as the aircraft is positioned and finishes setting it up while paused, w
 
 ---
 
+## 0.68.2
+
+### VATSIM map: altitude and speed as a pilot reads them
+- **The aircraft panel updates live** while it is open (it used to keep the figures from the moment you tapped), and
+  says how old the position is (VATSIM updates each pilot about every 15 seconds). The airport traffic board updates too.
+- **Altitude:** above about 10,000 ft it shows the **flight level** (e.g. FL370), worked out from the pilot's true
+  altitude and QNH, with the true altitude and QNH in small print. VATSIM sends true altitude, which can differ from the
+  flight level by hundreds of feet or more. Below that, feet. A **climb or descent arrow** with the rate (▲ 2400 ft/min)
+  or "level".
+- **Speed** is labelled **Ground speed** (VATSIM does not send airspeed), with the heading, and the **filed** cruise
+  level and TAS from the flight plan for comparison.
+- The same figures appear in the pilot list and the airport traffic board.
+- **Fix:** the observer and ATC counts at the top were wrong (FSS positions were counted as observers and left out of
+  the ATC list).
+
 ## 0.68.1
 
 ### Fixes: Nearby ATC and airport frequencies

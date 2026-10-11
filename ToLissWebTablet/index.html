@@ -2034,7 +2034,7 @@
                 <div style="line-height: 1.5; color: var(--text-muted); font-size: 13px;">
                     <p>A web-based, remote interface for the ToLiss line of aircraft in X-Plane 12.</p>
                     <p>By Soarbywire &middot; <a href="https://soarbywire.com" target="_blank" rel="noopener">soarbywire.com</a></p>
-                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.68.1 Release Beta</p>
+                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.68.2 Release Beta</p>
                     <p style="font-size: 11px; color: #ff9800; margin-top: 5px;"><strong>Caution:</strong> Some features may not work as intended.</p>
                     <p style="font-size: 11px; color: var(--text-dim); margin-top: 5px;">New versions are published on <a href="https://github.com/Soarbywire/toliss-efb/releases" target="_blank" rel="noopener">GitHub</a> and the X-Plane.org forums, and can be installed from <b>Updates</b> above.</p>
                     <div class="lic">
@@ -3372,7 +3372,71 @@
             }
         }
         
-        function openVatPanel(html) {
+        // ---- VATSIM pilot figures as a pilot reads them ----
+        // VATSIM gives each pilot's true altitude (above sea level), their sim's QNH and their ground speed, updated about
+        // every 15 s. Above about 10,000 ft the flight level is shown, from the pressure altitude: true altitude corrected
+        // for the QNH (about 27 ft per hPa); it can still differ a little from the pilot's own FL in very hot or cold air.
+        const VAT_VS = {};                         // cid -> {alt, t, fpm}
+        let VAT_SEL = null;                        // what the side panel shows: {cid} or {apt, lat, lon}
+        function vatAlt(p) {
+            const alt = Number(p.altitude) || 0, qnh = Number(p.qnh_mb) || 0;
+            const pa = qnh > 900 && qnh < 1100 ? alt + (1013.25 - qnh) * 27.3 : alt;
+            const fl = Math.round(pa / 100);
+            if (pa >= 10500) return { main: 'FL' + String(fl).padStart(3, '0'), sub: `${alt.toLocaleString()} ft true` + (qnh > 900 ? ` · QNH ${Math.round(qnh)}` : ''), short: 'FL' + String(fl).padStart(3, '0') };
+            return { main: `${alt.toLocaleString()} ft`, sub: qnh > 900 ? `QNH ${Math.round(qnh)}` : '', short: `${alt.toLocaleString()} ft` };
+        }
+        function vatTrack(p) {
+            const t = Date.parse(p.last_updated || '') || 0, alt = Number(p.altitude) || 0, v = VAT_VS[p.cid];
+            if (!v) { VAT_VS[p.cid] = { alt, t, fpm: null }; return; }
+            if (t && t !== v.t) {
+                const dt = (t - v.t) / 60000;
+                if (dt > 0 && dt < 3) v.fpm = (alt - v.alt) / dt;
+                v.alt = alt; v.t = t;
+            }
+        }
+        function vatTrend(p) {
+            const v = VAT_VS[p.cid];
+            if (!v || v.fpm === null || Math.abs(v.fpm) < 300) return v && v.fpm !== null ? 'level' : '';
+            return `${v.fpm > 0 ? '▲' : '▼'} ${Math.round(Math.abs(v.fpm) / 100) * 100} ft/min`;
+        }
+        function vatAge(p) {
+            const t = Date.parse(p.last_updated || '');
+            if (!t) return '';
+            const s = Math.max(0, Math.round((Date.now() - t) / 1000));
+            return s < 90 ? `position ${s} s old` : `position ${Math.round(s / 60)} min old`;
+        }
+        function vatPilotHtml(p) {
+            const fp = p.flight_plan, a = vatAlt(p), tr = vatTrend(p);
+            const fpStr = fp ? `<b>${esc(fp.departure || '????')} ➔ ${esc(fp.arrival || '????')}</b>` : "<span style='color:var(--text-dim);'>No Flight Plan</span>";
+            const cruise = fp && (fp.altitude || fp.cruise_tas) ? `<div class="vat-pop-row" style="font-size: 13px; color: var(--text-muted);"><b>Filed:</b> ${fp.altitude ? (Number(fp.altitude) >= 10500 ? 'FL' + String(Math.round(Number(fp.altitude) / 100)).padStart(3, '0') : esc(fp.altitude) + ' ft') : '---'} · ${fp.cruise_tas ? esc(fp.cruise_tas) + ' kt TAS' : '---'}</div>` : '';
+            return `
+                <div class="vat-pop-title" style="color:#f57c00; font-size: 20px;">✈️ ${esc(p.callsign)}</div>
+                <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">${esc(p.name || '')} (${p.cid})</div>
+                <div class="vat-pop-row" style="font-size: 14px;"><b>Type:</b> ${esc(fp && fp.aircraft_short || 'Unknown')} | <b>Squawk:</b> ${esc(p.transponder || '----')}</div>
+                <div class="vat-pop-row" style="font-size: 14px;"><b>Altitude:</b> ${a.main}${tr ? ` <span style="color:${tr === 'level' ? 'var(--text-dim)' : '#4da6ff'};">${tr}</span>` : ''}${a.sub ? `<div style="font-size:12px; color:var(--text-dim);">${a.sub}</div>` : ''}</div>
+                <div class="vat-pop-row" style="font-size: 14px;"><b>Ground speed:</b> ${Number(p.groundspeed) || 0} kt · <b>Hdg:</b> ${String(Math.round(Number(p.heading) || 0) % 360).padStart(3, '0')}°</div>
+                ${cruise}
+                <div style="font-size: 11px; color: var(--text-dim); margin: 4px 0 15px 0;">${vatAge(p)} · updates live while this panel is open</div>
+                <div class="vat-pop-row" style="font-size: 15px; color:var(--accent); margin-bottom:8px;">${fpStr}</div>
+                <div class="vat-pop-route" style="font-size: 13px;">${esc(fp && fp.route ? fp.route : 'VFR / No Route File')}</div>`;
+        }
+        // keep the open side panel current when new VATSIM data arrives
+        function vatRefreshPanel() {
+            const pnl = document.getElementById('vatmap-sidepanel'), content = document.getElementById('vatmap-panel-content');
+            if (!VAT_SEL || !pnl || !content || pnl.style.right !== '0px' && pnl.style.right !== '0') return;
+            if (VAT_SEL.cid !== undefined) {
+                const p = globalVatsimPilots.find(x => x.cid === VAT_SEL.cid);
+                if (p) content.innerHTML = vatPilotHtml(p);
+                else if (!content.querySelector('.vat-gone')) content.insertAdjacentHTML('afterbegin', '<div class="vat-gone" style="color:#ff9800; font-size:13px; margin-bottom:8px;">This pilot has left VATSIM.</div>');
+            } else if (VAT_SEL.apt) {
+                const sc = pnl.scrollTop;
+                openAirportTrafficBoard(VAT_SEL.apt, VAT_SEL.lat, VAT_SEL.lon);
+                pnl.scrollTop = sc;
+            }
+        }
+
+        function openVatPanel(html, sel) {
+            VAT_SEL = sel || null;                 // anything else shown in the panel (e.g. a controller) stays as it is
             let pnl = document.getElementById('vatmap-sidepanel');
             let content = document.getElementById('vatmap-panel-content');
             if(pnl && content) {
@@ -3384,6 +3448,7 @@
         }
 
         function closeVatPanel() {
+            VAT_SEL = null;
             let pnl = document.getElementById('vatmap-sidepanel');
             if(pnl) pnl.style.right = '-320px';
             if(vatActiveRouteLayer) vatActiveRouteLayer.clearLayers();
@@ -3431,7 +3496,7 @@
                        </div>
                        <div style="font-size:12px; color:var(--text-dim); display:flex; justify-content:space-between;">
                           <span>To: <b style="color:#fff;">${p.flight_plan.arrival || '???'}</b></span>
-                          <span>GS: ${p.groundspeed} kt</span>
+                          <span>${vatAlt(p).short} · GS ${p.groundspeed} kt</span>
                        </div>
                     </div>`;
                 });
@@ -3452,14 +3517,14 @@
                        </div>
                        <div style="font-size:12px; color:var(--text-dim); display:flex; justify-content:space-between;">
                           <span>Fm: <b style="color:#fff;">${p.flight_plan.departure || '???'}</b> | ${acType}</span>
-                          <span>GS: ${p.groundspeed} kt</span>
+                          <span>${vatAlt(p).short} · GS ${p.groundspeed} kt</span>
                        </div>
                     </div>`;
                 });
             }
             html += `</div>`;
             
-            openVatPanel(html);
+            openVatPanel(html, { apt: icao, lat: aptLat, lon: aptLon });
             if(vatActiveRouteLayer) vatActiveRouteLayer.clearLayers();
         }
 
@@ -3495,18 +3560,9 @@
                 let rtgStr = p.flight_plan ? p.flight_plan.route : "VFR / No Route File";
                 let acStr = p.flight_plan ? p.flight_plan.aircraft_short : "Unknown";
 
-                let sideHtml = `
-                    <div class="vat-pop-title" style="color:#f57c00; font-size: 20px;">✈️ ${p.callsign}</div>
-                    <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">${p.name} (${p.cid})</div>
-                    <div class="vat-pop-row" style="font-size: 14px;"><b>Type:</b> ${acStr} | <b>Squawk:</b> ${p.transponder}</div>
-                    <div class="vat-pop-row" style="font-size: 14px; margin-bottom:15px;"><b>Alt:</b> ${p.altitude} ft | <b>GS:</b> ${p.groundspeed} kts</div>
-                    <div class="vat-pop-row" style="font-size: 15px; color:var(--accent); margin-bottom:8px;">${fpStr}</div>
-                    <div class="vat-pop-route" style="font-size: 13px;">${rtgStr}</div>
-                `;
-
                 let onClickHandler = (e) => { 
                     L.DomEvent.stopPropagation(e);
-                    openVatPanel(sideHtml); 
+                    openVatPanel(vatPilotHtml(p), { cid: p.cid }); 
                     if(vatActiveRouteLayer) vatActiveRouteLayer.clearLayers();
                     
                     let trkPts = vatsimTracks[p.cid] || [[p.latitude, p.longitude]];
@@ -5418,7 +5474,8 @@
                         <div style="display:none; padding:15px; border-top:1px solid var(--border); background:#1a1a1a;">
                             <div style="font-size:12px; color:var(--text-muted); margin-bottom:10px; line-height:1.6;">
                                 <strong>Aircraft:</strong> ${acStr} | <strong>Squawk:</strong> ${p.transponder || '----'} <br>
-                                <strong>Altitude:</strong> ${p.altitude || 0} ft | <strong>Groundspeed:</strong> ${p.groundspeed || 0} kts <br>
+                                <strong>Altitude:</strong> ${vatAlt(p).main}${vatTrend(p) && vatTrend(p) !== 'level' ? ' ' + vatTrend(p) : ''} <span style="color:var(--text-dim);">${vatAlt(p).sub}</span> | <strong>Ground speed:</strong> ${p.groundspeed || 0} kt <br>
+                                <span style="color:var(--text-dim);">${vatAge(p)}</span><br>
                                 <strong>Route:</strong> <span style="font-family:var(--font-mono); color:var(--text-main);">${rtgStr}</span>
                             </div>
                             ${focusBtnHtml}
@@ -5608,6 +5665,7 @@
 
                         lastVatsimData = atcData;
                         globalVatsimPilots = d.data.pilots;
+                        globalVatsimPilots.forEach(vatTrack);
                         
                         let activeCids = new Set(globalVatsimPilots.map(p => p.cid));
                         
@@ -5633,6 +5691,7 @@
                         if(document.getElementById('vatsim').classList.contains('active')) {
                             renderVatsimList();
                             renderVatsimMapMarkers();
+                            vatRefreshPanel();
                         }
                     }
                 }).catch(() => {});
