@@ -2034,7 +2034,7 @@
                 <div style="line-height: 1.5; color: var(--text-muted); font-size: 13px;">
                     <p>A web-based, remote interface for the ToLiss line of aircraft in X-Plane 12.</p>
                     <p>By Soarbywire &middot; <a href="https://soarbywire.com" target="_blank" rel="noopener">soarbywire.com</a></p>
-                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.68 Release Beta</p>
+                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.68.1 Release Beta</p>
                     <p style="font-size: 11px; color: #ff9800; margin-top: 5px;"><strong>Caution:</strong> Some features may not work as intended.</p>
                     <p style="font-size: 11px; color: var(--text-dim); margin-top: 5px;">New versions are published on <a href="https://github.com/Soarbywire/toliss-efb/releases" target="_blank" rel="noopener">GitHub</a> and the X-Plane.org forums, and can be installed from <b>Updates</b> above.</p>
                     <div class="lic">
@@ -9201,7 +9201,6 @@
             document.getElementById('xp-split').classList.toggle('on', Number(x["xpilot/audio/split_audio_channels"]) >= 1);
             set('xp-age', res.vatsim_age_s !== null && res.vatsim_age_s !== undefined ? `VATSIM data ${res.vatsim_age_s}s old` : 'VATSIM data loading...');
             xpRenderList(res.nearby || []);
-            if (AF.data[AF.tab]) afRender();
         }
 
         function xpRenderList(list) {
@@ -9255,25 +9254,28 @@
         const AF_LABEL = { ATIS: 'ATIS', DEL: 'Delivery', GND: 'Ground', TWR: 'Tower', DEP: 'Departure', APP: 'Approach', CTAF: 'CTAF / UNICOM' };
         function afRender() {
             const res = AF.data[AF.tab];
-            const online = new Set(((typeof xpLast !== 'undefined' && xpLast && xpLast.nearby) || []).map(a => Number(a.khz)));
             const html = !res ? '<div class="perf-empty">Loading...</div>'
                 : res.status !== 'success' ? `<div class="perf-empty">${esc(res.message || 'Not available.')}</div>`
                 : `<div class="af-head">${esc(res.icao)} · ${esc(res.name || '')}</div>` + (!res.freqs.length ? '<div class="perf-empty">Your scenery lists no radio frequencies for this airport.</div>' :
                     res.freqs.map(f => `<div class="xp-row">
-                        <span class="xp-dot${online.has(f.khz) ? ' on' : ''}" title="${online.has(f.khz) ? 'VATSIM controller online on this frequency' : ''}"></span>
-                        <div class="xp-main"><div><span class="xp-cs">${esc(AF_LABEL[f.type] || f.type)}</span></div><div class="xp-name">${esc(f.name)}</div></div>
+                        <span class="xp-dot${f.online ? ' on' : ''}" title="${f.online ? 'VATSIM: ' + esc(f.online) + ' online on this frequency' : ''}"></span>
+                        <div class="xp-main"><div><span class="xp-cs">${esc(AF_LABEL[f.type] || f.type)}</span>${f.online ? `<span class="xp-type" style="color:#4caf50;">${esc(f.online)}</span>` : ''}</div><div class="xp-name">${esc(f.name)}</div></div>
                         <div class="xp-f">${esc(f.mhz)}</div>
                         <div class="xp-tune"><button onclick="xpTune(1, ${f.khz}, '${esc(f.name).replace(/'/g, '')}')">COM1</button><button onclick="xpTune(2, ${f.khz}, '${esc(f.name).replace(/'/g, '')}')">COM2</button></div>
                     </div>`).join(''));
             ['af-list', 'af-modal-list'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = html; });
             const tt = document.getElementById('af-modal-title'); if (tt) tt.textContent = res && res.icao ? `${res.icao} frequencies` : 'Airport frequencies';
         }
+        // keep the green dots current while a frequency list is on screen (the plugin refreshes VATSIM every 30 s)
+        setInterval(() => {
+            const page = document.getElementById('xpilot'), modal = document.getElementById('af-modal');
+            if ((page && page.classList.contains('active')) || (modal && modal.style.display !== 'none')) afLoad(true);
+        }, 30000);
         function afStart() { document.querySelectorAll('.af-tabs button[data-t]').forEach(b => b.classList.toggle('active', b.dataset.t === AF.tab)); afLoad(AF.tab === 'near'); }
         function afOpenModal() {
             document.getElementById('af-modal').style.display = '';
             if (simOnGround || !afIcao('dest')) AF.tab = 'near';
             afStart(); afLoad(true);
-            if (typeof xpLast === 'undefined' || !xpLast) fetch('/api/xpilot').then(r => r.json()).then(res => { xpLast = res; afRender(); }).catch(() => {});
         }
         function afCloseModal() { document.getElementById('af-modal').style.display = 'none'; }
 
@@ -9283,6 +9285,8 @@
         }
 
         function xpTune(com, khz, cs) {
+            khz = Math.round(Number(khz));
+            if (!Number.isFinite(khz) || khz < 108000 || khz > 137000) { updateStatus(`No valid frequency for ${cs}`); return; }
             sendDataRef(`sim/cockpit2/radios/actuators/com${com}_standby_frequency_hz_833`, khz);
             updateStatus(`${cs} ${(khz / 1000).toFixed(3)} set in COM${com} standby`);
             setTimeout(xpPoll, 400);

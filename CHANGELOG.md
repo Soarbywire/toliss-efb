@@ -16,6 +16,18 @@ as soon as the aircraft is positioned and finishes setting it up while paused, w
 
 ---
 
+## 0.68.1
+
+### Fixes: Nearby ATC and airport frequencies
+- **Nearby ATC works again** (broken since 0.67): the COM1 / COM2 buttons set the frequency instead of giving a NaN
+  error, the **green dot** shows stations you are in VHF radio range of (out-of-range stations are greyed), and each
+  row shows the station type (DEL, GND, TWR, APP, CTR, ATIS with its letter), the controller's name and the ATIS text
+  when tapped. Observers and positions without a frequency are left out; stations in range are listed first.
+- **Airport frequencies:** the green dot now works, and shows the online station's callsign. It lights only for a
+  controller or ATIS that belongs to that airport (its callsign names the airport, e.g. YSSY_TWR or LAX_TWR, or it
+  transmits close to it, e.g. SY_TWR), not for a controller elsewhere that happens to use the same frequency. The
+  list refreshes every 30 seconds while it is open, without needing the xPilot page first.
+
 ## 0.68
 
 Everything since 0.67, in one update (the changes of 0.67.1 to 0.67.8). Details of each step are in CHANGELOG.md.

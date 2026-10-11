@@ -27,7 +27,7 @@ from ..features.checklists import checklist_dir, checklist_safe_name
 from ..services.airports import _gm_dist_m, get_apt_search_paths, label_duplicate_stands, parse_ground_map, sanitize_data
 from ..services.navdata import NavDatabase
 from ..services.ops import CALLSIGN_RE
-from ..services.vatsim import nearby_atc
+from ..services.vatsim import airport_online, nearby_atc
 from ..services.taxi import taxi_options
 from ..sim.displays import STREAM_RATE_HZ
 from ..sim.mcdu import MCDU_KEYS, mcdu_text_to_keys
@@ -649,6 +649,17 @@ def handle_get(req, plugin):
                         body = {"status": "error", "message": f"{icao} is not in your scenery." if getattr(plugin, 'db_ready', False) else "The airport index is still loading."}
                     else:
                         body = {"status": "success", **res}
+                        # which of them have a VATSIM controller (or ATIS) online for this airport
+                        try:
+                            pos = plugin.__dict__.setdefault("_apt_pos", {})
+                            if icao not in pos:
+                                pos[icao] = next(((c[0], c[1]) for c in getattr(plugin, "apt_coords", []) if c[2] == icao), (None, None))
+                            snap = plugin.vatsim.cache.snapshot()
+                            on = airport_online(snap, icao, *pos[icao])
+                        except Exception:
+                            snap, on = {}, {}
+                        body["freqs"] = [dict(f, online=on.get(f["khz"], "")) for f in body.get("freqs", [])]
+                        body["vatsim_loaded"] = bool(snap.get("data"))
                 elif body is None:
                     body = {"status": "error", "message": "No airport given."}
             except Exception as exc:
