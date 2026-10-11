@@ -24,7 +24,8 @@ from .. import EFB_VERSION
 from ..features.checklists import checklist_dir, checklist_safe_name
 from ..services.airports import _gm_dist_m, get_apt_search_paths, parse_ground_map, sanitize_data
 from ..services.navdata import NavDatabase
-from ..services.ops import CALLSIGN_RE
+from ..services.ops import CALLSIGN_RE, OPS_SIZE_CODE
+from ..services.taxi import taxi_route, taxi_set_stand
 from ..services.vatsim import nearby_atc
 from ..sim.displays import STREAM_RATE_HZ
 from ..sim.mcdu import MCDU_KEYS, mcdu_text_to_keys
@@ -44,6 +45,26 @@ def handle_post(req, plugin):
             req.send_response(200)
             req.end_headers()
             req.wfile.write(b'{"status":"success"}')
+
+        elif req.path == '/api/taxi/route':
+            try:
+                result = taxi_route(plugin, data if isinstance(data, dict) else {}, OPS_SIZE_CODE)
+            except Exception as exc:
+                result = {"status": "error", "message": "No response from the sim" if isinstance(exc, TimeoutError) else f"Taxi: {exc}"}
+            req.send_response(200)
+            req.send_header('Content-type', 'application/json')
+            req.end_headers()
+            req.wfile.write(json.dumps(result).encode('utf-8'))
+
+        elif req.path == '/api/taxi/stand':
+            try:
+                result = taxi_set_stand(plugin, data if isinstance(data, dict) else {})
+            except Exception as exc:
+                result = {"status": "error", "message": f"Taxi: {exc}"}
+            req.send_response(200)
+            req.send_header('Content-type', 'application/json')
+            req.end_headers()
+            req.wfile.write(json.dumps(result).encode('utf-8'))
 
         elif req.path == '/api/units':
             # runway distance unit for the performance sheets and the Ops Centre's landing data (SimBrief gives feet)

@@ -27,6 +27,32 @@ def sanitize_data(data):
     return data
 
 # ===== Airport scenery helpers (ground map) =====
+def label_duplicate_stands(stands, name_key="name", size_key="size"):
+    """Some sceneries give one name to more than one stand, e.g. FlyTampa YSSY has a stand 57 for size C and another
+    for size F. Keep them all and make each name unique: '57 (C)' and '57 (F)', or '57 (1)', '57 (2)' when the sizes
+    don't tell them apart. The same stand listed twice (same name, within 3 m) is kept once, with the larger size.
+    Works in place."""
+    out, groups = [], {}
+    for s in stands:
+        grp = groups.setdefault(s[name_key], [])
+        same = next((g for g in grp if _gm_dist_m(g["lat"], g["lon"], s["lat"], s["lon"]) < 3.0), None)
+        if same is not None:
+            if (s.get(size_key) or "") > (same.get(size_key) or ""):
+                same[size_key] = s[size_key]
+            continue
+        grp.append(s)
+        out.append(s)
+    for name, grp in groups.items():
+        if len(grp) < 2:
+            continue
+        sizes = [(g.get(size_key) or "").upper() for g in grp]
+        for i, g in enumerate(grp, 1):
+            tag = sizes[i - 1] if sizes[i - 1] and sizes.count(sizes[i - 1]) == 1 else str(i)
+            g[name_key] = f"{name} ({tag})"
+    stands[:] = out
+    return stands
+
+
 def get_apt_search_paths(xp_path):
     """apt.dat files in X-Plane priority order: scenery_packs.ini order, then global/default airports."""
     paths = []
@@ -280,6 +306,8 @@ def parse_ground_map(path, pos):
                         have_1300 = True
                         name = " ".join(parts[6:]) if len(parts) >= 7 else ""
                         data["stands"].append({"n": name, "lat": float(parts[1]), "lon": float(parts[2]), "h": float(parts[3])})
+                    elif code == '1301' and len(parts) >= 2 and have_1300 and data["stands"]:
+                        data["stands"][-1]["size"] = parts[1].upper()
                     elif code == '15' and len(parts) >= 4:
                         legacy_stands.append({"n": " ".join(parts[4:]), "lat": float(parts[1]), "lon": float(parts[2]), "h": float(parts[3])})
                     elif code == '1201' and len(parts) >= 5:
@@ -298,6 +326,7 @@ def parse_ground_map(path, pos):
 
     if not have_1300:
         data["stands"] = legacy_stands
+    label_duplicate_stands(data["stands"], name_key="n")
 
     # Taxi network segments (for "nearest taxiway"): [lat1, lon1, lat2, lon2, name, is_runway]
     for edges, is_rwy in ((taxi_edges, 0), (runway_edges, 1)):

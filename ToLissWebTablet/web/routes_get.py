@@ -24,10 +24,11 @@ from ..core.utils import get_local_ip
 from ..features.fdr import FT_PER_M, fdr_analyse, fdr_dir, fdr_read_csv, fdr_read_events, fdr_safe_name
 from .. import EFB_VERSION
 from ..features.checklists import checklist_dir, checklist_safe_name
-from ..services.airports import _gm_dist_m, get_apt_search_paths, parse_ground_map, sanitize_data
+from ..services.airports import _gm_dist_m, get_apt_search_paths, label_duplicate_stands, parse_ground_map, sanitize_data
 from ..services.navdata import NavDatabase
 from ..services.ops import CALLSIGN_RE
 from ..services.vatsim import nearby_atc
+from ..services.taxi import taxi_options
 from ..sim.displays import STREAM_RATE_HZ
 from ..sim.mcdu import MCDU_KEYS, mcdu_text_to_keys
 
@@ -185,7 +186,8 @@ def handle_get(req, plugin):
                 runways_draw = []
                 elev_ft = 0.0
                 apt_name = icao
-                seen_names = set()
+                seen_names = set()          # runway ends
+                stands, legacy = [], []
 
                 known = plugin.apt_index.get(icao) if getattr(plugin, 'db_ready', False) else None
                 if known:
@@ -263,28 +265,25 @@ def handle_get(req, plugin):
                                                 gates.append({"type": "RWY", "name": name2, "lat": lat2, "lon": lon2, "hdg": hdg2})
                                                 seen_names.add(name2)
 
-                                        elif code in ('1300', '1301', '1302') and len(parts) >= 4:
-                                            lat = float(parts[1])
-                                            lon = float(parts[2])
-                                            hdg = float(parts[3])
+                                        elif code == '1300' and len(parts) >= 4:
+                                            # every stand is kept, even when two share a name (labelled below)
                                             name = " ".join(parts[6:]) if len(parts) >= 7 else f"Stand {parts[4]}"
-                                            if name not in seen_names:
-                                                gates.append({"type": "STAND", "name": name, "lat": lat, "lon": lon, "hdg": hdg})
-                                                seen_names.add(name)
+                                            stands.append({"type": "STAND", "name": name, "lat": float(parts[1]), "lon": float(parts[2]),
+                                                           "hdg": float(parts[3]), "size": ""})
+                                        elif code == '1301' and len(parts) >= 2 and stands:
+                                            stands[-1]["size"] = parts[1].upper()
 
                                         elif code == '15' and len(parts) >= 4:
-                                            lat = float(parts[1])
-                                            lon = float(parts[2])
-                                            hdg = float(parts[3])
                                             name = " ".join(parts[4:]) if len(parts) >= 5 else "Ramp"
-                                            if name not in seen_names:
-                                                gates.append({"type": "STAND", "name": name, "lat": lat, "lon": lon, "hdg": hdg})
-                                                seen_names.add(name)
+                                            legacy.append({"type": "STAND", "name": name, "lat": float(parts[1]), "lon": float(parts[2]),
+                                                           "hdg": float(parts[3]), "size": ""})
                                     except Exception: pass
                             mm.close()
                     except Exception: pass
                     if found:
                         break
+                # the newer stand rows if the airport has them (the old ramp-start rows are then duplicates)
+                gates += label_duplicate_stands(stands or legacy)
 
                 req.send_response(200)
                 req.send_header('Content-type', 'application/json')
@@ -564,7 +563,7 @@ def handle_get(req, plugin):
                 req.send_response(200)
                 req.send_header('Content-type', 'application/json')
                 req.end_headers()
-                req.wfile.write(json.dumps({"status": "success", "data": clean_results}).encode('utf-8', errors='ignore'))
+                req.wfile.write(json.dumps({"status": "success", "data": clean_results, "efb_pushing": bool(getattr(plugin, "push", None))}).encode('utf-8', errors='ignore'))
             except Exception:
                 req.send_response(500)
                 req.end_headers()
@@ -621,6 +620,16 @@ def handle_get(req, plugin):
             finally:
                 plugin.stream_clients = max(0, getattr(plugin, 'stream_clients', 1) - 1)
             return
+
+        elif req.path.startswith('/api/taxi/options'):
+            try:
+                body = taxi_options(plugin)
+            except Exception as exc:
+                body = {"status": "error", "message": "No response from the sim" if isinstance(exc, TimeoutError) else f"Taxi: {exc}"}
+            req.send_response(200)
+            req.send_header('Content-type', 'application/json')
+            req.end_headers()
+            req.wfile.write(json.dumps(body).encode('utf-8'))
 
         elif req.path.startswith('/api/airport_freqs'):
             # real-world ATC frequencies for an airport (?icao=YSSY), or the airport nearest the aircraft (?near=1)

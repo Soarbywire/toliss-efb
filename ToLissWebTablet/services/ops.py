@@ -18,7 +18,7 @@ import urllib.request
 from ..core.net import urlopen as net_urlopen
 
 from .. import EFB_VERSION
-from ..services.airports import _gm_dist_m, parse_ground_map
+from ..services.airports import _gm_dist_m, parse_ground_map, label_duplicate_stands
 
 HOPPIE_URL = "https://www.hoppie.nl/acars/system/connect.html"
 HOPPIE_POLL_MIN_S, HOPPIE_POLL_MAX_S = 45, 75      # Hoppie asks clients to poll at a random 45-75 s interval
@@ -95,7 +95,7 @@ def parse_stands(path, pos):
                     continue
         finally:
             mm.close()
-    return stands
+    return label_duplicate_stands(stands)
 
 
 def parse_runway_ends(path, pos):
@@ -138,8 +138,12 @@ def stand_key(name):
 
 
 def stand_matches(name, pattern):
-    """Patterns: exact ('14', 'A3'), ranges ('1-16', 'A1-A10') and prefixes ('T3*', '5*')."""
-    k, p = stand_key(name), str(pattern).upper().replace(" ", "")
+    """Patterns: exact ('14', 'A3'), ranges ('1-16', 'A1-A10') and prefixes ('T3*', '5*'). A stand made unique by its
+    size, like '57 (C)', also matches '57' (both stands 57) and '57 (C)' (just that one)."""
+    full, p = stand_key(name), str(pattern).upper().replace(" ", "")
+    k = re.sub(r"\((?:[A-F]|\d+)\)$", "", full)
+    if p and full != k and full == stand_key(p):
+        return True
     if not p:
         return False
     if p.endswith("*"):

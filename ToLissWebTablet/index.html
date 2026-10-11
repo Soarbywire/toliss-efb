@@ -673,6 +673,22 @@
                       padding: 10px 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.4); border-top: 3px dashed #bbb; }
         .dcdu-wrap { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; align-items: flex-start; }
         .dcdu-wrap .mcdu-body { margin: 0; }
+        /* taxi routing */
+        .taxi-panel { background: var(--slider-bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin: 0 0 10px 0; }
+        .taxi-panel .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-top: 8px; }
+        .taxi-panel select, .taxi-panel input[type=text] { min-height: 38px; }
+        .taxi-strip { position: absolute; left: 50%; transform: translateX(-50%); top: 10px; z-index: 1200; min-width: 260px; max-width: calc(100% - 120px);
+                      background: rgba(10, 12, 16, 0.92); border: 2px solid #e040fb; border-radius: 10px; padding: 8px 14px; text-align: center; pointer-events: auto; }
+        .taxi-strip .next { font: bold 20px var(--font-mono); color: #fff; }
+        .taxi-strip .next small { font-size: 14px; color: #e040fb; margin-left: 8px; }
+        .taxi-strip .sum { font-size: 12px; color: #ccc; margin-top: 3px; }
+        .taxi-strip .cue { font: bold 13px var(--font-ui); color: #111; background: #ffb300; border-radius: 5px; padding: 2px 8px; margin-top: 5px; display: inline-block; }
+        .taxi-strip.hold { border-color: #f44336; } .taxi-strip.hold .next { color: #ff5252; }
+        .taxi-strip.off { border-color: #ff9800; }
+        .taxi-strip .x { position: absolute; right: 6px; top: 4px; cursor: pointer; color: #aaa; font-size: 14px; }
+        .taxi-global { display: flex; align-items: center; gap: 10px; background: #2a1030; border-bottom: 2px solid #e040fb; color: #fff; padding: 5px 15px; font: bold 14px var(--font-mono); cursor: pointer; }
+        .taxi-global.hold { background: #3a0f0f; border-color: #f44336; color: #ff8a80; }
+        .taxi-global span.lbl { color: #e040fb; font-family: var(--font-ui); font-size: 12px; }
         /* replay and TCAS traffic (IOS) */
         .replay-badge { background: #e65100; color: #fff; font-weight: bold; font-size: 12px; letter-spacing: 1px; padding: 6px 10px; border-radius: 6px; margin-right: 8px; cursor: pointer; white-space: nowrap; }
         .rpl-bar { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 6px; margin-top: 12px; }
@@ -763,6 +779,7 @@
             <button id="global-pause-btn" onclick="sendCommand('sim/operation/pause_toggle')">▶️ RUNNING</button>
         </div>
 
+        <div class="taxi-global" id="taxi-global" style="display:none;" onclick="switchTab('telemetry')"></div>
         <div class="content-area">
 
             <!-- TOLISS PRO SITUATIONS -->
@@ -1756,14 +1773,43 @@
                     <span class="map-tools">
                         <button onclick="gmGroundView()" class="map-tool-btn">Ground view</button>
                         <button onclick="afOpenModal()" class="map-tool-btn" title="Real-world ATC frequencies for the airport you are at">Frequencies</button>
+                        <button onclick="taxiOpen()" class="map-tool-btn" id="taxi-btn" title="Taxi route to a stand or a runway holding point">Taxi</button>
                         <button onclick="toggleDrawMode()" class="map-tool-btn" id="draw-btn">Draw</button>
                         <label><input type="checkbox" id="follow-plane" checked> Follow</label>
                         <label><input type="checkbox" id="map-hdgup" onchange="setMapHeadingUp(this.checked)"> Heading up</label>
                         <label><input type="checkbox" id="map-tall" onchange="setMapTall(this.checked)"> Tall map</label>
                     </span>
                 </h3>
+                <div class="taxi-panel" id="taxi-panel" style="display:none;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                        <b>Taxi route <span id="taxi-apt" style="font-family:var(--font-mono); color:var(--accent);"></span></b>
+                        <button class="mc-btn" onclick="taxiOpen(false)" style="min-height:30px;">Close</button>
+                    </div>
+                    <div class="row">
+                        <div class="perf-rwys" style="margin:0;" id="taxi-type">
+                            <button class="perf-rwy" data-t="stand" onclick="taxiSetType('stand')">To a stand</button>
+                            <button class="perf-rwy" data-t="runway" onclick="taxiSetType('runway')">To a runway</button>
+                        </div>
+                        <label class="rp-field" id="taxi-stand-f">Stand<select id="taxi-stand" onchange="taxiUserPick('stand')"></select></label>
+                        <label class="rp-field" id="taxi-rwy-f" style="display:none;">Runway<select id="taxi-rwy" onchange="taxiUserPick('runway')"></select></label>
+                        <label class="rp-field" style="flex:2; min-width:200px;">Clearance (optional, as ATC gave it)<input type="text" id="taxi-clr" placeholder="e.g. B B4 A HOLD SHORT 16R" autocapitalize="characters" autocomplete="off"></label>
+                    </div>
+                    <div class="rp-note" id="taxi-src" style="min-height:16px; margin-top:6px; color:var(--accent);"></div>
+                    <div class="row">
+                        <button class="rp-go" id="taxi-plan-btn" onclick="taxiPlan()">Plan route</button>
+                        <button class="mc-btn" id="taxi-save-stand" onclick="taxiSaveStand()" style="display:none;">Save as my arrival stand</button>
+                        <button class="mc-btn" onclick="taxiClear()">Clear route</button>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:6px; margin-top:8px; font-size:13px;">
+                        <label style="display:flex; gap:6px; align-items:center;"><input type="checkbox" id="taxi-auto" onchange="safeSetStorage('toliss_taxi_auto', this.checked ? '1' : '0')"> After landing, show the taxi route to my stand automatically (the stand the Ops Centre assigned, or the one you chose here)</label>
+                        <label style="display:flex; gap:6px; align-items:center;"><input type="checkbox" id="taxi-dep-auto" onchange="safeSetStorage('toliss_taxi_dep_auto', this.checked ? '1' : '0'); TAXI.depFor = null;"> Before departure, show the taxi route to my runway automatically</label>
+                    </div>
+                    <div class="rp-note" id="taxi-msg" style="min-height:16px;"></div>
+                    <div class="rp-note">Routes follow your scenery's taxi network: taxiways wide enough for your aircraft, one-way rules, no U-turns, runways only to cross them. They are advisory: ATC and your clearance come first. Tap a stand on the map to choose it. In flight, this panel shows your destination so you can choose your arrival stand before landing.</div>
+                </div>
                 <div id="map-outer" class="map-outer">
                     <div id="map-container"></div>
+                    <div class="taxi-strip" id="taxi-strip" style="display:none;"></div>
                     <div class="map-ovl map-ovl-status" id="gm-status" style="display:none;"></div>
                     <div id="draw-surface"></div>
                     <div class="map-ovl map-ovl-draw" id="draw-tools" style="display:none;">
@@ -1988,7 +2034,7 @@
                 <div style="line-height: 1.5; color: var(--text-muted); font-size: 13px;">
                     <p>A web-based, remote interface for the ToLiss line of aircraft in X-Plane 12.</p>
                     <p>By Soarbywire &middot; <a href="https://soarbywire.com" target="_blank" rel="noopener">soarbywire.com</a></p>
-                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.67.5 Release Beta</p>
+                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.68 Release Beta</p>
                     <p style="font-size: 11px; color: #ff9800; margin-top: 5px;"><strong>Caution:</strong> Some features may not work as intended.</p>
                     <p style="font-size: 11px; color: var(--text-dim); margin-top: 5px;">New versions are published on <a href="https://github.com/Soarbywire/toliss-efb/releases" target="_blank" rel="noopener">GitHub</a> and the X-Plane.org forums, and can be installed from <b>Updates</b> above.</p>
                     <div class="lic">
@@ -5768,6 +5814,8 @@
                     }
 
                     let validGPS = (simLat !== 0 && simLon !== 0);
+                    TAXI.pushing = !!data.efb_pushing;
+                    try { taxiTick(simLat, simLon, Number(d["sim/flightmodel/position/groundspeed"]) || 0); } catch (e) {}
 
                     if(validGPS) {
                         if (map) {
@@ -6975,6 +7023,297 @@
         function tfcClear() { tfcPost('/api/traffic/clear', {}); }
         function tfcStart() { tfcPoll(); clearInterval(TFC.timer); TFC.timer = setInterval(tfcPoll, 500); }
 
+        // ===== Taxi routing: route on the map, instructions, progress =====
+        const TAXI = { route: null, params: null, layer: null, idx: 0, offSince: 0, lastPlan: 0, wasAirborne: false, autoDone: false, opts: null, arrived: 0,
+                       depOpts: null, depOptsAt: 0, depBusy: false, depFor: null, depLive: null, moveSince: 0, pushing: false, wasPushing: false };
+        const taxiPost = body => fetch('/api/taxi/route', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(r => r.json());
+        const TAXI_SRC = { ofp: 'planned in your SimBrief OFP', atis: 'from the departure ATIS', ops: 'assigned by the Ops Centre', chosen: 'chosen by you' };
+        function taxiOpen(force) {
+            const p = document.getElementById('taxi-panel');
+            const show = force !== undefined ? force : p.style.display === 'none';
+            p.style.display = show ? '' : 'none';
+            document.getElementById('taxi-auto').checked = safeGetStorage('toliss_taxi_auto') === '1';
+            document.getElementById('taxi-dep-auto').checked = safeGetStorage('toliss_taxi_dep_auto') === '1';
+            if (show) taxiLoadOptions();
+        }
+        function taxiSetType(t) {
+            document.querySelectorAll('#taxi-type button').forEach(b => b.classList.toggle('active', b.dataset.t === t));
+            document.getElementById('taxi-stand-f').style.display = t === 'stand' ? '' : 'none';
+            document.getElementById('taxi-rwy-f').style.display = t === 'runway' ? '' : 'none';
+            TAXI.type = t;
+            taxiShowSrc();
+        }
+        // where the stand or runway shown came from: the OFP, the ATIS, the Ops Centre, or the pilot
+        function taxiShowSrc() {
+            const el = document.getElementById('taxi-src'), o = TAXI.opts;
+            if (!el) return;
+            if (!o || o.status !== 'success') { el.textContent = ''; return; }
+            const sg = o.suggest || {};
+            let txt = '';
+            if (TAXI.type === 'stand') {
+                const v = document.getElementById('taxi-stand').value;
+                if (!v) txt = o.at_dest ? 'No arrival stand yet: choose one here (or wait for the Ops Centre to assign one).' : '';
+                else {
+                    const src = !TAXI.userStand && v === sg.stand && sg.stand_src ? sg.stand_src : 'chosen';
+                    txt = `Stand ${v} · ${TAXI_SRC[src]}` + (src === 'chosen' && o.remote && v !== o.chosen_stand ? ' (not saved yet)' : '');
+                }
+            } else {
+                const v = document.getElementById('taxi-rwy').value;
+                if (v && TAXI.userRwy) txt = `Runway ${v} · ${TAXI_SRC.chosen}`;
+                else if (v && v === sg.runway && sg.runway_src) txt = `Runway ${v} · ${TAXI_SRC[sg.runway_src]}` + (sg.note ? ` · ${sg.note}` : '');
+            }
+            el.textContent = txt;
+        }
+        function taxiUserPick(kind) {
+            if (kind === 'stand') TAXI.userStand = true; else TAXI.userRwy = true;
+            taxiShowSrc();
+        }
+        function taxiLoadOptions() {
+            const msg = document.getElementById('taxi-msg'); msg.textContent = 'Reading the airport...'; msg.style.color = '';
+            return fetch('/api/taxi/options').then(r => r.json()).then(o => {
+                TAXI.opts = o; TAXI.userStand = false; TAXI.userRwy = false;
+                const remote = o.status === 'success' && o.remote;
+                document.getElementById('taxi-plan-btn').style.display = remote ? 'none' : '';
+                document.getElementById('taxi-save-stand').style.display = o.status === 'success' && o.at_dest ? '' : 'none';
+                document.querySelector('#taxi-type button[data-t="runway"]').style.display = remote ? 'none' : '';
+                if (o.status !== 'success') { msg.textContent = o.message; msg.style.color = '#f44336'; document.getElementById('taxi-apt').textContent = ''; taxiShowSrc(); return o; }
+                document.getElementById('taxi-apt').textContent = o.icao + (remote ? ' (destination)' : '');
+                const ss = document.getElementById('taxi-stand');
+                ss.innerHTML = '<option value="">Choose a stand...</option>' + o.stands.map(s => `<option value="${esc(s.name)}">${esc(s.name)}${s.name === o.assigned_stand ? '  (Ops Centre)' : (s.name === o.chosen_stand ? '  (your choice)' : '')}</option>`).join('');
+                document.getElementById('taxi-rwy').innerHTML = o.runways.map(r => `<option value="${esc(r)}">${esc(r)}</option>`).join('');
+                ss.value = o.suggest.stand || '';
+                if (o.suggest.runway) document.getElementById('taxi-rwy').value = o.suggest.runway;
+                taxiSetType(remote ? 'stand' : o.suggest.type);
+                if (remote) { msg.textContent = `In flight: choose your arrival stand at ${o.icao} and save it. It is remembered for this flight, and the route is planned after landing.`; msg.style.color = ''; }
+                else { msg.textContent = o.network ? '' : 'This airport has no taxi routing network in your scenery, so routing is not available here.'; msg.style.color = o.network ? '' : '#ff9800'; }
+                if (remote && !o.network) { msg.textContent += ' (This airport has no taxi routing network in your scenery, so no route will be available.)'; msg.style.color = '#ff9800'; }
+                taxiDrawStands();
+                return o;
+            }).catch(() => { msg.textContent = 'No response from the EFB.'; msg.style.color = '#f44336'; });
+        }
+        function taxiSaveStand() {
+            const o = TAXI.opts, msg = document.getElementById('taxi-msg');
+            if (!o || o.status !== 'success') return;
+            const stand = document.getElementById('taxi-stand').value;
+            fetch('/api/taxi/stand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ stand, icao: o.icao }) })
+                .then(r => r.json()).then(res => {
+                    msg.textContent = res.message; msg.style.color = res.status === 'success' ? '#4caf50' : '#f44336';
+                    if (res.status !== 'success') return;
+                    o.chosen_stand = res.chosen_stand;
+                    if (!o.assigned_stand || o.suggest.stand_src !== 'ops') { o.suggest.stand = res.chosen_stand; o.suggest.stand_src = res.chosen_stand ? 'chosen' : ''; }
+                    TAXI.userStand = false;
+                    [...document.getElementById('taxi-stand').options].forEach(op => {
+                        if (!op.value) return;
+                        op.textContent = op.value + (op.value === o.assigned_stand ? '  (Ops Centre)' : (op.value === o.chosen_stand ? '  (your choice)' : ''));
+                    });
+                    taxiShowSrc();
+                }).catch(() => { msg.textContent = 'No response from the EFB.'; msg.style.color = '#f44336'; });
+        }
+        // stands on the map you can tap while the panel is open
+        function taxiDrawStands() {
+            if (!map || !TAXI.opts || !TAXI.opts.stands) return;
+            if (TAXI.standLayer) map.removeLayer(TAXI.standLayer);
+            TAXI.standLayer = L.layerGroup().addTo(map);
+            TAXI.opts.stands.forEach(s => L.circleMarker([s.lat, s.lon], { radius: 6, color: '#e040fb', weight: 1, fillOpacity: 0.25 })
+                .bindTooltip(s.name).on('click', () => { taxiSetType('stand'); document.getElementById('taxi-stand').value = s.name; taxiUserPick('stand'); })
+                .addTo(TAXI.standLayer));
+        }
+        function taxiParams() {
+            const t = TAXI.type || 'stand';
+            return { dest_type: t, stand: document.getElementById('taxi-stand').value, runway: document.getElementById('taxi-rwy').value, clearance: document.getElementById('taxi-clr').value };
+        }
+        function taxiPlan(params, quiet, preview) {
+            params = params || taxiParams();
+            const msg = document.getElementById('taxi-msg');
+            if (params.dest_type === 'stand' && !params.stand) { msg.textContent = 'Choose a stand first (or tap one on the map).'; msg.style.color = '#f44336'; return Promise.resolve(); }
+            if (!quiet) { msg.textContent = 'Planning...'; msg.style.color = ''; }
+            TAXI.lastPlan = Date.now();
+            return taxiPost(params).then(res => {
+                if (res.status !== 'success') {
+                    if (!quiet) { msg.textContent = res.message; msg.style.color = '#f44336'; }
+                    else taxiShowStrip(`<div class="next" style="font-size:15px;">${esc(res.message)}</div>`, 'off');
+                    return;
+                }
+                res.preview = !!preview; res.note = params.note || '';
+                TAXI.route = res; TAXI.params = params; TAXI.idx = 0; TAXI.offSince = 0; TAXI.arrived = 0; TAXI.lastDraw = 0;
+                msg.textContent = `${preview ? 'Preview' : 'Route planned'}: ${res.summary} (${Math.round(res.length_m)} m).`; msg.style.color = '';
+                if (TAXI.standLayer && !quiet) { map.removeLayer(TAXI.standLayer); TAXI.standLayer = null; }
+                taxiDraw(0);
+                if (!quiet) document.getElementById('taxi-panel').style.display = 'none';
+                const hu = document.getElementById('map-hdgup');
+                if (hu && !hu.checked && !TAXI.huAsked) TAXI.huAsked = true;
+                taxiTick(simLat, simLon, 0);
+            }).catch(() => { msg.textContent = 'No response from the EFB.'; msg.style.color = '#f44336'; });
+        }
+        function taxiClear() {
+            TAXI.route = null; TAXI.params = null;
+            if (TAXI.layer) { map && map.removeLayer(TAXI.layer); TAXI.layer = null; }
+            if (TAXI.standLayer) { map && map.removeLayer(TAXI.standLayer); TAXI.standLayer = null; }
+            document.getElementById('taxi-strip').style.display = 'none';
+            document.getElementById('taxi-global').style.display = 'none';
+            const m = document.getElementById('taxi-msg'); if (m) m.textContent = '';
+        }
+        function taxiToStand(stand) {
+            switchTab('telemetry');
+            taxiLoadOptions().then(o => {
+                if (!o || o.status !== 'success') { taxiOpen(true); return; }
+                taxiSetType('stand'); document.getElementById('taxi-stand').value = stand;
+                taxiPlan({ dest_type: 'stand', stand, runway: '', clearance: '' });
+            });
+        }
+        function taxiDraw(doneD) {
+            if (!map || !TAXI.route) return;
+            if (TAXI.layer) map.removeLayer(TAXI.layer);
+            TAXI.layer = L.layerGroup().addTo(map);
+            const pts = TAXI.route.points;
+            if (TAXI.route.preview) {
+                // a preview: a faint dashed line to the holding point, no directions yet
+                L.polyline(pts.map(p => [p[0], p[1]]), { color: '#e040fb', weight: 4, opacity: 0.55, dashArray: '8 10', interactive: false }).addTo(TAXI.layer);
+                const d0 = TAXI.route.dest;
+                L.circleMarker([d0.lat, d0.lon], { radius: 7, color: '#e040fb', weight: 2, fillColor: '#fff', fillOpacity: 0.5, interactive: false }).addTo(TAXI.layer)
+                    .bindTooltip(d0.label, { permanent: true, direction: 'left' });
+                return;
+            }
+            const done = pts.filter(p => p[2] <= doneD).map(p => [p[0], p[1]]);
+            const ahead = pts.filter(p => p[2] >= doneD).map(p => [p[0], p[1]]);
+            if (done.length > 1) L.polyline(done, { color: '#e040fb', weight: 5, opacity: 0.25, interactive: false }).addTo(TAXI.layer);
+            if (ahead.length > 1) L.polyline(ahead, { color: '#e040fb', weight: 6, opacity: 0.95, interactive: false }).addTo(TAXI.layer);
+            TAXI.route.steps.filter(s => s.kind === 'hold' && s.d >= doneD).forEach(s => {
+                const p = pts[s.i];
+                L.circleMarker([p[0], p[1]], { radius: 8, color: '#f44336', weight: 3, fillColor: '#f44336', fillOpacity: 0.5, interactive: false }).addTo(TAXI.layer)
+                    .bindTooltip(s.text, { permanent: true, direction: 'right', className: 'taxi-tip' });
+            });
+            const dst = TAXI.route.dest;
+            L.circleMarker([dst.lat, dst.lon], { radius: 9, color: '#e040fb', weight: 3, fillColor: '#fff', fillOpacity: 0.9, interactive: false }).addTo(TAXI.layer)
+                .bindTooltip(dst.label, { permanent: true, direction: 'left' });
+        }
+        function taxiShowStrip(html, cls) {
+            const s = document.getElementById('taxi-strip');
+            s.innerHTML = html + '<span class="x" title="Clear the route" onclick="taxiClear()">✕</span>';
+            s.className = 'taxi-strip' + (cls ? ' ' + cls : '');
+            s.style.display = '';
+        }
+        const taxiFmtD = m => m >= 1000 ? (m / 1000).toFixed(1) + ' km' : (Math.round(m / 10) * 10) + ' m';
+        // where the aircraft is along the route: nearest segment ahead of the last known position
+        function taxiProgress(lat, lon) {
+            const pts = TAXI.route.points, k0 = Math.max(0, TAXI.idx - 3), k1 = Math.min(pts.length - 1, TAXI.idx + 60);
+            const c = Math.cos(lat * Math.PI / 180);
+            let best = { x: 1e9, d: 0, k: TAXI.idx };
+            for (let k = k0; k < k1; k++) {
+                const ax = (pts[k][1] - lon) * 111320 * c, ay = (pts[k][0] - lat) * 110540;
+                const bx = (pts[k + 1][1] - lon) * 111320 * c, by = (pts[k + 1][0] - lat) * 110540;
+                const vx = bx - ax, vy = by - ay, L2 = vx * vx + vy * vy || 1;
+                const t = Math.max(0, Math.min(1, -(ax * vx + ay * vy) / L2));
+                const px = ax + vx * t, py = ay + vy * t, x = Math.hypot(px, py);
+                if (x < best.x) best = { x, d: pts[k][2] + (pts[k + 1][2] - pts[k][2]) * t, k };
+            }
+            return best;
+        }
+        function taxiTick(lat, lon, gs) {
+            // after landing: the route to the assigned stand, if asked for
+            // (the stand the Ops Centre assigned, or the one the pilot chose in the Taxi panel)
+            if (!simOnGround) { TAXI.wasAirborne = true; TAXI.autoDone = false; }
+            else if (TAXI.wasAirborne && gs < 15) {
+                TAXI.wasAirborne = false;
+                if (!TAXI.autoDone && safeGetStorage('toliss_taxi_auto') === '1' && (!TAXI.route || TAXI.route.preview)) {
+                TAXI.autoDone = true;
+                fetch('/api/taxi/options').then(r => r.json()).then(o => {
+                    if (o.status !== 'success' || !o.network || o.suggest.type !== 'stand') return;
+                    if (o.suggest.stand) taxiPlan({ dest_type: 'stand', stand: o.suggest.stand, runway: '', clearance: '' }, true);
+                    else taxiShowStrip(`<div class="next" style="font-size:16px;">Choose your stand for a taxi route</div>` +
+                        `<div class="sum" style="margin-top:6px;"><button class="mc-btn" style="min-height:30px;" onclick="switchTab('telemetry'); taxiOpen(true);">Choose stand</button></div>`, 'off');
+                }).catch(() => {});
+                }
+            }
+            // before departure: the preview, then the live route when the aircraft starts to taxi
+            taxiDepTick(gs);
+            const R = TAXI.route;
+            if (!R || !lat) return;
+            if (R.preview) {
+                taxiShowStrip(`<div class="next" style="font-size:16px;">Preview: ${esc(R.dest.label)}</div>` +
+                    `<div class="sum">${esc(R.summary)} · ${taxiFmtD(R.length_m)} · starts when you taxi${R.note ? '<br>' + esc(R.note) : ''}</div>`);
+                document.getElementById('taxi-global').style.display = 'none';
+                return;
+            }
+            const p = taxiProgress(lat, lon);
+            TAXI.idx = p.k;
+            const kt = gs * 1.94384;
+            const remain = Math.max(0, R.length_m - p.d);
+            // arrived
+            if (remain < 15 || (TAXI.arrived && Date.now() - TAXI.arrived < 20000)) {
+                if (!TAXI.arrived) TAXI.arrived = Date.now();
+                taxiShowStrip(`<div class="next">Arrived: ${esc(R.dest.label)}</div><div class="sum">Route complete</div>`);
+                taxiGlobal(`Arrived: ${R.dest.label}`, false);
+                if (Date.now() - TAXI.arrived > 15000) taxiClear();
+                return;
+            }
+            // off the route: tell, and plan again from here (keeping the clearance)
+            if (p.x > 45 && gs > 1) {
+                if (!TAXI.offSince) TAXI.offSince = Date.now();
+                if (Date.now() - TAXI.offSince > 6000 && Date.now() - TAXI.lastPlan > 15000) {
+                    taxiShowStrip('<div class="next">OFF ROUTE</div><div class="sum">Planning a new route from here...</div>', 'off');
+                    taxiPlan(TAXI.params, true);
+                    return;
+                }
+            } else TAXI.offSince = 0;
+            const next = R.steps.find(s => s.d > p.d + 3) || R.steps[R.steps.length - 1];
+            const dn = Math.max(0, next.d - p.d);
+            const hold = next.kind === 'hold' && dn < 250;
+            let cue = '';
+            const sharp = (R.sharp || []).find(s => s.d > p.d && s.d - p.d < 150);
+            if (sharp && kt > 12) cue = `SLOW: sharp ${sharp.turn < 0 ? 'left' : 'right'} turn`;
+            else if (next.kind === 'dest' && dn < 120 && kt > 8) cue = R.dest.label.startsWith('Stand') ? 'SLOW: stand ahead' : 'SLOW: holding point ahead';
+            const mins = Math.max(1, Math.round(remain / Math.max(gs, 4) / 60));
+            const nextTxt = next.kind === 'dest' ? R.dest.label : next.text;
+            taxiShowStrip(`<div class="next">${esc(nextTxt)}<small>in ${taxiFmtD(dn)}</small></div>` +
+                `<div class="sum">${esc(R.summary)} · ${taxiFmtD(remain)} to go · ${mins} min` + (R.note ? ` · ${esc(R.note)}` : '') +
+                (document.getElementById('map-hdgup') && !document.getElementById('map-hdgup').checked ? ` · <a href="#" style="color:#e040fb;" onclick="const c=document.getElementById('map-hdgup'); c.checked=true; setMapHeadingUp(true); if (map) map.setZoom(Math.max(map.getZoom(), 17)); return false;">heading up</a>` : '') + `</div>` + (p.x > 45 ? '<div class="cue" style="background:#ff9800;">OFF ROUTE</div>' : (cue ? `<div class="cue">${cue}</div>` : '')),
+                hold ? 'hold' : (p.x > 45 ? 'off' : ''));
+            taxiGlobal(`${nextTxt} · ${taxiFmtD(dn)}`, hold);
+            if (!TAXI.lastDraw || Math.abs(p.d - TAXI.lastDraw) > 20) { TAXI.lastDraw = p.d; taxiDraw(p.d); }
+        }
+        // "Before departure, show the taxi route to my runway automatically": a preview once the OFP is loaded
+        // (at the OFP origin, parked), then the real route when pushback ends or the aircraft starts to taxi
+        function taxiDepTick(gs) {
+            const pushEnded = TAXI.wasPushing && !TAXI.pushing;
+            TAXI.wasPushing = TAXI.pushing;
+            if (safeGetStorage('toliss_taxi_dep_auto') !== '1' || !simOnGround) { TAXI.moveSince = 0; return; }
+            if (TAXI.route && !TAXI.route.preview) { TAXI.moveSince = 0; return; }     // a live route is already showing
+            const now = Date.now(), o = TAXI.depOpts;
+            const every = o && o.status === 'success' && o.ofp_id && o.at_origin ? 60000 : 15000;
+            if ((!o || now - TAXI.depOptsAt > every) && !TAXI.depBusy) {
+                TAXI.depBusy = true; TAXI.depOptsAt = now;
+                fetch('/api/taxi/options').then(r => r.json()).then(x => { TAXI.depOpts = x; }).catch(() => {}).finally(() => { TAXI.depBusy = false; });
+            }
+            if (!o || o.status !== 'success' || !o.network || !o.at_origin || !o.ofp_id || !o.suggest.runway) return;
+            const key = o.ofp_id;
+            if (TAXI.depLive === key) return;                       // the live route was already given for this flight
+            if (TAXI.pushing) { TAXI.moveSince = 0; return; }
+            if (gs > 3) { if (!TAXI.moveSince) TAXI.moveSince = now; } else TAXI.moveSince = 0;
+            const p = TAXI.route && TAXI.route.preview && TAXI.params ? TAXI.params : null;
+            const picked = TAXI.userRwy && TAXI.type === 'runway' && TAXI.opts && TAXI.opts.icao === o.icao ? document.getElementById('taxi-rwy').value : '';
+            const params = { dest_type: 'runway', stand: '', runway: picked || (p ? p.runway : o.suggest.runway), clearance: document.getElementById('taxi-clr').value || '',
+                             note: picked && picked !== o.suggest.runway ? '' : (p ? p.note : (o.suggest.note || '')) };
+            if (pushEnded || (TAXI.moveSince && now - TAXI.moveSince >= 4000)) {
+                TAXI.depLive = key; TAXI.moveSince = 0;
+                taxiPlan(params, true);
+                return;
+            }
+            if (TAXI.depFor !== key && !TAXI.route && gs < 1 && now - TAXI.lastPlan > 5000) {
+                TAXI.depFor = key;
+                taxiPlan(params, true, true);
+            }
+        }
+        // the slim strip under the top bar on the other pages
+        function taxiGlobal(text, hold) {
+            const g = document.getElementById('taxi-global');
+            const onMap = document.getElementById('telemetry').classList.contains('active');
+            if (onMap || !TAXI.route) { g.style.display = 'none'; return; }
+            g.innerHTML = `<span class="lbl">TAXI</span>${esc(text)}`;
+            g.className = 'taxi-global' + (hold ? ' hold' : '');
+            g.style.display = '';
+        }
+
         // ===== DCDU: Ops Centre messages on an A320-family DCDU, with response keys =====
         // Uplinks (ops centre -> aircraft) and the crew's downlinks; the keys answer as the crew over Hoppie.
         const DCDU = { idx: -1, page: 0, recall: false, timer: null, seen: {}, bright: 1, lastUp: null, audio: null };
@@ -7318,7 +7657,8 @@
                 if (open) {
                     html += items.map(([k, label, when]) => {
                         const [st, cls] = opsItemStatus(f, k, when);
-                        const extra = k === 'stand' ? `<button class="mc-btn ops-reassign" onclick="opsStandOpen()">${f.stand ? 'Change stand' : 'Assign stand'}</button>` : '';
+                        const extra = k === 'stand' ? `<button class="mc-btn ops-reassign" onclick="opsStandOpen()">${f.stand ? 'Change stand' : 'Assign stand'}</button>` +
+                            (f.stand ? `<button class="mc-btn ops-reassign" onclick="taxiToStand('${esc(f.stand).replace(/'/g, '')}')">Route to stand</button>` : '') : '';
                         return `<div class="ops-item"><div>${label}</div><div class="st ${cls}${extra ? ' has-btn' : ''}">${extra ? '<span>' + esc(st) + '</span>' : esc(st)}${extra}</div>
                             <label><input type="checkbox" ${f.auto[k] ? 'checked' : ''} onchange="opsAuto('${k}', this.checked)"> Auto</label>
                             <button class="mc-btn" onclick="opsAction('${k}')">Send now</button></div>`;

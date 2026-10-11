@@ -16,6 +16,142 @@ as soon as the aircraft is positioned and finishes setting it up while paused, w
 
 ---
 
+## 0.68
+
+Everything since 0.67, in one update (the changes of 0.67.1 to 0.67.8). Details of each step are in CHANGELOG.md.
+
+### Taxi routing (new)
+Taxi directions to a stand or a runway holding point, on the moving map.
+- **Map & Telemetry → Taxi:** choose **To a stand** or **To a runway**, optionally type your clearance as ATC gave it
+  (e.g. `B B4 A HOLD SHORT 16R`), and **Plan route**. You can also tap a stand on the map.
+- **The route** follows your scenery's taxi network: only taxiways wide enough for your aircraft, one-way rules, no
+  U-turns or very sharp turns, runways only to cross them. With a clearance, it follows those taxiways in that order,
+  or says which part is impossible.
+- **On the map:** the route in magenta, runway hold-short points in red, the stand or holding point marked; the part
+  you have taxied fades.
+- **Directions:** a strip on the map with the next step and its distance (*Left onto B1 in 300 m*, *HOLD SHORT RWY
+  16/34* in red), the distance and time to go, a **heading up** shortcut, and SLOW cues before sharp turns and the
+  stand. Leave the route and it says OFF ROUTE and plans a new one from where you are. On the other pages a slim TAXI
+  strip under the top bar shows the next step.
+- **Where each suggestion comes from** is shown under the stand or runway: "Runway 16 · planned in your SimBrief OFP",
+  "Runway 34 · from the departure ATIS", "Stand 42 · assigned by the Ops Centre", or "· chosen by you".
+- **Choose your arrival stand in flight:** in flight the panel shows your OFP destination's stands; pick one and press
+  **Save as my arrival stand**. It is remembered for that flight, no Ops Centre needed. An Ops Centre stand takes priority.
+- **After landing, show the taxi route to my stand automatically** (tickbox, off by default): to the Ops Centre's
+  stand, or else the one you chose. With neither, the strip says **Choose your stand for a taxi route**, with a button.
+- **Before departure, show the taxi route to my runway automatically** (tickbox, off by default): once the OFP is
+  loaded and you are parked at the departure airport, a faint dashed preview to the holding point; when an EFB
+  pushback ends or you start to taxi, the real route and directions start. The runway is the departure ATIS runway
+  (VATSIM) if it differs from the OFP, with a note such as "RWY 34L (ATIS C); OFP planned 16R"; otherwise the OFP's.
+- **Ops Centre:** a **Route to stand** button next to the stand assignment.
+- Airports whose scenery has no taxi routing network can't be routed; the panel says so. The directions are advisory:
+  ATC and your clearance come first.
+
+### Ops Centre: DCDU (new)
+Ops Centre messages on an A320-family DCDU (as on the A320, A321neo and A321XLR), in the same bezel and key colours
+as the EFB's MCDU and FCU.
+- **Where:** Ops Centre → **Message display: List / DCDU**, or the **DCDU** button on the MCDU page.
+- **Response keys** to suit each message: the final load sheet ACCEPT / REJECT (a rejection brings a revised load
+  sheet), the stand assignment ROGER / REQ CHANGE (another stand is assigned), questions ROGER / STBY / UNABLE, and
+  everything else ROGER. CLOSE and RECALL, MSG−/MSG+, PGE−/PGE+, PRINT (onto a cockpit-printer strip) and BRT/DIM.
+- A **MSG** light and a chime for a new message. Responses go to the ops centre over Hoppie as the crew and are kept
+  in the Ops Centre log, so every device shows the same state.
+
+### Ops Centre: other changes
+- **Load my latest SimBrief flight plan automatically** (tickbox, off by default): the plugin loads your latest plan
+  when X-Plane starts or after Reload scripts.
+- **No repeated messages after a reload:** the flight's progress is saved, so loading the same plan carries on where
+  it left off.
+- **A new flight plan starts a clean message list:** the previous flight's messages move to a folded **Previous
+  flights** section (the last 5 flights), and messages still waiting for the old plan are cancelled.
+  **Clear messages** also deletes the Previous flights.
+- **The Flight box folds** to one line (phase, messages sent, what comes next).
+- **The list of messages is always shown**, greyed out with a note when no flight plan is loaded.
+
+### Airport frequencies (new)
+- **xPilot & ATC → Airport frequencies:** the real-world stations of an airport (ATIS, Delivery, Ground, Tower,
+  Departure, Approach, CTAF) from your scenery, with tabs for the **current / nearest** airport, your **departure** and
+  your **destination**. COM1 / COM2 buttons set the standby frequency; a green dot shows a VATSIM controller online.
+- **Map & Telemetry → Frequencies** opens the list for the airport you are at.
+
+### QNH in the airport's own unit
+- inHg where the METAR gives `A2992` (US, Canada, Japan and others), hPa where it gives `Q1013`; without a METAR, by
+  country. Used in the Ops Centre takeoff and landing data (now with a QNH line), the performance sheets and the
+  telemetry strip.
+
+### Units and labels
+- **Dispatch & OFP** shows both the **Flight** number (e.g. QF431) and the ATC **Callsign** (e.g. QFA43T).
+- **Runway distances: FT / M**, one setting for the performance sheets and the Ops Centre's landing data. Elevations
+  stay in feet. The default is feet.
+
+### Fixes
+- **Stands that share a name** (e.g. FlyTampa YSSY's two stands 57, for size C and size F, or any scenery that does
+  this) are all kept and labelled by size, **57 (C)** and **57 (F)**, or **57 (1)**, **57 (2)** without different sizes,
+  on the Reposition page, the ground map, the Taxi panel and the Ops Centre. A stand listed twice in the same place is
+  shown once, and a stand named like a runway end is no longer hidden. Stand rules written as **57** apply to both.
+- **Secure connections:** if the computer's own certificates reject a server (common with the Python inside
+  XPPython3 on a Mac), the EFB retries with an up-to-date set, and otherwise explains what to check instead of showing
+  "CERTIFICATE_VERIFY_FAILED". Applies to Hoppie, SimBrief, VATSIM, METARs and updates.
+- Updates use the repository's new GitHub address (Soarbywire/toliss-efb).
+
+---
+
+## 0.67.8
+
+### Fix: stands that share a name
+Some sceneries give one name to more than one stand. FlyTampa YSSY, for example, has a stand 57 for size C and
+another stand 57 for size F. The Reposition page kept only the first one, so the other could not be found or chosen.
+- **All stands are now kept**, each with its own name: the size class is added, e.g. **57 (C)** and **57 (F)**
+  (or **57 (1)**, **57 (2)** when the scenery gives no different sizes). This applies on the Reposition page, the
+  ground map, the Taxi panel and the Ops Centre's stand assignment, so a taxi route or an assignment goes to the
+  right one.
+- A stand listed twice in the same place is shown once.
+- A stand with the same name as a runway end (e.g. stand 16 and runway 16) is no longer hidden.
+- Stand rules (exclusions, airline stands) written as **57** apply to both; **57 (C)** applies to just that one.
+
+## 0.67.7
+
+### Taxi routing: clearer suggestions, arrival stand without the Ops Centre, automatic departure route
+- **Where each suggestion comes from:** the Taxi panel now says it under the stand or runway, e.g.
+  "Runway 16 · planned in your SimBrief OFP", "Stand 42 · assigned by the Ops Centre", or "· chosen by you".
+- **Choose your arrival stand in flight:** in flight the Taxi panel shows your OFP destination's stands. Pick one and
+  press **Save as my arrival stand**; it is remembered for that flight (also over a reload), no Ops Centre needed.
+  A stand the Ops Centre assigns takes priority.
+- **After landing** (tickbox reworded: "After landing, show the taxi route to my stand automatically (the stand the
+  Ops Centre assigned, or the one you chose here)"): the route goes to the Ops Centre's stand, or else your chosen
+  stand. With neither, the strip says **Choose your stand for a taxi route** with a button that opens the panel.
+- **New tickbox: "Before departure, show the taxi route to my runway automatically".**
+  - **Preview:** once the OFP is loaded and you are parked at the departure airport, a faint dashed line from your
+    stand to the holding point (no directions yet).
+  - **Live route:** when an EFB pushback ends, or when you start to taxi (above about 6 kt for 4 seconds), the real
+    route is planned from where you are and the directions start.
+  - **Runway:** the departure runway in the VATSIM ATIS if it differs from the OFP, with a note such as
+    "RWY 34L (ATIS C); OFP planned 16R"; otherwise the OFP's planned runway. A runway you pick in the panel wins.
+  - You can still type a clearance at any time and plan the route yourself.
+
+## 0.67.6
+
+### Taxi routing (new)
+Taxi directions to a stand or a runway holding point, on the moving map.
+- **Map & Telemetry → Taxi:** choose **To a stand** (your Ops Centre stand is suggested at the destination; or pick one
+  from the list, or tap a stand on the map) or **To a runway** (the SimBrief runway is suggested at the departure),
+  optionally type your clearance as ATC gave it (e.g. `B B4 A HOLD SHORT 16R`), and **Plan route**.
+- **The route** follows your scenery's taxi network: only taxiways wide enough for your aircraft, one-way rules, no
+  U-turns or very sharp turns, runways only to cross them. With a clearance, it follows those taxiways in that order,
+  or says which part is impossible.
+- **On the map:** the route in magenta, runway hold-short points in red, the stand or holding point marked; the part
+  you have taxied fades.
+- **Directions:** a strip on the map with the next step and its distance (*Left onto B1 in 300 m*, *HOLD SHORT RWY
+  16/34* in red), the route summary, the distance and time to go, a **heading up** shortcut, and SLOW cues before
+  sharp turns and the stand. Leave the route and it says OFF ROUTE and plans a new one from where you are.
+- **On the other pages** a slim TAXI strip under the top bar shows the next step; tap it for the map.
+- **Ops Centre:** **Route to stand** next to the stand assignment, and an option to plan the route to your assigned
+  stand automatically after landing (in the Taxi panel, off by default).
+- Airports whose scenery has no taxi routing network can't be routed; the panel says so. The directions are advisory:
+  ATC and your clearance come first.
+
+---
+
 ## 0.67.5
 
 ### Ops Centre
