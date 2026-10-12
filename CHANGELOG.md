@@ -16,6 +16,17 @@ as soon as the aircraft is positioned and finishes setting it up while paused, w
 
 ---
 
+## 0.68.3
+
+### Secure connections on Macs (and other computers with missing certificates)
+- When this computer's own certificates are rejected (common with the Python inside XPPython3 on a Mac), the EFB now
+  retries with a combined set: the certifi package if installed, the **operating system's own certificate file**
+  (on a Mac `/etc/ssl/cert.pem`, kept up to date by macOS) and the EFB's bundled copy of Mozilla's certificates.
+  No changes to the EFB's files are needed. Certificates are always checked: please don't edit the EFB to use
+  `ssl.SSLContext()` with no arguments, as that turns certificate checking off.
+- **Updating from 0.66 or earlier** now uses the same fallback, so it no longer fails on such a Mac.
+- The X-Plane log notes once when the fallback is used (and which certificate files it used), to help with support.
+
 ## 0.68.2
 
 ### VATSIM map: altitude and speed as a pilot reads them

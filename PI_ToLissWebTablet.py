@@ -13,7 +13,7 @@ so updates work:
 import os
 import sys
 
-STUB_VERSION = "0.68.2"          # make_release.py checks this matches ToLissWebTablet/__init__.py
+STUB_VERSION = "0.68.3"          # make_release.py checks this matches ToLissWebTablet/__init__.py
 UPDATE_REPO = "Soarbywire/toliss-efb"
 
 for _name in list(sys.modules):
@@ -44,6 +44,7 @@ else:
     import re
     import shutil
     import socketserver
+    import ssl
     import tempfile
     import threading
     import urllib.request
@@ -102,9 +103,36 @@ else:
         daemon_threads = True
         allow_reuse_address = True
 
+    def _fallback_ctx():
+        """If this Python's own certificates are rejected (e.g. a Mac without 'Install Certificates.command'): a
+        verifying context with certifi, the system's certificate file and the EFB's bundle if already present."""
+        files = []
+        try:
+            import certifi
+            files.append(certifi.where())
+        except Exception:
+            pass
+        files += ["/etc/ssl/cert.pem", "/etc/ssl/certs/ca-certificates.crt", "/etc/pki/tls/certs/ca-bundle.crt",
+                  "/etc/ssl/ca-bundle.pem", os.path.join(_PKG, "core", "cacert.pem")]
+        ctx = ssl.create_default_context()
+        for f in files:
+            if os.path.isfile(f):
+                try:
+                    ctx.load_verify_locations(cafile=f)
+                except Exception:
+                    pass
+        return ctx
+
     def _get(url, limit):
         req = urllib.request.Request(url, headers={"User-Agent": f"ToLissEFB/{STUB_VERSION}"})
-        with urllib.request.urlopen(req, timeout=30) as resp:
+        try:
+            resp = urllib.request.urlopen(req, timeout=30)
+        except Exception as exc:
+            if "CERTIFICATE_VERIFY_FAILED" not in str(exc) and not isinstance(getattr(exc, "reason", None), ssl.SSLCertVerificationError):
+                raise
+            XPLMDebugString("ToLiss EFB: this computer's certificates were rejected; retrying with the certificate fallback.\n")
+            resp = urllib.request.urlopen(req, timeout=30, context=_fallback_ctx())
+        with resp:
             data = resp.read(limit + 1)
         if len(data) > limit:
             raise ValueError("the download is larger than expected")

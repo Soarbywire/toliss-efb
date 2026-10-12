@@ -61,6 +61,8 @@ class PythonInterface(
 
         self.stop_event = threading.Event()
         self.log = MainThreadLogger()
+        from .core import net as _net
+        _net.set_logger(self.log.xplane)
         self.bridge = SimBridge()
         self.config_file = os.path.join(self.plugin_dir, "config.json")
         self.config_store = ConfigStore(self.config_file)
