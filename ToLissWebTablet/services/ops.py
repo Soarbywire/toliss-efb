@@ -805,6 +805,18 @@ class OpsCentre:
                  f"ZFW {zfw}  MAX {mzfw}", f"TOF {tof}",
                  f"TOW {tow}  MAX {mtow}", f"TIF {trip}",
                  f"LAW {law}  MAX {mlaw}"]
+        # CG in % MAC: MACTOW from ToLiss, MACZFW worked out from it (services/cg.py); 24 columns on the MCDU
+        try:
+            cgf = self.plugin.cg.figures() if getattr(self.plugin, "cg", None) else {}
+        except Exception:
+            cgf = {}
+        if cgf.get("tow_cg") is not None:
+            if cgf.get("zfw_status") == "confirmed":
+                lines.append(f'MACZFW {cgf["zfw_cg"]:.1f}  MACTOW {cgf["tow_cg"]:.1f}')
+            else:
+                if cgf.get("zfw_status") == "est":
+                    lines.append(f'MACZFW {cgf["zfw_cg"]:.1f} EST')
+                lines.append(f'MACTOW {cgf["tow_cg"]:.1f}')
         if under is not None:
             lines.append(f"UNDERLOAD {under}" if under >= 0 else f"OVERWEIGHT {-under} CHECK")
         lines += ["LMC NIL", "PLEASE ACKNOWLEDGE"]

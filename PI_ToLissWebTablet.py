@@ -13,7 +13,7 @@ so updates work:
 import os
 import sys
 
-STUB_VERSION = "0.68.3"          # make_release.py checks this matches ToLissWebTablet/__init__.py
+STUB_VERSION = "0.68.5"          # make_release.py checks this matches ToLissWebTablet/__init__.py
 UPDATE_REPO = "Soarbywire/toliss-efb"
 
 for _name in list(sys.modules):

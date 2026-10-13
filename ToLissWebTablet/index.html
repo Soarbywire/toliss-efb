@@ -1094,6 +1094,8 @@
                     <input type="range" id="fuel-slider" min="0" max="24000" step="100" value="0" 
                            oninput="document.getElementById('fuel-val').innerText = this.value" 
                            onchange="applyFuelFromSlider()">
+                    <div id="wb-cg" style="margin-top:12px; font-family:var(--font-mono); font-size:15px;"></div>
+                    <div class="rp-note" id="wb-cg-note" style="margin-top:4px;"></div>
                 </div>
             </div>
 
@@ -1266,7 +1268,7 @@
                     <div class="perf-rwys" id="dsp-stick"></div>
                     <button class="mc-btn" onclick="dspFullscreen()">Full screen</button>
                 </div>
-                <div class="dsp-fcu" id="dsp-fcu-unit"><svg id="dsp-fcu" viewBox="0 0 1200 190" preserveAspectRatio="xMidYMid meet"></svg></div>
+                <div class="dsp-fcu" id="dsp-fcu-unit"><svg id="dsp-fcu" viewBox="0 0 1200 190" preserveAspectRatio="xMidYMid meet"></svg><div class="rp-note" id="dsp-fcu-note" style="min-height:14px; margin:4px 6px 0;"></div></div>
                 <div class="dsp-grid" id="dsp-grid">
                     <div class="dsp-unit" id="dsp-pfd-unit"><svg id="dsp-pfd" viewBox="0 0 512 512" preserveAspectRatio="xMidYMid meet"></svg></div>
                     <div class="dsp-unit" id="dsp-ewd-unit"><svg id="dsp-ewd" viewBox="0 0 512 512" preserveAspectRatio="xMidYMid meet"></svg></div>
@@ -2034,7 +2036,7 @@
                 <div style="line-height: 1.5; color: var(--text-muted); font-size: 13px;">
                     <p>A web-based, remote interface for the ToLiss line of aircraft in X-Plane 12.</p>
                     <p>By Soarbywire &middot; <a href="https://soarbywire.com" target="_blank" rel="noopener">soarbywire.com</a></p>
-                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.68.3 Release Beta</p>
+                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.68.5 Release Beta</p>
                     <p style="font-size: 11px; color: #ff9800; margin-top: 5px;"><strong>Caution:</strong> Some features may not work as intended.</p>
                     <p style="font-size: 11px; color: var(--text-dim); margin-top: 5px;">New versions are published on <a href="https://github.com/Soarbywire/toliss-efb/releases" target="_blank" rel="noopener">GitHub</a> and the X-Plane.org forums, and can be installed from <b>Updates</b> above.</p>
                     <div class="lic">
@@ -8162,9 +8164,14 @@
             // a push button with a green bar that lights
             const btn = (key, x, y, w, label) => {
                 sv(svg, 'rect', { x, y: y + 2, width: w, height: 40, rx: 4, fill: '#2a2f34' });                          // shadow
-                sv(svg, 'rect', { x, y, width: w, height: 40, rx: 4, fill: '#454c54', stroke: '#2a2f34', 'stroke-width': 1.5 });
+                const face = sv(svg, 'rect', { x, y, width: w, height: 40, rx: 4, fill: '#454c54', stroke: '#2a2f34', 'stroke-width': 1.5 });
                 FC[key] = sv(svg, 'rect', { x: x + 8, y: y + 6, width: w - 16, height: 5, rx: 2, fill: FCU_BAR_OFF });
                 t(x + w / 2, y + 31, label, 13, '#ffffff', 'middle', { 'font-weight': 'bold' });
+                // tap target over the whole key: presses the button in ToLiss
+                const hit = sv(svg, 'rect', { x, y, width: w, height: 42, rx: 4, fill: 'transparent', style: 'cursor:pointer' });
+                hit.addEventListener('pointerdown', e => { e.preventDefault(); face.setAttribute('fill', '#2f353b'); });
+                ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => hit.addEventListener(ev, () => face.setAttribute('fill', '#454c54')));
+                hit.addEventListener('click', () => fcuPress(key, label));
             };
             // EFIS baro, each side
             [['capt', 0], ['fo', 1040]].forEach(([side, x0]) => {
@@ -8187,6 +8194,27 @@
             btn('loc', 410, 110, 70, 'LOC');
             btn('exped', 715, 110, 80, 'EXPED');
             btn('appr', 905, 110, 80, 'APPR');
+        }
+        // the light each button shows (ToLiss's own state), to tell whether a press did anything
+        const FCU_LIGHT = { ap1: 'ap1', ap2: 'ap2', athr: 'athr', loc: 'loc_lt', appr: 'appr_lt', exped: 'exped_lt',
+                            capt_fd: 'fd1', fo_fd: 'fd2', capt_ls: 'ls', fo_ls: 'ls_fo' };
+        function fcuPress(key, label) {
+            const note = document.getElementById('dsp-fcu-note');
+            const before = DSP.last ? Number(DSP.last[FCU_LIGHT[key]]) >= 1 : null;
+            note.textContent = ''; note.style.color = '';
+            fetch('/api/fcu/press', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ button: key }) })
+                .then(r => r.json()).then(res => {
+                    if (res.status !== 'success') { note.textContent = `${label}: ${res.message}`; note.style.color = '#ff9800'; return; }
+                    setTimeout(() => {
+                        const after = DSP.last ? Number(DSP.last[FCU_LIGHT[key]]) >= 1 : null;
+                        if (before !== null && after === before) {
+                            note.textContent = key === 'ap1' || key === 'ap2'
+                                ? `${label} did not ${before ? 'disengage' : 'engage'}: on the ground or with the sidestick off centre, the autopilot may refuse.`
+                                : `${label} pressed, but ToLiss did not change it (its conditions may not be met).`;
+                            note.style.color = '#ff9800';
+                        }
+                    }, 1500);
+                }).catch(() => { note.textContent = 'No response from the EFB.'; note.style.color = '#f44336'; });
         }
         function fcuUpdate(d) {
             if (!FC.spd) fcuBuild();
@@ -9939,6 +9967,18 @@
             .then(() => setTimeout(() => updateStatus('Plugin Connected'), 2000));
         }
 
+        // centre of gravity (% MAC): the current CG from ToLiss, and the zero-fuel CG worked out from it
+        function wbShowCg(cg) {
+            const el = document.getElementById('wb-cg'), note = document.getElementById('wb-cg-note');
+            if (!el) return;
+            if (!cg || cg.tow_cg === null || cg.tow_cg === undefined) { el.textContent = ''; note.textContent = ''; return; }
+            const z = cg.zfw_cg !== null && cg.zfw_cg !== undefined ? `${cg.zfw_cg.toFixed(1)} %MAC${cg.zfw_status === 'est' ? ' (estimate)' : ''}` : '---';
+            el.innerHTML = `CG <b style="color:var(--accent);">${cg.tow_cg.toFixed(1)} %MAC</b> &nbsp;·&nbsp; ZFW CG <b style="color:var(--accent);">${z}</b>`;
+            note.textContent = cg.zfw_status === 'confirmed' ? 'The ZFW CG is the figure for INIT B / FUEL PRED.'
+                : cg.zfw_status === 'est' ? 'The ZFW CG is an estimate until the EFB has seen the fuel change a few more times (it learns this once for each aircraft type).'
+                : 'The ZFW CG appears once the EFB has seen how the CG moves with fuel: load the fuel here, or refuel, and it learns it.';
+        }
+
         function applyPayloadFromSliders() {
             const pax = Number(document.getElementById('pax-slider').value);
             const cargoFwd = Number(document.getElementById('cargo-fwd-slider').value);
@@ -9987,6 +10027,7 @@
                 .then(res => res.json())
                 .then(data => {
                     if(data.status === 'success') {
+                        wbShowCg(data.cg);
                         const pax = Math.round(data.pax);
                         const cargofwd = Math.round(data.cargo_fwd);
                         const cargoaft = Math.round(data.cargo_aft);

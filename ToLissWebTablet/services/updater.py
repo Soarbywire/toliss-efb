@@ -29,6 +29,7 @@ UPDATE_MAX_BYTES = 30 * 1024 * 1024
 PRESERVED_PATHS = (
     "config.json",
     "stand_rules.json",
+    "cg_calibration.json",
     "backup",
     "fdr",
     "ops",

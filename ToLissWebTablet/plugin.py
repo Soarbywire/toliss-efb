@@ -94,6 +94,9 @@ class PythonInterface(
         self.fdr = FlightRecorder(self)
         self.updater = Updater(self)
         self.ops = OpsCentre(self)
+        from .services.cg import CgTracker
+        self.cg = CgTracker(self)
+        threading.Thread(target=self.cg.run, args=(self.stop_event,), name="ToLissEFB-CG", daemon=True).start()
         self.navdb = NavDatabase(self.xp_path, self.plugin_dir, self.log, self.stop_event)
         self.navdb.load_async()
         self.vatsim = VatsimService(self.log, self.stop_event)
@@ -206,6 +209,20 @@ class PythonInterface(
             if aircraft_path and not os.path.isabs(aircraft_path):
                 aircraft_path = os.path.join(self.xp_path, aircraft_path)
             return aircraft_path or ""
+        if operation == "fcu_press":
+            # one FCU / EFIS push button from the Cockpit Displays page: the first of its ToLiss commands that exists
+            for name in payload or []:
+                command = XPLMFindCommand(str(name))
+                if command:
+                    XPLMCommandBegin(command)
+                    self.active_commands.append(command)
+                    return str(name)
+            missing = self.__dict__.setdefault("_fcu_missing", set())
+            key = "|".join(payload or [])
+            if key not in missing:
+                missing.add(key)
+                self.log.xplane(f"ToLiss EFB: none of these commands exist in this aircraft: {', '.join(payload or [])}\n")
+            return ""
         if operation == "command":
             command = XPLMFindCommand(str(payload))
             if command:

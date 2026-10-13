@@ -223,6 +223,9 @@ class InstructorMixin:
                      "y": g("sim/flightmodel/position/local_y"), "inp": {"fwd": 0, "side": 0, "up": 0, "turn": 0},
                      "rate": float(item.get("rate") or 20.0), "last_input": 0.0, "t": time.time(),
                      "resume_ias": float(item.get("resume_ias") or g("sim/flightmodel/position/indicated_airspeed") or 250)}
+        # how high the aircraft sits on its gear, and its attitude when parked: used to put it back on the ground
+        self.slew["gear_agl"] = self.slew["agl_m"] if on_ground else (getattr(self, 'gear_height_m', None) or 3.0)
+        self.slew["ground_pitch"] = self.slew["pitch"] if on_ground else 0.0
         self._override_path(True)
         return {"ok": True, "message": "Slew on" + (" (unpaused; the aircraft is held in place)" if was_paused else "") + "."}
     def _slew_place(self, x, z, sl):
@@ -257,10 +260,23 @@ class InstructorMixin:
         fwd, side = float(inp.get("fwd", 0)), float(inp.get("side", 0))
         east = (fwd * math.sin(h) + side * math.cos(h)) * rate * dt
         north = (fwd * math.cos(h) - side * math.sin(h)) * rate * dt
-        if not sl["ground"]:
-            sl["y"] += float(inp.get("up", 0)) * max(1.0, min(60.0, rate * 0.5)) * dt
+        up = float(inp.get("up", 0))
         x = self._get_f("sim/flightmodel/position/local_x") + east
         z = self._get_f("sim/flightmodel/position/local_z") - north      # -z is north
+        if sl["ground"] and up > 0:
+            # climbing from the ground: lift off and slew in the air from here on
+            sl["ground"], sl["pitch"] = False, 0.0
+            ground_y = self._probe_terrain_y(x, sl["y"] + 2000.0, z)
+            sl["y"] = max(sl["y"], (ground_y if ground_y is not None else sl["y"]) + 15.24)
+        if not sl["ground"]:
+            # at least about 500 ft/min, so a slow slew rate still visibly climbs or descends
+            sl["y"] += up * max(2.5, min(60.0, rate * 0.5)) * dt
+            if up < 0:
+                ground_y = self._probe_terrain_y(x, sl["y"] + 2000.0, z)
+                if ground_y is not None and sl["y"] <= ground_y + 15.24 + 0.01:
+                    # descended to the lowest slew height (50 ft): put it back on its wheels
+                    sl["ground"], sl["agl_m"], sl["pitch"] = True, sl.get("gear_agl") or 3.0, sl.get("ground_pitch", 0.0)
+                    sl["y"] = ground_y + sl["agl_m"]
         self._slew_place(x, z, sl)
     def _slew_stop(self):
         sl = self.slew

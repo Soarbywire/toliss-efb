@@ -116,6 +116,34 @@ def handle_post(req, plugin):
             req.end_headers()
             req.wfile.write(json.dumps(result).encode('utf-8'))
 
+        elif req.path == '/api/fcu/press':
+            # FCU and EFIS push buttons: ToLiss's own commands, so the aircraft decides (e.g. AP1 may refuse to engage)
+            cands = {
+                "ap1": ["toliss_airbus/ap1_push", "AirbusFBW/AP1Push"],
+                "ap2": ["toliss_airbus/ap2_push", "AirbusFBW/AP2Push"],
+                "athr": ["AirbusFBW/ATHRbutton", "toliss_airbus/athr_push"],
+                "loc": ["AirbusFBW/LOCbutton", "toliss_airbus/loc_push"],
+                "appr": ["AirbusFBW/APPRbutton", "toliss_airbus/appr_push"],
+                "exped": ["AirbusFBW/EXPEDbutton", "toliss_airbus/exped_push"],
+                "capt_fd": ["toliss_airbus/fd1_push", "AirbusFBW/FD1Push"],
+                "fo_fd": ["toliss_airbus/fd2_push", "AirbusFBW/FD2Push"],
+                "capt_ls": ["toliss_airbus/dispcommands/CaptLSButtonPush", "AirbusFBW/CaptLSButtonPush"],
+                "fo_ls": ["toliss_airbus/dispcommands/CoLSButtonPush", "AirbusFBW/CoLSButtonPush"],
+            }.get(str(data.get("button", "")))
+            if not cands:
+                result = {"status": "error", "message": "Unknown button."}
+            else:
+                try:
+                    used = plugin.bridge.call("fcu_press", cands, timeout=1.5)
+                    result = {"status": "success", "command": used} if used else \
+                             {"status": "error", "message": "This aircraft has no command for that button (noted in the X-Plane log)."}
+                except Exception as exc:
+                    result = {"status": "error", "message": "No response from the sim" if isinstance(exc, TimeoutError) else f"Could not press it: {exc}"}
+            req.send_response(200)
+            req.send_header('Content-type', 'application/json')
+            req.end_headers()
+            req.wfile.write(json.dumps(result).encode('utf-8'))
+
         elif req.path == '/command':
             if data.get('command'):
                 plugin.bridge.submit("command", data.get('command'))
@@ -140,7 +168,30 @@ def handle_post(req, plugin):
                 "fuel": data.get("fuel")
             }
             try:
+                cg = getattr(plugin, "cg", None)
+                fuel = payload.get("fuel")
+                try:
+                    cg and cg.sample()
+                except Exception:
+                    pass
+                if cg and fuel is not None and float(fuel) >= 3000 and cg.needs_learning():
+                    # load the fuel in steps the first times: each step shows how ToLiss's CG moves with the fuel,
+                    # which is what the ZFW CG on the load sheet is worked out from
+                    if payload.get("pax") is not None:
+                        plugin.bridge.call("payload_apply", dict(payload, fuel=None), timeout=2.0)
+                        time.sleep(2.0)
+                        cg.sample()
+                    for frac in (0.3, 0.6):
+                        plugin.bridge.call("payload_apply", {"pax": None, "cargo_fwd": None, "cargo_aft": None, "fuel": float(fuel) * frac}, timeout=2.0)
+                        time.sleep(2.5)
+                        cg.sample()
                 result = plugin.bridge.call("payload_apply", payload, timeout=2.0)
+                if cg:
+                    time.sleep(2.0)
+                    try:
+                        result["cg"] = cg.figures()
+                    except Exception:
+                        pass
                 req.send_response(200 if result.get("status") == "success" else 400)
                 req.send_header('Content-type', 'application/json')
                 req.end_headers()

@@ -16,6 +16,32 @@ as soon as the aircraft is positioned and finishes setting it up while paused, w
 
 ---
 
+## 0.68.5
+
+### CG on the load sheet
+- **The final load sheet shows the CG in % MAC**, as on a real Airbus load sheet: `MACZFW 27.4  MACTOW 28.9`.
+  - **MACTOW** is ToLiss's own CG with everything on board (AirbusFBW/CGLocationPercent) when the load sheet is sent.
+  - **MACZFW** (the figure for INIT B / FUEL PRED) is that CG with the fuel taken out. How each fuel tank moves the
+    CG is not guessed: the EFB learns it for each aircraft type from how ToLiss's CG actually moves when the fuel
+    changes with the same payload (loading fuel, refuelling, or burning it in flight), and checks its result
+    against ToLiss's CG every time. Until it has seen enough, the load sheet says `MACZFW 27.4 EST`; if a tank holding
+    fuel has never been seen to change, MACZFW is left out.
+  - The first few times you load fuel from the **Weight & Balance** page, the EFB loads it in three quick steps
+    (a few seconds) so it learns straight away. What it has learned is kept (cg_calibration.json) for later flights.
+- **Weight & Balance** shows the live CG and the ZFW CG (% MAC).
+
+## 0.68.4
+
+### Fixes
+- **Slew: Climb works from the ground.** Slew started on the ground used to stay on the ground, so Climb did nothing.
+  Now Climb lifts the aircraft off and slews in the air; Descend back to the lowest slew height (50 ft) puts it back
+  on its wheels at the right height and attitude. Climb and descent are at least about 500 ft/min, so a slow slew
+  rate still visibly moves the aircraft.
+- **Cockpit Displays: the FCU and EFIS buttons work.** AP1, AP2, A/THR, LOC, APPR, EXPED, and both FD and LS buttons
+  now press the button in ToLiss. Each lights from ToLiss's own state, so it shows what the aircraft actually did. If
+  a press changes nothing (e.g. the autopilot refuses to engage on the ground), a short note under the FCU says so.
+  If an aircraft lacks the command for a button, the X-Plane log names it.
+
 ## 0.68.3
 
 ### Secure connections on Macs (and other computers with missing certificates)

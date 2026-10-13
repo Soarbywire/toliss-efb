@@ -584,7 +584,8 @@ def handle_get(req, plugin):
                     "cargo_fwd": clean_results.get(drefs[1], 0),
                     "cargo_aft": clean_results.get(drefs[2], 0),
                     "fuel": clean_results.get(drefs[3], 0),
-                    "fuel_max": clean_results.get(drefs[4], 0)
+                    "fuel_max": clean_results.get(drefs[4], 0),
+                    "cg": (plugin.cg.figures() if getattr(plugin, "cg", None) else None)
                 }).encode('utf-8', errors='ignore'))
             except Exception:
                 req.send_response(500)
