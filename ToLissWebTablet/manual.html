@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>try { var t = new URLSearchParams(location.search).get("theme"); if (t === "dark" || t === "light") document.documentElement.setAttribute("data-theme", t); } catch (e) {}</script>
+<title>ToLiss EFB Manual</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: an operations-manual page. Sticky contents rail on the left (wide screens), one reading column on the right;
+   chapters numbered like a manual because the order follows a flight. MCDU examples are drawn as a black screen. */
+:root {
+  --paper: #f4f6f5;
+  --sheet: #ffffff;
+  --ink: #15201d;
+  --ink-soft: #4a5753;
+  --rule: #d5ddda;
+  --accent: #0a7385;          /* ECAM cyan, darkened for paper */
+  --accent-soft: #e2f1f3;
+  --amber: #9a5b00;            /* cautions */
+  --amber-soft: #fbf0dd;
+  --green: #1d7a45;            /* memos, OK */
+  --green-soft: #e3f3e9;
+  --screen: #07090a;           /* the MCDU / DCDU glass, same in both themes */
+  --scr-white: #e9eeee;
+  --scr-cyan: #3fd4e6;
+  --scr-green: #3be37a;
+  --scr-amber: #ffb43a;
+  --f-display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --f-mono: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0e1416; --sheet: #141c1f; --ink: #dfe8e6; --ink-soft: #9fb0ac; --rule: #2a3639;
+    --accent: #52c9db; --accent-soft: #15303a; --amber: #f0b052; --amber-soft: #33270f;
+    --green: #5fd38f; --green-soft: #13301f; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0e1416; --sheet: #141c1f; --ink: #dfe8e6; --ink-soft: #9fb0ac; --rule: #2a3639;
+  --accent: #52c9db; --accent-soft: #15303a; --amber: #f0b052; --amber-soft: #33270f;
+  --green: #5fd38f; --green-soft: #13301f; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  background: var(--paper); color: var(--ink);
+  font-family: var(--f-body); font-size: 16.5px; line-height: 1.62;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+a { color: var(--accent); text-underline-offset: 2px; }
+a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+/* ---------- masthead ---------- */
+.mast { max-width: 1180px; margin: 0 auto; padding-block: 34px 26px; border-bottom: 3px solid var(--ink); display: flex; flex-wrap: wrap; gap: 18px 40px; align-items: end; justify-content: space-between; }
+.mast h1 { font-family: var(--f-display); font-weight: 700; font-size: clamp(2.6rem, 6vw, 4.2rem); line-height: .92; letter-spacing: .01em; margin: 0; text-transform: uppercase; text-wrap: balance; }
+.mast h1 span { color: var(--accent); }
+.mast .sub { margin: 10px 0 0; color: var(--ink-soft); max-width: 46ch; }
+.docid { font-family: var(--f-mono); font-size: 12.5px; line-height: 1.7; border: 1px solid var(--rule); background: var(--sheet); padding: 10px 14px; min-width: 0; }
+.docid div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 22px; }
+.docid b { overflow-wrap: anywhere; }
+.docid b { font-weight: 600; }
+.docid .k { color: var(--ink-soft); text-transform: uppercase; letter-spacing: .06em; }
+
+/* ---------- page grid ---------- */
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 48px; padding-block: 28px 80px; }
+@media (max-width: 900px) { .wrap { grid-template-columns: minmax(0, 1fr); gap: 8px; } }
+
+/* contents rail */
+.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); align-self: start; max-height: calc(100vh - 32px); overflow: auto; font-size: 14.5px; padding-right: 4px; }
+.toc h2 { font-family: var(--f-display); font-size: 1.05rem; text-transform: uppercase; letter-spacing: .12em; color: var(--ink-soft); margin: 0 0 10px; }
+.toc ol { list-style: none; margin: 0; padding: 0; counter-reset: ch; }
+.toc > ol > li { counter-increment: ch; margin: 2px 0; }
+.toc a { color: var(--ink); text-decoration: none; display: block; padding: 3px 8px; border-left: 2px solid transparent; }
+.toc > ol > li > a::before { content: counter(ch) "  "; font-family: var(--f-mono); font-size: 12px; color: var(--ink-soft); white-space: pre; }
+.toc ol ol { padding-left: 22px; margin: 0 0 6px; }
+.toc ol ol a { font-size: 13.5px; color: var(--ink-soft); padding: 1px 8px; }
+.toc a:hover { color: var(--accent); }
+.toc a.on { border-left-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.toc-m { display: none; }
+@media (max-width: 900px) {
+  .toc { display: none; }
+  .toc-m { display: block; border: 1px solid var(--rule); background: var(--sheet); padding: 10px 14px; margin-bottom: 8px; }
+  .toc-m summary { font-family: var(--f-display); text-transform: uppercase; letter-spacing: .1em; font-weight: 600; cursor: pointer; }
+  .toc-m ol { margin: 8px 0 4px; padding-left: 22px; }
+  .toc-m ol ol { padding-left: 18px; }
+}
+
+/* ---------- reading column ---------- */
+main { min-width: 0; }
+.chap { padding-top: 26px; margin-top: 26px; border-top: 1px solid var(--rule); counter-increment: chap; }
+main { counter-reset: chap; }
+.chap:first-of-type { border-top: 0; margin-top: 0; padding-top: 0; }
+.chap > h2 { font-family: var(--f-display); font-weight: 700; font-size: 2.1rem; line-height: 1.05; margin: 0 0 4px; text-transform: uppercase; letter-spacing: .015em; text-wrap: balance; display: flex; gap: 14px; align-items: baseline; }
+.chap > h2::before { content: counter(chap, decimal-leading-zero); font-family: var(--f-mono); font-size: .95rem; font-weight: 600; color: var(--accent); letter-spacing: 0; }
+.where { font-size: 13.5px; color: var(--ink-soft); margin: 0 0 14px; font-family: var(--f-mono); }
+h3 { font-family: var(--f-display); font-weight: 600; font-size: 1.45rem; line-height: 1.15; margin: 28px 0 6px; text-wrap: balance; }
+h4 { font-size: 1rem; margin: 18px 0 4px; }
+p, li { max-width: 68ch; }
+p { margin: 0 0 12px; }
+ul, ol { margin: 0 0 14px; padding-left: 22px; }
+li { margin: 4px 0; }
+li::marker { color: var(--ink-soft); }
+.lead { font-size: 1.08rem; }
+kbd { font-family: var(--f-mono); font-size: .82em; border: 1px solid var(--rule); border-bottom-width: 2px; background: var(--sheet); padding: 1px 6px; border-radius: 4px; white-space: nowrap; }
+code { font-family: var(--f-mono); font-size: .86em; background: var(--accent-soft); padding: 1px 5px; border-radius: 3px; overflow-wrap: anywhere; }
+.ui { font-weight: 700; }   /* names of buttons and pages as they appear in the EFB */
+
+/* call-outs, after the FCOM convention: NOTE / CAUTION */
+.note, .caution, .tip { border-left: 4px solid; padding: 10px 14px; margin: 14px 0 16px; max-width: 72ch; }
+.note { border-color: var(--accent); background: var(--accent-soft); }
+.caution { border-color: var(--amber); background: var(--amber-soft); }
+.tip { border-color: var(--green); background: var(--green-soft); }
+.note > b:first-child, .caution > b:first-child, .tip > b:first-child { font-family: var(--f-display); text-transform: uppercase; letter-spacing: .1em; font-size: .95rem; display: block; margin-bottom: 2px; }
+.caution > b:first-child { color: var(--amber); }
+.note > b:first-child { color: var(--accent); }
+.tip > b:first-child { color: var(--green); }
+
+/* step list: a real sequence */
+.steps { counter-reset: st; list-style: none; padding: 0; margin: 10px 0 18px; }
+.steps > li { counter-increment: st; position: relative; padding-left: 44px; margin: 0 0 14px; }
+.steps > li::before { content: counter(st); position: absolute; left: 0; top: -1px; width: 30px; height: 30px; display: grid; place-items: center; font-family: var(--f-display); font-weight: 700; font-size: 1.05rem; border: 2px solid var(--ink); border-radius: 50%; }
+.steps b { display: block; }
+
+/* tables */
+.tbl { overflow-x: auto; margin: 10px 0 18px; border: 1px solid var(--rule); background: var(--sheet); }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--f-display); text-transform: uppercase; letter-spacing: .06em; font-size: .92rem; font-weight: 600; background: var(--paper); }
+tr:last-child td { border-bottom: 0; }
+td.k { font-weight: 700; white-space: nowrap; }
+.tnum { font-variant-numeric: tabular-nums; }
+
+/* MCDU / DCDU screen */
+.screens { display: flex; flex-wrap: wrap; gap: 16px; margin: 12px 0 18px; }
+.mcdu { background: var(--screen); color: var(--scr-white); font-family: var(--f-mono); font-size: 13.5px; line-height: 1.5; padding: 14px 16px; border-radius: 6px; box-shadow: 0 0 0 6px #2d353a, 0 0 0 7px #11161a; margin: 8px 7px; width: calc(100% - 14px); max-width: calc(24ch + 34px); white-space: pre; overflow-x: auto; }
+.mcdu .c { color: var(--scr-cyan); } .mcdu .g { color: var(--scr-green); } .mcdu .a { color: var(--scr-amber); }
+.cap { font-size: 13px; color: var(--ink-soft); margin-top: 6px; max-width: 30ch; }
+figure { margin: 0; }
+
+/* two-column definition rows */
+dl.defs { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 20px; margin: 8px 0 16px; max-width: 76ch; }
+dl.defs dt { font-weight: 700; }
+dl.defs dd { margin: 0; }
+@media (max-width: 560px) { dl.defs { grid-template-columns: minmax(0, 1fr); } dl.defs dd { margin-bottom: 8px; } }
+
+.foot { max-width: 1180px; margin: 0 auto; border-top: 3px solid var(--ink); padding-block: 14px 40px; font-size: 13.5px; color: var(--ink-soft); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px; }
+</style>
+</head>
+<body>
+
+<header class="mast">
+  <div>
+    <h1>ToLiss <span>EFB</span><br>Pilot's Manual</h1>
+    <p class="sub">The browser-based electronic flight bag for the ToLiss Airbus family in X-Plane 12: dispatch, ground handling, moving map, cockpit displays, instructor station and your own airline operations centre.</p>
+  </div>
+  <div class="docid" aria-label="Document information">
+    <div><span class="k">Software</span><b>ToLiss EFB 0.68.7</b></div>
+    <div><span class="k">Aircraft</span><b>ToLiss A319 · A320 · A321 · A330 · A340</b></div>
+    <div><span class="k">Simulator</span><b>X-Plane 12 + XPPython3</b></div>
+    <div><span class="k">Source</span><b>github.com/Soarbywire/toliss-efb</b></div>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="toc" aria-label="Contents">
+    <h2>Contents</h2>
+    <ol>
+      <li><a href="#intro">Introduction</a></li>
+      <li><a href="#install">Installing and updating</a></li>
+      <li><a href="#flow">A flight, start to finish</a></li>
+      <li><a href="#preflight">Preflight</a>
+        <ol><li><a href="#dispatch">Dispatch &amp; OFP</a></li><li><a href="#wb">Weight &amp; Balance</a></li><li><a href="#ground">Ground Services</a></li><li><a href="#pushback">Pushback</a></li></ol></li>
+      <li><a href="#flight">Flight pages</a>
+        <ol><li><a href="#map">Map &amp; Telemetry</a></li><li><a href="#taxi">Taxi routing</a></li><li><a href="#mcdu">MCDU &amp; Checklist</a></li><li><a href="#displays">Cockpit Displays</a></li><li><a href="#fdr">Flight Recorder</a></li></ol></li>
+      <li><a href="#ios">Instructor station (IOS)</a>
+        <ol><li><a href="#state">Aircraft State</a></li><li><a href="#slew">Slew</a></li><li><a href="#repo">Reposition &amp; approaches</a></li><li><a href="#wx">Weather &amp; Time</a></li><li><a href="#tcas">TCAS Traffic</a></li><li><a href="#replay">Replay</a></li><li><a href="#fail">Malfunctions</a></li></ol></li>
+      <li><a href="#ops">Operations Centre</a>
+        <ol><li><a href="#ops-setup">Setting up</a></li><li><a href="#ops-msgs">What it sends, and when</a></li><li><a href="#loadsheet">Load sheets and CG</a></li><li><a href="#dcdu">DCDU</a></li><li><a href="#stands">Stands</a></li><li><a href="#requests">Requests</a></li></ol></li>
+      <li><a href="#network">VATSIM and ATC</a></li>
+      <li><a href="#settings">Settings</a></li>
+      <li><a href="#trouble">Troubleshooting</a></li>
+      <li><a href="#files">Files the EFB keeps</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <details class="toc-m"><summary>Contents</summary>
+      <ol>
+        <li><a href="#intro">Introduction</a></li><li><a href="#install">Installing and updating</a></li><li><a href="#flow">A flight, start to finish</a></li>
+        <li><a href="#preflight">Preflight</a></li><li><a href="#flight">Flight pages</a></li><li><a href="#ios">Instructor station (IOS)</a></li>
+        <li><a href="#ops">Operations Centre</a></li><li><a href="#network">VATSIM and ATC</a></li><li><a href="#settings">Settings</a></li>
+        <li><a href="#trouble">Troubleshooting</a></li><li><a href="#files">Files the EFB keeps</a></li>
+      </ol>
+    </details>
+
+    <!-- ===================================================== 1 -->
+    <section class="chap" id="intro">
+      <h2>Introduction</h2>
+      <p class="lead">ToLiss EFB runs inside X-Plane as an XPPython3 plugin with its own small web server. You open it in any browser on your network, so an iPad, a tablet, a phone or a second monitor becomes your EFB, with nothing to install on the device.</p>
+      <p>The sidebar groups the pages the way a flight runs:</p>
+      <dl class="defs">
+        <dt>Preflight</dt><dd>Dispatch &amp; OFP, Weight &amp; Balance, Ground Services, Pushback.</dd>
+        <dt>Flight</dt><dd>Map &amp; Telemetry, Airbus Checklist, MCDU, Cockpit Displays, Flight Recorder, Scratchpad.</dd>
+        <dt>IOS</dt><dd>The instructor station: Aircraft State, Slew, Reposition, Weather &amp; Time, TCAS Traffic, Replay, Situations and Malfunctions.</dd>
+        <dt>Network</dt><dd>VATSIM Network, xPilot &amp; ATC, and the Operations Centre.</dd>
+        <dt>Manual</dt><dd>This manual, at the bottom of the sidebar next to Settings. It also opens on its own at <code>http://&lt;EFB address&gt;/manual</code>.</dd>
+      </dl>
+      <h3>Requirements</h3>
+      <ul>
+        <li>X-Plane 12. TCAS traffic training needs X-Plane 12.4.1 or later.</li>
+        <li>Any ToLiss Airbus: A319, A320neo, A321/A321neo, A330, A340-600.</li>
+        <li>The XPPython3 plugin, installed and working.</li>
+        <li>For the Operations Centre: a free Hoppie ACARS logon code from <a href="https://www.hoppie.nl/acars/" target="_blank" rel="noopener">hoppie.nl/acars</a>.</li>
+        <li>For dispatch: a SimBrief account (username or user ID).</li>
+      </ul>
+      <div class="tip"><b>Recommended ToLiss setting</b>In the ToLiss ISCS, enable <span class="ui">X-Plane pause acts as freeze motion</span>. The aircraft then holds still with its systems running while paused, which the IOS Freeze and the approach trainer rely on.</div>
+    </section>
+
+    <!-- ===================================================== 2 -->
+    <section class="chap" id="install">
+      <h2>Installing and updating</h2>
+      <h3>First installation</h3>
+      <ol class="steps">
+        <li><b>Check XPPython3.</b>It must be installed and working in X-Plane 12.</li>
+        <li><b>Download the latest release</b>from <a href="https://github.com/Soarbywire/toliss-efb/releases" target="_blank" rel="noopener">github.com/Soarbywire/toliss-efb/releases</a> and unzip it.</li>
+        <li><b>Copy two items</b>into <code>X-Plane 12/Resources/plugins/PythonPlugins/</code>: the file <code>PI_ToLissWebTablet.py</code> and the whole <code>ToLissWebTablet</code> folder.</li>
+        <li><b>Start X-Plane</b>(or choose Plugins → XPPython3 → Reload scripts) and load a ToLiss aircraft.</li>
+        <li><b>Open the EFB</b>in a browser: <code>http://localhost:8080</code> on the same PC, or <code>http://&lt;your PC's local IP&gt;:8080</code> from a tablet or phone on the same network.</li>
+      </ol>
+      <p>On the first start the plugin builds two indexes in the background (airports and navigation data) and saves them in its folder. Later starts load them in under a second. They rebuild by themselves when your scenery or navigation data changes, for example after a Navigraph AIRAC update.</p>
+      <h3>Port</h3>
+      <p>The default port is 8080. If another program uses it, the plugin tries the next free port (8081, 8082 and so on). You can set the port in <span class="ui">Settings</span>, or in <code>config.json</code> in the <code>ToLissWebTablet</code> folder.</p>
+      <h3>Updating</h3>
+      <p>New versions appear under <span class="ui">Settings → Updates</span> and install in one tap, checked against the published SHA-256 checksum. Your settings, recordings, checklists, learned stands, CG learning and Ops Centre history are kept, and <span class="ui">Undo last update</span> restores the previous version.</p>
+      <ul>
+        <li>Updates install only while the aircraft is parked, and never while the flight recorder is recording.</li>
+        <li>Updating from 0.66 or earlier: install as usual, then choose Plugins → XPPython3 → Reload scripts. The EFB downloads the rest of the new version itself and shows its progress at the EFB address. When it says so, choose Reload scripts once more.</li>
+      </ul>
+    </section>
+
+    <!-- ===================================================== 3 -->
+    <section class="chap" id="flow">
+      <h2>A flight, start to finish</h2>
+      <p>A typical airline-style flight with the Operations Centre switched on. Each step links to the chapter that explains it.</p>
+      <ol class="steps">
+        <li><b>Load your SimBrief plan.</b><a href="#dispatch">Dispatch &amp; OFP</a> → Fetch Latest OFP (or let it load automatically). The Operations Centre sends the flight release, weather, NOTAMs and the preliminary load sheet to the MCDU, and takes your aircraft callsign from the plan.</li>
+        <li><b>Load fuel and payload.</b><a href="#wb">Weight &amp; Balance</a>, or one tap from the OFP. The live CG and ZFW CG appear.</li>
+        <li><b>Board.</b>Open the doors in <a href="#ground">Ground Services</a> (or ToLiss). When the doors are closed again and the payload is steady for a minute, the final load sheet and takeoff data arrive. Answer the load sheet on the <a href="#dcdu">DCDU</a>.</li>
+        <li><b>Push back.</b><a href="#pushback">Pushback</a>: plan it on the map, release the parking brake, and the tug pushes along the planned path.</li>
+        <li><b>Taxi.</b><a href="#taxi">Taxi routing</a> gives turn-by-turn directions to the holding point, with your clearance if you type it.</li>
+        <li><b>Fly.</b>The Operations Centre records OOOI times and sends a departure report, ETA updates, fuel checks and destination weather.</li>
+        <li><b>Arrive.</b>At about 150 nm out: arrival ATIS, a stand assignment and landing data. After landing, taxi directions to your stand; on stand, a block-in summary.</li>
+      </ol>
+    </section>
+
+    <!-- ===================================================== 4 -->
+    <section class="chap" id="preflight">
+      <h2>Preflight</h2>
+
+      <h3 id="dispatch">Dispatch &amp; OFP</h3>
+      <p>Enter your SimBrief username in <span class="ui">Settings</span>, then <span class="ui">Fetch Latest OFP</span>. The page shows the flight number and the ATC callsign separately, the route, fuel and weights, and the OFP PDF.</p>
+      <ul>
+        <li><b>Takeoff and Landing performance sheets</b> from SimBrief's runway analysis: V-speeds, flaps, FLEX, landing distances and margins. QNH is shown in the airport's own unit (hPa, or inHg where the METAR uses <code>A2992</code>), and runway distances in feet or metres as you choose.</li>
+        <li><b>One-tap loading</b> of the planned fuel and payload into ToLiss.</li>
+        <li><b>Load automatically:</b> tick <span class="ui">Load my latest SimBrief flight plan automatically</span> (off by default) and the plan loads when X-Plane starts and when the EFB opens.</li>
+      </ul>
+
+      <h3 id="wb">Weight &amp; Balance</h3>
+      <p>Sliders for passengers, forward and aft cargo, and block fuel, applied straight into ToLiss. Under the fuel slider, the centre of gravity in % MAC:</p>
+      <dl class="defs">
+        <dt>CG</dt><dd>ToLiss's own CG with everything on board (the ISCS calls it GWCG). This is MACTOW on the load sheet.</dd>
+        <dt>ZFW CG</dt><dd>The same CG with the fuel taken out: the figure for INIT B / FUEL PRED. It does not move when you change fuel; it moves when passengers or cargo move.</dd>
+        <dt>Landing CG</dt><dd>The CG after the planned taxi and trip fuel is burnt, centre tank first, then the wings.</dd>
+      </dl>
+      <div class="note"><b>How the ZFW CG is found</b>The EFB learns, once for each aircraft type, how each fuel tank moves ToLiss's CG, by watching the CG while the fuel changes with the same payload. The first few times you load fuel from this page it does so in three quick steps (a few seconds) to learn straight away. Until it has seen enough, the ZFW CG is marked <em>estimate</em> and the load sheet says <code>EST</code>.</div>
+
+      <h3 id="ground">Ground Services</h3>
+      <p>External power, chocks, ground air, passenger and cargo doors, and de-icing. Each door button cycles <span class="ui">CLOSE</span> → <span class="ui">AUTO</span> → <span class="ui">OPEN</span>, using ToLiss's own door modes.</p>
+
+      <h3 id="pushback">Pushback</h3>
+      <p>A built-in tug; no other plugin is needed. Plan the push with sliders or typed values:</p>
+      <ul>
+        <li><b>Straight back</b>, then a <b>turn</b> with the tail left or right by any angle, then a <b>final straight</b>, at your chosen towing speed. Presets cover the common pushes, and <b>Pull forward</b> covers nose-out stands.</li>
+        <li><b>Towing model:</b> the tug steers the nose wheel (Gentle, Normal or Tight, within Airbus's 90° towing limit) and the aircraft pivots about its main gear, using your aircraft's real wheelbase.</li>
+        <li><b>Map preview:</b> the airport map (optionally satellite) shows the path of the nose and the aircraft at true size where it will end up.</li>
+      </ul>
+      <ol class="steps">
+        <li><b>Plan</b> the push and check the preview.</li>
+        <li><b>Start pushback.</b>The push begins when you release the parking brake, like a real tug. Pause/Resume and Stop are available throughout.</li>
+        <li><b>Set the parking brake</b> at the end. Until you do, the EFB holds the aircraft in place so idle thrust cannot move it.</li>
+      </ol>
+      <p>Settings are remembered on every device; <span class="ui">Reset</span> returns to the defaults. Pushback is available on the ground only.</p>
+      <div class="caution"><b>Caution</b>Setting the parking brake during the push stops it, as a real tug driver would. The EFB pushback does not show a tug or the NWS DISC memo yet.</div>
+    </section>
+
+    <!-- ===================================================== 5 -->
+    <section class="chap" id="flight">
+      <h2>Flight pages</h2>
+
+      <h3 id="map">Map &amp; Telemetry</h3>
+      <p>A moving map with full airport detail from your installed scenery: taxiways, hold-short lines, taxiway signs and stands. Satellite view keeps the taxiway lines on top. Heading-up mode, follow, a tall-map option and freehand drawing are in the map tools.</p>
+      <p>The telemetry strip shows speeds, altitude, wind, QNH (in the airport's unit), autopilot, flaps, gear, fuel, transponder and the nearest taxiway or stand. <span class="ui">Frequencies</span> opens the radio stations of the airport you are at (<a href="#network">see chapter 8</a>).</p>
+
+      <h3 id="taxi">Taxi routing</h3>
+      <p class="where">Map &amp; Telemetry → Taxi</p>
+      <p>Directions to a stand or a runway holding point, along your scenery's taxi network: only taxiways wide enough for your aircraft, one-way rules respected, no U-turns, and runways only to cross them.</p>
+      <ul>
+        <li>Choose <span class="ui">To a stand</span> or <span class="ui">To a runway</span>, or tap a stand on the map. Type your clearance as ATC gave it, for example <code>B B4 A HOLD SHORT 16R</code>, and the route follows it, or tells you which part is impossible.</li>
+        <li>The panel says where each suggestion comes from: <em>planned in your SimBrief OFP</em>, <em>from the departure ATIS</em>, <em>assigned by the Ops Centre</em> or <em>chosen by you</em>.</li>
+        <li>On the map: the route in magenta, hold-short points in red, the part already taxied faded. A strip shows the next step and its distance, the time to go, and SLOW cues before sharp turns and the stand. Leave the route and it plans a new one from where you are.</li>
+        <li>In flight, the panel shows your destination: choose your arrival stand and <span class="ui">Save as my arrival stand</span>.</li>
+      </ul>
+      <dl class="defs">
+        <dt>Before departure</dt><dd>Optional tickbox: a dashed preview to the holding point once the plan is loaded; the live route starts when pushback ends or you begin to taxi. The runway is the departure ATIS runway (VATSIM) if it differs from the OFP.</dd>
+        <dt>After landing</dt><dd>Optional tickbox: the route to the Ops Centre's stand, or the one you chose.</dd>
+      </dl>
+      <div class="note"><b>Note</b>Routing needs an airport whose scenery includes a taxi network. Directions are advisory: ATC and your clearance come first.</div>
+
+      <h3 id="mcdu">MCDU and Airbus Checklist</h3>
+      <p>A live MCDU in Airbus colours with a keypad laid out like the real unit. Your computer keyboard types into the scratchpad as well. The <span class="ui">Airbus Checklist</span> reads your aircraft's ToLiss checklist, or one you upload in the same XML format.</p>
+
+      <h3 id="displays">Cockpit Displays</h3>
+      <p>Live PFD with a sidestick indicator, the E/WD with ECAM messages, and the FCU with both EFIS panels.</p>
+      <p>The FCU and EFIS push buttons work: <span class="ui">AP1</span>, <span class="ui">AP2</span>, <span class="ui">A/THR</span>, <span class="ui">LOC</span>, <span class="ui">APPR</span>, <span class="ui">EXPED</span>, and both <span class="ui">FD</span> and <span class="ui">LS</span>. Each light shows ToLiss's own state, so it shows what the aircraft actually did. If a press changes nothing (the autopilot refuses to engage on the ground, for example), a short note under the FCU says so.</p>
+
+      <h3 id="fdr">Flight Recorder and Scratchpad</h3>
+      <p>The recorder logs more than 60 flight parameters and every ECAM message. Each landing gets a report: landing rate, g-load, touchdown distance from the threshold, centreline offset and stabilised-approach checks, with charts, a map track, and CSV or Google Earth (KML) export. The Scratchpad has typed notes and a drawing pad with coloured pens.</p>
+    </section>
+
+    <!-- ===================================================== 6 -->
+    <section class="chap" id="ios">
+      <h2>Instructor station (IOS)</h2>
+      <p>The IOS pages are named and ordered like a Level D simulator's instructor station.</p>
+
+      <h3 id="state">Aircraft State</h3>
+      <p>Live altitude, height above ground, IAS, TAS, ground speed, heading, vertical speed, pitch, bank and fuel. In flight, set altitude, airspeed, heading, vertical speed, pitch and bank with immediate effect, one at a time or together (FL100, 250 kt, heading 270). Indicated airspeed is converted properly for the altitude and wind. Also: Freeze (X-Plane paused with ToLiss's systems running), altitude freeze, fuel freeze and sim rate ×1 to ×8.</p>
+
+      <h3 id="slew">Slew</h3>
+      <p>Move the aircraft with the hold-to-move pad, the keyboard, or by tapping the map. On the ground it follows the terrain; <span class="ui">Climb</span> lifts it off, and descending to the lowest slew height (50 ft) puts it back on its wheels. Ending slew in the air hands control back at the airspeed you choose.</p>
+      <div class="tbl"><table>
+        <thead><tr><th>Key</th><th>Movement</th></tr></thead>
+        <tbody>
+          <tr><td><kbd>↑</kbd> <kbd>↓</kbd></td><td>Forward, back</td></tr>
+          <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Turn left, right</td></tr>
+          <tr><td><kbd>Shift</kbd> + <kbd>←</kbd> <kbd>→</kbd></td><td>Sideways</td></tr>
+          <tr><td><kbd>Page Up</kbd> <kbd>Page Down</kbd></td><td>Climb, descend (at least about 500 ft/min)</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3 id="repo">Reposition and approach trainer</h3>
+      <p>Move to any stand (nose wheel on the stop line) or runway at any airport. Stands that share a name in the scenery are all listed, labelled by size: <code>57 (C)</code> and <code>57 (F)</code>. Quick positions place you lined up, on a 5 or 10 nm final, on a downwind, or overhead, with the FCU set.</p>
+      <p>The <b>approach trainer</b> offers any ILS, LOC, RNAV, RNP, VOR or NDB approach from X-Plane's navigation data (Navigraph included). Start on final, on an intercept, or at the start of the procedure. Optionally it programs the MCDU (approach, VIA, PERF APPR from the live METAR), activates the approach phase, sets the FCU and engages the autopilot with APPR armed.</p>
+
+      <h3 id="wx">Weather &amp; Time</h3>
+      <p>Live weather or manual presets, the time of day, and training weather applied at once:</p>
+      <ul>
+        <li><b>Wind</b> relative to your heading: headwind, crosswind either side, 25 kt gusting 35, tailwind, calm.</li>
+        <li><b>Turbulence</b> none, light, moderate or severe; <b>visibility</b> down to CAT IIIA fog, or a clear sky.</li>
+        <li><b>Wind shear</b> on approach: armed, it hits at about 1,000 ft: a headwind gust, then a 25 kt tailwind with turbulence. Your previous wind returns afterwards.</li>
+      </ul>
+
+      <h3 id="tcas">TCAS Traffic</h3>
+      <p>Inject intruders for TA and RA practice (X-Plane 12.4.1 or later): head-on, crossing from either side, overtaking, climbing from below or descending from above. Set the time to the closest point of approach, the miss distance and the vertical offset, up to 8 intruders at once. They appear on TCAS and the ND. The EFB never takes traffic away from xPilot or LiveTraffic.</p>
+
+      <h3 id="replay">Replay</h3>
+      <p>X-Plane's replay on the EFB: Start, Fast reverse, Reverse, Slow reverse, Pause, Slow forward, Play, Fast forward, End, and <span class="ui">Exit to Real-Time</span>. A REPLAY badge shows on every page while you are in replay.</p>
+
+      <h3 id="fail">Situations and Malfunctions</h3>
+      <p>Requires ToLiss Pro. ToLiss situations and the full failure list, plus one-tap malfunctions: engine failure at V1 (V1 from your SimBrief takeoff data), engine fire, engine failure after takeoff, hydraulic loss, generator and bleed faults, and cabin decompression.</p>
+    </section>
+
+    <!-- ===================================================== 7 -->
+    <section class="chap" id="ops">
+      <h2>Operations Centre</h2>
+      <p class="lead">The EFB becomes your airline's ground station on the free Hoppie ACARS network and dispatches your flight to the ToLiss MCDU (ATSU → AOC → RECEIVED MESSAGES), from preflight to block-in. Every message is formatted for the MCDU's 24 columns.</p>
+
+      <h3 id="ops-setup">Setting up</h3>
+      <ol class="steps">
+        <li><b>Get a Hoppie logon code</b> at hoppie.nl/acars and enter it in the Ops Centre setup <em>and</em> in the ToLiss ISCS (ATSU).</li>
+        <li><b>Callsigns.</b>Choose an ops callsign (for example <code>QFAOPS</code>). The aircraft callsign comes from your SimBrief plan automatically when <span class="ui">Use the aircraft callsign from my SimBrief plan</span> is ticked. It must match the flight number in ToLiss's INIT A.</li>
+        <li><b>Save and connect.</b>The status shows when the aircraft's ATSU is online. Messages wait while it is offline and go out when it is back.</li>
+      </ol>
+
+      <h3 id="ops-msgs">What it sends, and when</h3>
+      <p>The flight panel lists every message by phase, with an on/off switch and <span class="ui">Send now</span> for each.</p>
+      <div class="tbl"><table>
+        <thead><tr><th>Phase</th><th>Message</th><th>Sent</th></tr></thead>
+        <tbody>
+          <tr><td class="k">Preflight</td><td>Flight release, weather, NOTAMs, preliminary load sheet</td><td>When the SimBrief plan is loaded</td></tr>
+          <tr><td></td><td>Final load sheet, takeoff data</td><td>When the doors close after boarding and the payload is steady for a minute (or at beacon on)</td></tr>
+          <tr><td></td><td>Departure ATIS</td><td>From VATSIM, again whenever the letter changes; the latest METAR if no ATIS is online</td></tr>
+          <tr><td class="k">In flight</td><td>Departure report</td><td>After takeoff, with ETA and on-time status</td></tr>
+          <tr><td></td><td>ETA updates, fuel check, destination weather</td><td>When the ETA moves 10 minutes; if fuel at destination falls 500 kg below plan; on each new METAR in cruise</td></tr>
+          <tr><td class="k">Arrival</td><td>Arrival ATIS, stand assignment, landing data</td><td>At about 150 nm or 30 minutes out</td></tr>
+          <tr><td></td><td>Block-in summary</td><td>When the parking brake is set on stand: block and flight times, fuel used, touchdown rate</td></tr>
+        </tbody>
+      </table></div>
+      <p>Loading a different plan starts a clean message list: the previous flight's messages move to <span class="ui">Previous flights</span> (the last five are kept), and anything still waiting for the old plan is cancelled.</p>
+
+      <h3 id="loadsheet">Load sheets and CG</h3>
+      <p>The final load sheet is built from the actual load in the sim and awaits your acknowledgement. It gives the CG in % MAC:</p>
+      <div class="screens">
+        <figure>
+<div class="mcdu" role="img" aria-label="Example final load sheet on the MCDU"><span class="c">LOADSHEET FINAL 0412Z</span>
+<span class="c">EDNO 1</span>
+QFA43T YSSY-YMML
+A320 VH-VQA
+PAX 150
+HOLD FWD 1000  AFT 1500
+ZFW 58840  MAX 64300
+TOF 9800
+TOW 68640  MAX 78000
+TIF 3600
+LAW 65040  MAX 67400
+<span class="g">MACZFW 25.8  MACTOW 25.6</span>
+<span class="g">MACLAW 26.1</span>
+UNDERLOAD 2360
+LMC NIL
+PLEASE ACKNOWLEDGE</div>
+          <figcaption class="cap">A final load sheet as it appears on the MCDU (example figures).</figcaption>
+        </figure>
+      </div>
+      <dl class="defs">
+        <dt>MACZFW</dt><dd>Zero-fuel CG, for INIT B / FUEL PRED.</dd>
+        <dt>MACTOW</dt><dd>Takeoff CG, ToLiss's own figure.</dd>
+        <dt>MACLAW</dt><dd>Landing CG after the planned fuel burn.</dd>
+        <dt>EST</dt><dd>Shown until the EFB has confirmed the zero-fuel CG for this aircraft type (see <a href="#wb">Weight &amp; Balance</a>).</dd>
+      </dl>
+      <ul>
+        <li><b>Last-minute changes</b> after the final load sheet, before takeoff: an LMC message for a zero-fuel weight change of 100 kg or more; a <b>revised final load sheet</b> (next EDNO) for 500 kg or more.</li>
+        <li><b>Cautions</b> are added to the takeoff data if the actual weight, the ATIS runway or the temperature differ from the plan.</li>
+        <li><b>Trigger:</b> choose <span class="ui">at beacon on</span> in the setup if you prefer the final load sheet then.</li>
+      </ul>
+
+      <h3 id="dcdu">DCDU</h3>
+      <p class="where">Ops Centre → Message display: DCDU, or the DCDU button on the MCDU page</p>
+      <p>Messages on an A320-family DCDU in the same colours as the EFB's MCDU and FCU, with response keys to suit each message:</p>
+      <div class="tbl"><table>
+        <thead><tr><th>Message</th><th>Keys</th><th>Result</th></tr></thead>
+        <tbody>
+          <tr><td>Final load sheet</td><td class="tnum">ACCEPT / REJECT</td><td>A rejection brings a revised load sheet</td></tr>
+          <tr><td>Stand assignment</td><td>ROGER / REQ CHANGE</td><td>REQ CHANGE gets another stand</td></tr>
+          <tr><td>Questions</td><td>ROGER / STBY / UNABLE</td><td>Sent to the ops centre as the crew</td></tr>
+          <tr><td>Everything else</td><td>ROGER</td><td></td></tr>
+        </tbody>
+      </table></div>
+      <p>Also MSG−/MSG+, PGE−/PGE+, CLOSE and RECALL, PRINT onto a cockpit-printer strip, and BRT/DIM. A MSG light and a chime announce a new message. Responses go over Hoppie, so every device shows the same state.</p>
+
+      <h3 id="stands">Stands</h3>
+      <p>The stand comes from your destination's scenery and suits your aircraft size and airline. Freight, maintenance and general-aviation stands are never assigned. The ops centre learns where your airline parks; change the stand at any time (automatically, or from a list with a map preview) and save it as a rule. Rules written as <code>57</code> cover every stand 57; <code>57 (C)</code> covers just that one. The assigned stand is marked on the moving map, with a <span class="ui">Route to stand</span> button.</p>
+
+      <h3 id="requests">Requests from the aircraft</h3>
+      <p>Send these as the crew and the ops centre answers automatically:</p>
+      <p><code>REQUEST WX YMML</code> · <code>REQUEST ATIS YSSY</code> · <code>REQUEST LOADSHEET</code> · <code>REQUEST TO DATA</code> · <code>REQUEST ETA</code> · <code>REQUEST STAND</code> · <code>REQUEST LANDING DATA</code> · <code>LOADSHEET RECEIVED</code></p>
+    </section>
+
+    <!-- ===================================================== 8 -->
+    <section class="chap" id="network">
+      <h2>VATSIM and ATC</h2>
+      <h3>VATSIM Network</h3>
+      <p>A live map with ATC sectors, RainViewer weather radar and a search for pilots and controllers. Tap an aircraft for a panel that updates while open: altitude as a flight level above about 10,000 ft (true altitude and QNH underneath), climb or descent rate, ground speed, heading and the filed cruise level and speed. VATSIM sends true altitude and ground speed, not indicated airspeed.</p>
+      <h3>xPilot &amp; ATC</h3>
+      <p>xPilot connection status, COM radios, SELCAL alerts, and <b>Nearby ATC</b>: online controllers within 400 nm, with a green dot for those in VHF radio range. <span class="ui">COM1</span> / <span class="ui">COM2</span> set the standby frequency; swap it to active on the RMP.</p>
+      <h3>Airport frequencies</h3>
+      <p>The real-world stations of the nearest airport, your departure or your destination (ATIS, Delivery, Ground, Tower, Departure, Approach, CTAF), read from your scenery. A green dot and the callsign show a VATSIM controller online for that airport on that frequency. The list refreshes every 30 seconds while open.</p>
+    </section>
+
+    <!-- ===================================================== 9 -->
+    <section class="chap" id="settings">
+      <h2>Settings</h2>
+      <dl class="defs">
+        <dt>SimBrief</dt><dd>Username or user ID, and automatic plan loading.</dd>
+        <dt>Units</dt><dd>Runway distances in feet or metres, shared by the performance sheets and the Ops Centre's landing data.</dd>
+        <dt>Appearance</dt><dd>Light and dark themes, and the start page.</dd>
+        <dt>Pages</dt><dd>Show or hide optional pages, such as xPilot &amp; Nearby ATC.</dd>
+        <dt>Updates</dt><dd>Check, install and undo (<a href="#install">chapter 2</a>).</dd>
+        <dt>External tools</dt><dd>Links to SimBrief, Navigraph, Chartfox and VATSIM Radar.</dd>
+        <dt>About</dt><dd>The installed version.</dd>
+      </dl>
+    </section>
+
+    <!-- ===================================================== 10 -->
+    <section class="chap" id="trouble">
+      <h2>Troubleshooting</h2>
+      <div class="tbl"><table>
+        <thead><tr><th>Symptom</th><th>What to check</th></tr></thead>
+        <tbody>
+          <tr><td>The EFB page does not open</td><td>X-Plane running with a ToLiss aircraft loaded; the right address and port (it may have moved to 8081 if 8080 was busy); the tablet on the same network; the PC's firewall allowing Python.</td></tr>
+          <tr><td>"Secure connection failed" (Hoppie, SimBrief, VATSIM, updates)</td><td>The computer's date, time and time zone. On a Mac, run <em>Install Certificates.command</em> in the Python folder under Applications. The EFB already retries with its own up-to-date certificates; certificate checking always stays on.</td></tr>
+          <tr><td>No Ops Centre messages on the MCDU</td><td>Same Hoppie code in the EFB and the ISCS; the aircraft callsign matches the flight number in INIT A; the status shows the ATSU online.</td></tr>
+          <tr><td>No CG on the load sheet</td><td>Weight &amp; Balance and the X-Plane log say why, for example when an aircraft has no <code>AirbusFBW/CGLocationPercent</code>.</td></tr>
+          <tr><td>Final load sheet only at beacon on</td><td>It waits for doors that were opened to close again. Doors left in AUTO do not count as opened; open them with OPEN in Ground Services.</td></tr>
+          <tr><td>No taxi route</td><td>The airport's scenery needs a taxi routing network; many default and freeware airports have one, some do not.</td></tr>
+          <tr><td>An FCU button reports no command</td><td>The X-Plane log names the missing command; please report it with your aircraft type.</td></tr>
+          <tr><td>A stand is missing on Reposition</td><td>It must exist in the highest-priority scenery for that airport. Same-named stands appear labelled by size, for example <code>57 (C)</code>.</td></tr>
+        </tbody>
+      </table></div>
+      <p>Reports and suggestions are welcome on the X-Plane.org forum thread or the GitHub repository. Include the EFB version and the relevant lines from X-Plane's <code>Log.txt</code> (lines starting with <code>ToLiss EFB:</code>).</p>
+    </section>
+
+    <!-- ===================================================== 11 -->
+    <section class="chap" id="files">
+      <h2>Files the EFB keeps</h2>
+      <p>All in <code>PythonPlugins/ToLissWebTablet</code>. Updates keep them; they can be backed up or copied to another PC.</p>
+      <div class="tbl"><table>
+        <thead><tr><th>File or folder</th><th>Holds</th></tr></thead>
+        <tbody>
+          <tr><td><code>config.json</code></td><td>Your settings, including the port, the Hoppie code (stored only on this PC) and pushback settings</td></tr>
+          <tr><td><code>stand_rules.json</code></td><td>Stand exclusions, airline rules and learned stands</td></tr>
+          <tr><td><code>cg_calibration.json</code></td><td>What the EFB has learned about each aircraft type's fuel tanks, for the ZFW CG</td></tr>
+          <tr><td><code>ops/</code></td><td>The Ops Centre message log, the current flight's progress and previous flights</td></tr>
+          <tr><td><code>fdr/</code></td><td>Flight recordings</td></tr>
+          <tr><td><code>checklists/</code></td><td>Checklists you uploaded</td></tr>
+          <tr><td><code>apt_index_cache.json</code>, <code>navdata_cache.pkl</code></td><td>Airport and navigation indexes; safe to delete, they rebuild</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+  </main>
+</div>
+
+<footer class="foot">
+  <span>ToLiss EFB 0.68.7 · Free for personal, non-commercial use</span>
+  <span>Not for real-world navigation or flight operations</span>
+</footer>
+
+<script>
+// highlight the current chapter in the contents rail
+(function () {
+  const links = Array.from(document.querySelectorAll('.toc a'));
+  const byId = new Map(links.map(a => [a.getAttribute('href').slice(1), a]));
+  const targets = Array.from(byId.keys()).map(id => document.getElementById(id)).filter(Boolean);
+  if (!('IntersectionObserver' in window) || !targets.length) return;
+  let current = null;
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) current = e.target.id; });
+    if (!current) return;
+    links.forEach(a => a.classList.remove('on'));
+    const a = byId.get(current); if (a) a.classList.add('on');
+  }, { rootMargin: '-15% 0px -75% 0px' });
+  targets.forEach(t => io.observe(t));
+})();
+</script>
+</body>
+</html>

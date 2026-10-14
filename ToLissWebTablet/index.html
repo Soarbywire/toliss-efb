@@ -756,6 +756,7 @@
                 <div class="nav-item" id="nav-ops" onclick="switchTab('ops')" style="display:none;">Ops Centre<span class="ops-badge" id="ops-badge" style="display:none;"></span></div>
             </div>
             <div class="nav-group-spacer"></div>
+            <div class="nav-item" id="nav-manual" onclick="switchTab('manual')">📖 Manual</div>
             <div class="nav-item" id="nav-settings" onclick="switchTab('settings')">⚙️ Settings<span class="upd-dot" id="upd-dot" style="display:none;" title="Update available"></span></div>
             
             <div id="nav-externallinks" style="display: none; flex-direction: column;">
@@ -1870,6 +1871,14 @@
             </div>
 
             <!-- 12. SETTINGS -->
+            <div id="manual" class="tab-content">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
+                    <h3 style="margin:0;">Manual</h3>
+                    <a href="/manual" target="_blank" rel="noopener" class="mc-btn" style="text-decoration:none; min-height:32px; display:inline-flex; align-items:center;">Open in a new tab ↗</a>
+                </div>
+                <iframe id="manual-frame" title="ToLiss EFB manual" style="width:100%; height:calc(100vh - 150px); min-height:420px; border:1px solid var(--border); border-radius:8px; background:var(--input-bg);"></iframe>
+            </div>
+
             <div id="settings" class="tab-content">
                 <h3 style="margin-top: 0;">Server Configuration</h3>
                 <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">
@@ -2045,7 +2054,7 @@
                 <div style="line-height: 1.5; color: var(--text-muted); font-size: 13px;">
                     <p>A web-based, remote interface for the ToLiss line of aircraft in X-Plane 12.</p>
                     <p>By Soarbywire &middot; <a href="https://soarbywire.com" target="_blank" rel="noopener">soarbywire.com</a></p>
-                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.68.6 Release Beta</p>
+                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.68.7 Release Beta</p>
                     <p style="font-size: 11px; color: #ff9800; margin-top: 5px;"><strong>Caution:</strong> Some features may not work as intended.</p>
                     <p style="font-size: 11px; color: var(--text-dim); margin-top: 5px;">New versions are published on <a href="https://github.com/Soarbywire/toliss-efb/releases" target="_blank" rel="noopener">GitHub</a> and the X-Plane.org forums, and can be installed from <b>Updates</b> above.</p>
                     <div class="lic">
@@ -9473,6 +9482,12 @@
             
             let navItem = document.getElementById('nav-' + tabName);
             if(navItem) navItem.classList.add('active');
+            if (tabName === 'manual') {
+                // load the manual on first opening, in the EFB's light or dark theme
+                const fr = document.getElementById('manual-frame');
+                const want = '/manual?theme=' + (document.body.classList.contains('light-theme') ? 'light' : 'dark');
+                if (fr && fr.getAttribute('src') !== want) fr.setAttribute('src', want);
+            }
             
             if (window.innerWidth <= 768 && isSidebarOpen) {
                 toggleSidebar();

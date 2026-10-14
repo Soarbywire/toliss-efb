@@ -61,6 +61,22 @@ def handle_get(req, plugin):
                 req.end_headers()
                 req.wfile.write(b"index.html not found in PythonPlugins/ToLissWebTablet/")
 
+        elif req.path.split('?')[0] in ('/manual', '/manual.html'):
+            # the EFB manual (also shown inside the EFB on the Manual page)
+            filepath = os.path.join(plugin.plugin_dir, 'manual.html')
+            if os.path.exists(filepath):
+                with open(filepath, 'rb') as f:
+                    content = f.read()
+                req.send_response(200)
+                req.send_header('Content-type', 'text/html; charset=utf-8')
+                req.send_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+                req.end_headers()
+                req.wfile.write(content)
+            else:
+                req.send_response(404)
+                req.end_headers()
+                req.wfile.write(b"manual.html not found in PythonPlugins/ToLissWebTablet/")
+
         elif req.path == '/api/toliss/situations':
             try:
                 result = plugin.bridge.call("situation", {"action": "list"}, timeout=3.0)

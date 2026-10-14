@@ -16,6 +16,14 @@ as soon as the aircraft is positioned and finishes setting it up while paused, w
 
 ---
 
+## 0.68.7
+
+### Manual
+- **The EFB now has a manual**, at the bottom of the sidebar (**📖 Manual**, next to Settings): installation and
+  updating, a flight start to finish, every page, the Operations Centre with load sheets and CG, VATSIM and ATC,
+  settings, troubleshooting and the files the EFB keeps. It follows the EFB's light or dark theme, and also opens on
+  its own at `http://<EFB address>/manual` (for example on a second screen).
+
 ## 0.68.6
 
 ### Ops Centre
