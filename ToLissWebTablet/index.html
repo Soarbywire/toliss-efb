@@ -1523,6 +1523,15 @@
                     </div>
                     <label class="ops-autoload-row" style="display:flex; gap:8px; align-items:center; margin-top:10px; font-size:13px; cursor:pointer;">
                         <input type="checkbox" class="ops-autoload" onchange="opsSetAutoload(this.checked)"> Load my latest SimBrief flight plan automatically (when X-Plane starts and when the EFB opens)</label>
+                    <label style="display:flex; gap:8px; align-items:center; margin-top:6px; font-size:13px; cursor:pointer;">
+                        <input type="checkbox" id="ops-sbcs" checked onchange="opsPost('/api/ops/config', { use_sb_callsign: this.checked }).then(opsRenderStatus).then(opsLoadFields).catch(() => {})"> Use the aircraft callsign from my SimBrief plan (it must match the flight number in ToLiss's INIT A)</label>
+                    <div class="rp-row" style="margin-top:6px; font-size:13px; align-items:center;">
+                        <span style="color:var(--text-dim);">Final load sheet</span>
+                        <select id="ops-final-trig" onchange="opsPost('/api/ops/config', { final_trigger: this.value }).then(opsRefresh).catch(() => {})">
+                            <option value="doors">when the doors close after boarding (else at beacon on)</option>
+                            <option value="beacon">at beacon on</option>
+                        </select>
+                    </div>
                     <div class="rp-row" id="ops-units">
                         <div class="perf-rwys dist-unit" style="margin:0;"><span style="font-size:12px;color:var(--text-dim);align-self:center;">Runway distances in landing data</span>
                             <button class="perf-rwy active" data-u="ft" onclick="setDistUnit('ft')">FT</button><button class="perf-rwy" data-u="m" onclick="setDistUnit('m')">M</button></div>
@@ -2036,7 +2045,7 @@
                 <div style="line-height: 1.5; color: var(--text-muted); font-size: 13px;">
                     <p>A web-based, remote interface for the ToLiss line of aircraft in X-Plane 12.</p>
                     <p>By Soarbywire &middot; <a href="https://soarbywire.com" target="_blank" rel="noopener">soarbywire.com</a></p>
-                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.68.5 Release Beta</p>
+                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.68.6 Release Beta</p>
                     <p style="font-size: 11px; color: #ff9800; margin-top: 5px;"><strong>Caution:</strong> Some features may not work as intended.</p>
                     <p style="font-size: 11px; color: var(--text-dim); margin-top: 5px;">New versions are published on <a href="https://github.com/Soarbywire/toliss-efb/releases" target="_blank" rel="noopener">GitHub</a> and the X-Plane.org forums, and can be installed from <b>Updates</b> above.</p>
                     <div class="lic">
@@ -7646,6 +7655,7 @@
             }
             if (!sent) {
                 if (f.airborne && OPS_PHASES[0].items.some(i => i[0] === k)) return ['Not sent (airborne)', ''];
+                if ((k === 'final' || k === 'todata') && f.final_trigger === 'doors') return ['Sends when the doors close after boarding (or at beacon on)', ''];
                 return [when, ''];
             }
             let st = 'Sent ' + opsUtc(sent), cls = 'ok';
@@ -7700,6 +7710,7 @@
                 el.innerHTML = html + `<div class="ops-fl-sum">${parts.join(' · ')}</div>`;
                 return;
             }
+            if (f.cs_note) html += `<div class="ops-note">${esc(f.cs_note)}</div>`;
             if (f.archived_prev) html += `<div class="ops-note">New flight plan: ${f.archived_prev.count} message${f.archived_prev.count === 1 ? '' : 's'} for the previous plan (${esc(f.archived_prev.label)}) moved to <a href="#ops-prev" onclick="document.getElementById('ops-prev').open = true;" style="color:#111;"><b>Previous flights</b></a>.</div>`;
             html += `<div class="ops-timeline"><span>OUT ${t('out')}</span><span>OFF ${t('off')}</span><span>ON ${t('on')}</span><span>IN ${t('in')}</span>${prog ? `<b>${prog}</b>` : ''}</div>`;
             OPS_PHASES.forEach((ph, i) => {
@@ -7900,6 +7911,8 @@
                     const el = document.getElementById(id);
                     if (el && document.activeElement !== el && v) el.value = v;
                 });
+                const sb = document.getElementById('ops-sbcs'); if (sb) sb.checked = c.use_sb_callsign !== false;
+                const ft = document.getElementById('ops-final-trig'); if (ft && c.final_trigger) ft.value = c.final_trigger;
             }).catch(() => {});
         }
         // save the setup as each field is changed, without connecting or disconnecting
@@ -9971,9 +9984,10 @@
         function wbShowCg(cg) {
             const el = document.getElementById('wb-cg'), note = document.getElementById('wb-cg-note');
             if (!el) return;
-            if (!cg || cg.tow_cg === null || cg.tow_cg === undefined) { el.textContent = ''; note.textContent = ''; return; }
+            if (!cg || cg.tow_cg === null || cg.tow_cg === undefined) { el.textContent = ''; note.textContent = cg && cg.why ? 'No CG: ' + cg.why + '.' : ''; return; }
             const z = cg.zfw_cg !== null && cg.zfw_cg !== undefined ? `${cg.zfw_cg.toFixed(1)} %MAC${cg.zfw_status === 'est' ? ' (estimate)' : ''}` : '---';
-            el.innerHTML = `CG <b style="color:var(--accent);">${cg.tow_cg.toFixed(1)} %MAC</b> &nbsp;·&nbsp; ZFW CG <b style="color:var(--accent);">${z}</b>`;
+            el.innerHTML = `CG <b style="color:var(--accent);">${cg.tow_cg.toFixed(1)} %MAC</b> &nbsp;·&nbsp; ZFW CG <b style="color:var(--accent);">${z}</b>` +
+                (cg.law_cg !== null && cg.law_cg !== undefined ? ` &nbsp;·&nbsp; Landing CG <b style="color:var(--accent);">${cg.law_cg.toFixed(1)} %MAC</b> <span style="color:var(--text-dim); font-size:12px;">(after the planned trip fuel)</span>` : '');
             note.textContent = cg.zfw_status === 'confirmed' ? 'The ZFW CG is the figure for INIT B / FUEL PRED.'
                 : cg.zfw_status === 'est' ? 'The ZFW CG is an estimate until the EFB has seen the fuel change a few more times (it learns this once for each aircraft type).'
                 : 'The ZFW CG appears once the EFB has seen how the CG moves with fuel: load the fuel here, or refuel, and it learns it.';

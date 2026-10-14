@@ -296,6 +296,8 @@ class OpsCentre:
         self.ops_callsign = cfg.get("ops_callsign", "")
         self.aircraft = cfg.get("ops_aircraft", "")
         self.enabled = bool(cfg.get("ops_enabled", False))
+        self.use_sb_cs = bool(cfg.get("ops_use_sb_callsign", True))          # take the aircraft callsign from the plan
+        self.final_trigger = cfg.get("ops_final_trigger", "doors") if cfg.get("ops_final_trigger") in ("doors", "beacon") else "doors"
         self.log = []
         self.lock = threading.RLock()
         self.last_poll = 0.0
@@ -438,7 +440,8 @@ class OpsCentre:
         try:
             self.plugin.config.update({"ops_logon": self.logon, "ops_callsign": self.ops_callsign,
                                        "ops_aircraft": self.aircraft, "ops_enabled": self.enabled,
-                                       "ops_auto": self.auto, "simbrief_user": self.ofp_user, "ops_autoload": self.autoload})
+                                       "ops_auto": self.auto, "simbrief_user": self.ofp_user, "ops_autoload": self.autoload,
+                                       "ops_use_sb_callsign": self.use_sb_cs, "ops_final_trigger": self.final_trigger})
             self.plugin.save_config(self.plugin.config)
         except Exception:
             pass
@@ -631,6 +634,27 @@ class OpsCentre:
             self.flight["label"] = f"{self._cs()} {self._route()}".strip()
             self.flight.setdefault("date", int(time.time()))
             self._saved_flight = None
+            self._callsign_from_plan()
+
+    def _callsign_from_plan(self):
+        """A new plan: send to the plan's aircraft callsign (the ATC callsign SimBrief gives, else airline + flight
+        number), unless the pilot has chosen to keep their own. The ops callsign is only filled in when empty."""
+        if not self.use_sb_cs or not self.ofp:
+            return
+        o = self.ofp
+        cs = re.sub(r"\s", "", str(_ops_g(o, "atc", "callsign") or (_ops_g(o, "general", "icao_airline") + _ops_g(o, "general", "flight_number")))).upper()[:8]
+        if not cs or not CALLSIGN_RE.match(cs):
+            return
+        changed = cs != self.aircraft
+        if not self.ops_callsign:
+            ops = (re.sub(r"[^A-Z]", "", str(_ops_g(o, "general", "icao_airline")).upper()) or "EFB") + "OPS"
+            if ops[:8] != cs:
+                self.ops_callsign = ops[:8]
+                changed = True
+        if changed:
+            self.aircraft = cs
+            self.flight["cs_note"] = f"Aircraft callsign set to {cs} from your SimBrief plan."
+            self.save_config()
 
     def _sim(self, names, timeout=1.5):
         try:
@@ -789,7 +813,24 @@ class OpsCentre:
         tof = max(0, _ops_num(fuel) - taxi) if fuel > 0 else _ops_num(f.get("plan_takeoff"))
         return v, zfw, tof, zfw + tof, zfw + tof - trip, trip
 
-    def msg_final(self):
+    def _cg_figures(self, burn):
+        """The CG for the load sheet; tries for a couple of seconds, and says in the log why if there is none."""
+        cg = getattr(self.plugin, "cg", None)
+        if not cg:
+            return {}
+        out = {}
+        for i in range(3):
+            try:
+                out = cg.figures(burn=burn)
+            except Exception as e:
+                out = {"why": str(e)}
+            if out.get("tow_cg") is not None:
+                return out
+            time.sleep(0.7)
+        self.plugin.log.xplane(f"ToLiss EFB: no CG on the load sheet: {out.get('why') or 'not available'}\n")
+        return out
+
+    def msg_final(self, revised=False):
         o, w, f = self.ofp, self.ofp.get("weights", {}), self.ofp.get("fuel", {})
         v, zfw, tof, tow, law, trip = self._actual_weights()
         mzfw, mtow, mlaw = _ops_num(w.get("max_zfw")), _ops_num(w.get("max_tow")), _ops_num(w.get("max_ldw"))
@@ -798,18 +839,15 @@ class OpsCentre:
         pax = _ops_num(v.get("AirbusFBW/NoPax"), _ops_num(w.get("pax_count")))
         fwd, aft = _ops_num(v.get("AirbusFBW/FwdCargo")), _ops_num(v.get("AirbusFBW/AftCargo"))
         self.flight["edno"] += 1
-        lines = [f'LOADSHEET FINAL {time.strftime("%H%MZ", time.gmtime())}', f'EDNO {self.flight["edno"]}',
+        lines = [f'{"REVISED " if revised else ""}LOADSHEET FINAL {time.strftime("%H%MZ", time.gmtime())}', f'EDNO {self.flight["edno"]}',
                  f"{self._cs()} {self._route()}",
                  f'{_ops_g(o, "aircraft", "icaocode")} {_ops_g(o, "aircraft", "reg")}'.strip(),
                  f"PAX {pax}", f"HOLD FWD {fwd}  AFT {aft}",
                  f"ZFW {zfw}  MAX {mzfw}", f"TOF {tof}",
                  f"TOW {tow}  MAX {mtow}", f"TIF {trip}",
                  f"LAW {law}  MAX {mlaw}"]
-        # CG in % MAC: MACTOW from ToLiss, MACZFW worked out from it (services/cg.py); 24 columns on the MCDU
-        try:
-            cgf = self.plugin.cg.figures() if getattr(self.plugin, "cg", None) else {}
-        except Exception:
-            cgf = {}
+        # CG in % MAC: MACTOW from ToLiss, MACZFW and MACLAW worked out from it (services/cg.py); 24 columns
+        cgf = self._cg_figures(_ops_num(f.get("taxi")) + trip)
         if cgf.get("tow_cg") is not None:
             if cgf.get("zfw_status") == "confirmed":
                 lines.append(f'MACZFW {cgf["zfw_cg"]:.1f}  MACTOW {cgf["tow_cg"]:.1f}')
@@ -817,11 +855,19 @@ class OpsCentre:
                 if cgf.get("zfw_status") == "est":
                     lines.append(f'MACZFW {cgf["zfw_cg"]:.1f} EST')
                 lines.append(f'MACTOW {cgf["tow_cg"]:.1f}')
+            if cgf.get("law_cg") is not None:
+                lines.append(f'MACLAW {cgf["law_cg"]:.1f}' + (" EST" if cgf.get("zfw_status") != "confirmed" else ""))
         if under is not None:
             lines.append(f"UNDERLOAD {under}" if under >= 0 else f"OVERWEIGHT {-under} CHECK")
         lines += ["LMC NIL", "PLEASE ACKNOWLEDGE"]
         self.flight["ack"] = None
+        self.flight["final_zfw"] = zfw                       # for last-minute changes
         return "\n".join(lines)
+
+    def msg_lmc(self, old, new):
+        d = new - old
+        return "\n".join(["LMC", f"{self._cs()} {self._route()}", f"ZFW {'+' if d >= 0 else '-'}{abs(d)}",
+                          f"NEW ZFW {new}", "NO NEW LOADSHEET", "REQUIRED"])
 
     def msg_todata(self):
         o = self.ofp or {}
@@ -926,7 +972,7 @@ class OpsCentre:
                        "sim/flightmodel/position/groundspeed", "sim/cockpit2/controls/parking_brake_ratio",
                        "sim/flightmodel/engine/ENGN_running", "sim/flightmodel/weight/m_fuel_total",
                        "sim/cockpit2/engine/indicators/fuel_flow_kg_sec", "sim/flightmodel/position/y_agl",
-                       "sim/flightmodel/weight/m_total"])
+                       "sim/flightmodel/weight/m_total", "AirbusFBW/PaxDoorModeArray", "AirbusFBW/CargoDoorModeArray"])
         if not v:
             return
         on_ground = float(v.get("sim/flightmodel/failures/onground_any", 1) or 0) >= 1
@@ -955,14 +1001,42 @@ class OpsCentre:
                     self.plugin.log.xplane(f"ToLiss EFB: ops could not prepare {key}: {e}\n")
             fl["released"] = all(k in done or not self.auto[k] for k in ("release", "wx", "notams", "prelim"))
         beacon = float(v.get("sim/cockpit2/switches/beacon_on", 0) or 0) >= 1
-        if beacon and not fl["beacon_seen"]:
+        # the final load sheet: once boarding and loading are done (all doors closed and the payload steady for a
+        # minute), or at beacon on (also the fallback, e.g. when the doors were never opened)
+        now = time.time()
+        doors = [float(x or 0) for x in (v.get("AirbusFBW/PaxDoorModeArray") or [])] + \
+                [float(x or 0) for x in (v.get("AirbusFBW/CargoDoorModeArray") or [])]
+        doors_open = any(x >= 1.5 for x in doors)              # door mode 2 = open (0 closed, 1 auto)
+        if doors_open:
+            fl["doors_opened"] = True
+        total, fuel_now = float(v.get("sim/flightmodel/weight/m_total", 0) or 0), float(v.get("sim/flightmodel/weight/m_fuel_total", 0) or 0)
+        zfw_now = round(total - fuel_now) if total > 0 else None
+        if zfw_now is not None and abs(zfw_now - (fl.get("zfw_seen") or -1e9)) > 20:
+            fl["zfw_seen"], fl["zfw_since"] = zfw_now, now          # the payload changed: wait for it to settle
+        steady = now - (fl.get("zfw_since") or now) >= 60
+        doors_done = (self.final_trigger == "doors" and fl.get("doors_opened") and not doors_open and steady)
+        if (beacon or doors_done) and not fl["beacon_seen"]:
             fl["beacon_seen"] = True
+            fl["final_by"] = "beacon" if beacon and not doors_done else "doors"
             for key, build in (("final", self.msg_final), ("todata", self.msg_todata)):
-                if self.auto[key] and key not in fl["sent"]:
+                if self.auto[key] and key not in fl["sent"] and key not in fl["queued"]:
                     try:
                         self._queue(key, build())
                     except Exception as e:
                         self.plugin.log.xplane(f"ToLiss EFB: ops could not prepare {key}: {e}\n")
+        # last-minute changes after the final load sheet, until takeoff: a big change gets a revised load sheet,
+        # a small one an LMC message
+        if fl.get("final_zfw") and zfw_now is not None and steady and ("final" in fl["sent"] or "final" in fl["queued"]):
+            d = zfw_now - int(fl["final_zfw"])
+            if abs(d) >= 500 and self.auto.get("final"):
+                fl["final_zfw"] = zfw_now
+                try:
+                    self._queue("reply", self.msg_final(revised=True))
+                except Exception as e:
+                    self.plugin.log.xplane(f"ToLiss EFB: ops could not prepare the revised load sheet: {e}\n")
+            elif abs(d) >= 100 and abs(zfw_now - int(fl.get("lmc_zfw") or fl["final_zfw"])) >= 100:
+                fl["lmc_zfw"] = zfw_now
+                self._queue("reply", self.msg_lmc(int(fl["final_zfw"]), zfw_now))
         if self.auto["atis"] and orig:
             letter, text = self.msg_atis(orig)
             if letter and letter != fl["atis_letter"]:
@@ -1594,6 +1668,7 @@ class OpsCentre:
                 "generated": _ops_num(_ops_g(o, "params", "time_generated")), "auto": self.auto, "sent": fl["sent"],
                 "queued": list(fl["queued"]), "ack": fl["ack"], "atis_letter": fl["atis_letter"],
                 "airborne": fl["airborne"], "beacon_seen": fl["beacon_seen"], "oooi": fl["oooi"],
+                "cs_note": fl.get("cs_note"), "final_trigger": self.final_trigger,
                 "eta": fl["eta"], "efob": fl["efob"], "dist_rem": fl["dist_rem"], "fuel_level": fl["fuel_level"],
                 "todata_caution": bool(fl.get("todata_caution")), "ldg_caution": bool(fl.get("ldg_caution")),
                 "stand": (fl.get("stand") or {}).get("name"), "arr_atis_letter": fl.get("arr_atis_letter"),

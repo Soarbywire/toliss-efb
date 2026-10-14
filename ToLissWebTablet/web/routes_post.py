@@ -259,6 +259,13 @@ def handle_post(req, plugin):
                     ops.next_poll = 0
                 if data.get("simbrief_user"):
                     ops.ofp_user = str(data["simbrief_user"]).strip()[:40]
+                if "use_sb_callsign" in data:
+                    ops.use_sb_cs = bool(data["use_sb_callsign"])
+                    if ops.use_sb_cs and ops.ofp:
+                        with ops.lock:
+                            ops._callsign_from_plan()
+                if data.get("final_trigger") in ("doors", "beacon"):
+                    ops.final_trigger = data["final_trigger"]
                 if "autoload" in data:
                     ops.autoload = bool(data["autoload"])
                     ops._autoload_tries, ops._next_autoload = 0, 0.0      # load it now if there is no plan yet

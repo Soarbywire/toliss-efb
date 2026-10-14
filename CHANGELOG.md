@@ -16,6 +16,23 @@ as soon as the aircraft is positioned and finishes setting it up while paused, w
 
 ---
 
+## 0.68.6
+
+### Ops Centre
+- **The aircraft callsign comes from your SimBrief plan**: when a new plan loads (also automatically), the Ops Centre
+  sends to the plan's ATC callsign, with no need to press "Use SimBrief callsign" or connect again; the Flight box
+  says so. The ops callsign is filled in only if empty. Untick "Use the aircraft callsign from my SimBrief plan" to
+  keep your own. (It must match the flight number in ToLiss's INIT A, which the ATSU logs on with.)
+- **The final load sheet comes when boarding is done**: once the passenger and cargo doors have been opened and are
+  closed again, and the payload has not changed for a minute, as in real operations. If the doors were never opened,
+  it comes at beacon on as before. Choose "at beacon on" in the setup to keep the old way.
+- **Last-minute changes**: if the zero-fuel weight changes after the final load sheet, before takeoff, the Ops
+  Centre sends an **LMC** message for 100 kg or more, and a **revised final load sheet** (next EDNO) for 500 kg or more.
+- **Landing CG on the load sheet**: `MACLAW 26.1`, after the planned taxi and trip fuel is burnt in the standard
+  Airbus order (centre tank first, then the wings). Marked EST until the ZFW CG is confirmed. Also on Weight & Balance.
+- **No CG?** If the CG cannot be read, the load sheet is sent without it after a short retry, and the X-Plane log
+  and Weight & Balance say why (e.g. the aircraft has no AirbusFBW/CGLocationPercent).
+
 ## 0.68.5
 
 ### CG on the load sheet

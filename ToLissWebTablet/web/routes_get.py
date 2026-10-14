@@ -32,6 +32,15 @@ from ..services.taxi import taxi_options
 from ..sim.displays import STREAM_RATE_HZ
 from ..sim.mcdu import MCDU_KEYS, mcdu_text_to_keys
 
+
+def _planned_burn(plugin):
+    """Taxi + trip fuel from the loaded SimBrief plan (for the landing CG), or None."""
+    try:
+        f = (getattr(plugin, "ops", None).ofp or {}).get("fuel", {})
+        return float(f.get("taxi") or 0) + float(f.get("enroute_burn") or 0) or None
+    except Exception:
+        return None
+
 def handle_get(req, plugin):
     try:
         if req.path == '/' or req.path == '/index.html':
@@ -585,7 +594,7 @@ def handle_get(req, plugin):
                     "cargo_aft": clean_results.get(drefs[2], 0),
                     "fuel": clean_results.get(drefs[3], 0),
                     "fuel_max": clean_results.get(drefs[4], 0),
-                    "cg": (plugin.cg.figures() if getattr(plugin, "cg", None) else None)
+                    "cg": (plugin.cg.figures(burn=_planned_burn(plugin)) if getattr(plugin, "cg", None) else None)
                 }).encode('utf-8', errors='ignore'))
             except Exception:
                 req.send_response(500)
@@ -735,7 +744,8 @@ def handle_get(req, plugin):
                 # the saved setup, to fill in the Ops Centre page (served only on your local network)
                 body = {"status": "success", "logon": ops.logon, "ops_callsign": ops.ops_callsign,
                         "aircraft": ops.aircraft, "enabled": ops.enabled, "autoload": ops.autoload,
-                        "simbrief_user": ops.ofp_user, "ofp_loaded": bool(ops.ofp)} if ops else {"status": "error"}
+                        "simbrief_user": ops.ofp_user, "ofp_loaded": bool(ops.ofp), "use_sb_callsign": ops.use_sb_cs,
+                        "final_trigger": ops.final_trigger} if ops else {"status": "error"}
             elif parsed.path == '/api/ops/archive':
                 body = {"status": "success", "flights": ops.load_archive()} if ops else {"status": "error"}
             elif parsed.path == '/api/ops/stands':

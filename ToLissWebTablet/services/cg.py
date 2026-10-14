@@ -80,6 +80,7 @@ class CgTracker:
                 self.data = {}
         except Exception:
             self.data = {}
+        self.why = "no reading yet"   # why there is no CG, if there is none
         self.last = None             # the sample the next fuel change is measured from
         self.now = None              # the latest sample
         self._last_status = {}
@@ -92,8 +93,13 @@ class CgTracker:
         fuel = [float(x or 0.0) for x in (v.get(READS[2]) or [])]
         tz = [float(x or 0.0) for x in (v.get(READS[3]) or [])]
         icao = str(v.get(READS[4]) or "").strip().upper()
+        if READS[0] in (v.get("__missing__") or []) or (cg == 0.0 and READS[0] not in v):
+            self.why = "this aircraft has no AirbusFBW/CGLocationPercent"
+            return None
         if not (5.0 < cg < 60.0) or w <= 0 or not fuel:
+            self.why = f"the aircraft is not ready (CG {cg:.1f}, weight {w:.0f} kg)"
             return None                                  # not a ToLiss aircraft (or not ready)
+        self.why = ""
         # tanks at the same position share one arm (left and right wing); without positions, each tank is its own
         groups = [("z%.1f" % tz[i]) if i < len(tz) and any(tz) else f"t{i}" for i in range(len(fuel))]
         return {"t": time.time(), "cg": cg, "w": w, "fuel": fuel, "groups": groups, "icao": icao or "ACF",
@@ -153,8 +159,9 @@ class CgTracker:
             pass
 
     # ---------- results ----------
-    def figures(self, fresh=True):
-        """{"tow_cg", "zfw_cg", "zfw_status": confirmed/est/none, "rms", "rows"} from the latest sample."""
+    def figures(self, fresh=True, burn=None):
+        """{"tow_cg", "zfw_cg", "zfw_status": confirmed/est/none, "law_cg", "rms", "rows", "why"} from the latest
+        sample. burn: the fuel used before landing (taxi + trip), for the landing CG."""
         s = None
         if fresh:
             try:
@@ -164,11 +171,11 @@ class CgTracker:
         with self.lock:
             s = s or self.now
             if s is None:
-                return {"tow_cg": None, "zfw_cg": None, "zfw_status": "none"}
+                return {"tow_cg": None, "zfw_cg": None, "zfw_status": "none", "law_cg": None, "why": self.why}
             ac = self.data.get(s["icao"]) or {}
             arms, seen, rms = ac.get("arms") or {}, ac.get("seen") or {}, ac.get("rms")
-            out = {"tow_cg": round(s["cg"], 1), "zfw_cg": None, "zfw_status": "none", "rms": rms,
-                   "rows": len(ac.get("rows", [])), "icao": s["icao"]}
+            out = {"tow_cg": round(s["cg"], 1), "zfw_cg": None, "zfw_status": "none", "law_cg": None, "rms": rms,
+                   "rows": len(ac.get("rows", [])), "icao": s["icao"], "why": ""}
             held = {}
             for i, g in enumerate(s["groups"]):
                 if s["fuel"][i] > 1.0:
@@ -185,8 +192,35 @@ class CgTracker:
                 return out
             ok = rms is not None and rms <= CONFIRM_RMS and all(seen.get(g, 0) >= 2 for g in held)
             out.update(zfw_cg=round(zcg, 1), zfw_status="confirmed" if ok else "est")
+            if burn is not None and burn > 0:
+                out["law_cg"] = self._landing_cg(s, held, arms, zcg, float(burn))
         self._note(out)
         return out
+
+    @staticmethod
+    def _landing_cg(s, held, arms, zcg, burn):
+        """The CG at landing: the fuel burnt in the standard Airbus order, the centre tank (and any single tank, such
+        as extra tanks feeding it) first, then the wing tanks evenly."""
+        count = {}
+        for g in s["groups"]:
+            count[g] = count.get(g, 0) + 1
+        land = dict(held)
+        single = [g for g in land if count.get(g, 1) == 1]
+        paired = [g for g in land if count.get(g, 1) > 1]
+        left = burn
+        for g in single:
+            use = min(left, land[g]); land[g] -= use; left -= use
+        wings = sum(land[g] for g in paired)
+        if left > 0 and wings > 0:
+            k = max(0.0, (wings - left) / wings)
+            for g in paired:
+                land[g] *= k
+        fuel = sum(land.values())
+        lw = s["zfw"] + fuel
+        if lw <= 0:
+            return None
+        c = (s["zfw"] * zcg + sum(m * arms[g] for g, m in land.items())) / lw
+        return round(c, 1) if 5.0 < c < 60.0 else None
 
     def _note(self, out):
         if self._last_status.get(out.get("icao")) != out.get("zfw_status"):
