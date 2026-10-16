@@ -517,6 +517,16 @@ class InstructorMixin:
                 self._push_tick()
             except Exception as e:
                 self._push_end(f"Pushback stopped: {e}")
+        if getattr(self, 'tug', None):
+            try:
+                self._tug_tick()
+            except Exception as e:
+                self.log.xplane(f"ToLiss EFB: pushback truck: {e}\n")
+                try:
+                    self._tug_release()
+                    self._tug_destroy(self.tug)
+                finally:
+                    self.tug = None
         while True:
             try:
                 item, reply = self._instructor_requests.get_nowait()

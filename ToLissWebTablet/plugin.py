@@ -23,6 +23,7 @@ from .features.fdr import FlightRecorder
 from .features.instructor import InstructorMixin
 from .features.payload import PayloadMixin
 from .features.pushback import PushbackMixin
+from .features.tug import TugMixin
 from .features.replay import ReplayMixin
 from .features.reposition import RepositionMixin
 from .features.situations import SituationMixin
@@ -39,7 +40,7 @@ from .web.server import ThreadingHTTPServer, make_handler
 
 class PythonInterface(
     AirportMixin, SituationMixin, FailureMixin, PayloadMixin, DataRefMixin,
-    DisplayMixin, InstructorMixin, PushbackMixin, RepositionMixin, ReplayMixin, TrafficMixin,
+    DisplayMixin, InstructorMixin, PushbackMixin, TugMixin, RepositionMixin, ReplayMixin, TrafficMixin,
 ):
     """Thin coordinator. Feature behavior lives in injected mixins/services."""
 
@@ -68,6 +69,10 @@ class PythonInterface(
         self.config_store = ConfigStore(self.config_file)
         self.context = AppContext(self.bridge, self.config_store, self.log, self.stop_event)
         self.config = self.load_config()
+        try:
+            self._tug_setup()                        # before the aircraft loads, so ToLiss finds the tug flags
+        except Exception as e:
+            self.log.xplane(f"ToLiss EFB: tug setup: {e}\n")
 
         self._situation_requests = queue.Queue()
         self._failure_requests = queue.Queue()
@@ -114,6 +119,10 @@ class PythonInterface(
 
     def XPluginStop(self):
         self.stop_event.set()
+        try:
+            self._tug_shutdown()                     # nose wheel steering back to ToLiss, truck removed
+        except Exception:
+            pass
         try:
             self._tfc_release()                      # hand X-Plane's traffic back
         except Exception:

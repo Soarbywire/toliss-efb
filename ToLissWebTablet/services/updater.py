@@ -297,12 +297,13 @@ class Updater:
                     raise ValueError("the release has no SHA-256 checksum")
                 backup = self._install_bytes(data, expected, latest.get("version", "unknown"))
                 self.state = "installed"
-                self.message = f"Version {latest.get('version')} installed; full backup: {backup}. Reload XPPython3 scripts."
-                self.plugin.log.xplane(self.message)
+                self.message = (f"Version {latest.get('version')} installed (full backup: {backup}). To finish: in X-Plane, "
+                                f"Plugins > XPPython3 > Reload scripts (or restart X-Plane), then reload the EFB page.")
+                self.plugin.log.xplane(f"ToLiss EFB: {self.message}\n")
             except Exception as exc:
                 self.state = "failed"
                 self.message = f"Update not installed: {exc}"
-                self.plugin.log.xplane(self.message)
+                self.plugin.log.xplane(f"ToLiss EFB: {self.message}\n")
 
     def rollback(self):
         with self.lock:
@@ -325,7 +326,8 @@ class Updater:
                 os.replace(paths["entrypoint"] + ".new", paths["entrypoint"])
                 shutil.rmtree(old)
                 self.state = "restored"
-                self.message = f"Restored backup {backups[0]}; reload XPPython3 scripts."
+                self.message = (f"Restored backup {backups[0]}. To finish: in X-Plane, Plugins > XPPython3 > Reload scripts "
+                                f"(or restart X-Plane), then reload the EFB page.")
             except Exception as exc:
                 self.state = "failed"
                 self.message = f"Could not restore: {exc}"

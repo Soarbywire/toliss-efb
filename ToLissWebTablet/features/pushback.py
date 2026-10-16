@@ -64,13 +64,14 @@ class PushbackMixin:
         u = lambda h: (math.sin(math.radians(h)), math.cos(math.radians(h)))     # (east, north) of the nose direction
         e0, n0 = u(hdg0)
         mx, mz, h = x0 - mb * e0, z0 + mb * n0, hdg0                              # main gear midpoint (local x east, -z north)
-        pts, s_ = [], 0.0
+        pts, s_, cur = [], 0.0, [0.0]
         def emit():
             e, n = u(h)
-            pts.append((s_, mx + mb * e, mz - mb * n, h % 360))
+            pts.append((s_, mx + mb * e, mz - mb * n, h % 360, math.degrees(cur[0])))   # last: nose wheel angle
         emit()
         def move(phi_rad, ds):
             nonlocal mx, mz, h, s_
+            cur[0] = phi_rad
             h += math.degrees(vn * math.sin(phi_rad) * ds / W)
             e, n = u(h)
             dm = vn * math.cos(phi_rad) * ds
@@ -123,11 +124,12 @@ class PushbackMixin:
                 self._push_end("Released without the parking brake.")      # "Release now"
                 res = {"ok": True, "message": "Released."}
             elif pb:
-                if pb["await_brake"]:
+                if pb.get("connecting") or pb["await_brake"]:
                     self._push_end("Pushback cancelled.")
+                    res = {"ok": True, "message": "Pushback cancelled."}
                 else:
                     self._push_start_hold(pb, "Parking brake set: pushback stopped. Disconnect the tug.")
-                res = {"ok": True, "message": "Stopped: holding the aircraft until the parking brake is set."}
+                    res = {"ok": True, "message": "Stopped: holding the aircraft until the parking brake is set."}
             else:
                 res = {"ok": True, "message": "Stopped."}
         elif kind == "push_state":
@@ -139,7 +141,23 @@ class PushbackMixin:
         return res
 
     def _brake_set(self):
-        return any(self._dref(n) is not None and self._get_f(n) >= 0.5 for n in self.PARK_BRAKE_REFS)
+        """The parking brake as the pilot set it: ToLiss's switch (AirbusFBW/ParkBrake) when the aircraft has it.
+        X-Plane's own parking_brake_ratio is only the fallback: while a tug is connected (the tug flags that give NWS
+        DISC) ToLiss can hold that one on, so it must not decide whether the brake was released."""
+        sw = "AirbusFBW/ParkBrake"
+        if self._dref(sw) is not None:
+            on = self._get_f(sw) >= 0.5
+        else:
+            on = self._get_f("sim/cockpit2/controls/parking_brake_ratio") >= 0.5
+        if getattr(self, "push", None) and on != getattr(self, "_brake_logged", None):
+            self._brake_logged = on
+            try:
+                self.log.xplane(f"ToLiss EFB: parking brake {'set' if on else 'released'} (ToLiss switch "
+                                f"{self._get_f(sw) if self._dref(sw) is not None else 'n/a'}, X-Plane ratio "
+                                f"{self._get_f('sim/cockpit2/controls/parking_brake_ratio'):.2f})\n")
+            except Exception:
+                pass
+        return on
     def _push_start(self, item):
         g = self._get_f
         if getattr(self, 'slew', None):
@@ -159,16 +177,17 @@ class PushbackMixin:
                              float(item.get("final_m", 0)), forward, geom, steer)
         if len(pts) < 3:
             return {"ok": False, "message": "Set a distance or a turn first."}
-        await_brake = self._brake_set()
         self.push = {"pts": pts, "total": pts[-1][0], "s": 0.0, "v": 0.0, "target": max(0.3, min(3.0, float(item.get("speed_kt", 3)) * 0.514444)),
-                     "paused": False, "forward": forward, "t": time.time(), "i": 0, "await_brake": await_brake, "braked": False,
+                     "paused": False, "forward": forward, "t": time.time(), "i": 0, "await_brake": False, "braked": False,
+                     "connecting": True, "start_xz": (x0, z0), "held": False, "go_at": 0.0,
                      "sl": {"ground": True, "y": g("sim/flightmodel/position/local_y"), "pitch": g("sim/flightmodel/position/theta"),
                             "agl_m": self._height_above_terrain(x0, z0), "hdg": h0}, "settle": None}
-        if await_brake:
-            # as with a real tug: nothing moves until the parking brake is released
-            return {"ok": True, "message": "Tug ready: release the parking brake to start."}
-        self._override_path(True)
-        return {"ok": True, "message": f"{'Pulling forward' if forward else 'Pushing back'}: {round(pts[-1][0])} m."}
+        # the tug drives up and takes the nose wheel first: nothing moves until it is connected (a safety margin
+        # covers a truck that never reports in)
+        arrive = self._tug_begin()
+        self.push["connect_until"] = time.time() + arrive + 5.0
+        self.push["phi"] = 0.0
+        return {"ok": True, "message": f"Tug on its way: it connects in about {round(arrive)} s."}
     def _height_above_terrain(self, x, z):
         """The aircraft's reference point above the terrain right now (keeps the gear exactly as compressed as it is)."""
         y = self._get_f("sim/flightmodel/position/local_y")
@@ -192,6 +211,10 @@ class PushbackMixin:
 
     def _push_end(self, message):
         self.push = None
+        try:
+            self._tug_release()
+        except Exception:
+            pass
         self._override_path(False)
         for d in ("local_vx", "local_vy", "local_vz"):
             self._set_num("sim/flightmodel/position/" + d, 0.0)
@@ -209,20 +232,52 @@ class PushbackMixin:
         pb["paused"], pb["v"] = True, 0.0
         pb["hold_xz"] = (self._get_f("sim/flightmodel/position/local_x"), self._get_f("sim/flightmodel/position/local_z"))
         pb["hold_msg_done"] = done_msg
+    def _push_still(self, pb):
+        """Keep the aircraft exactly where the push started (waiting for the tug, or for the go after the brake)."""
+        if not pb["held"]:
+            self._override_path(True)
+            pb["held"] = True
+        x, z = pb["start_xz"]
+        self._slew_place(x, z, pb["sl"])
+        for d in ("local_vx", "local_vy", "local_vz", "local_ax", "local_ay", "local_az", "P", "Q", "R", "Prad", "Qrad", "Rrad"):
+            self._set_num("sim/flightmodel/position/" + d, 0.0)
+
     def _push_tick(self):
         pb = self.push
         now = time.time()
         if pb.get("hold"):
             return self._push_hold(pb)
+        if pb["connecting"]:
+            t = getattr(self, "tug", None)
+            if t is not None and not t.get("attached") and now < pb["connect_until"]:
+                # the tug is still driving up: nothing moves; without the parking brake the EFB holds the aircraft
+                if pb["held"] or not self._brake_set():
+                    self._push_still(pb)
+                pb["t"] = now
+                return
+            # connected: with the parking brake set, wait for it to be released; otherwise go in a moment
+            pb["connecting"] = False
+            pb["await_brake"] = self._brake_set()
+            if not pb["await_brake"]:
+                pb["go_at"] = now + 2.0
         if pb["await_brake"]:
             if self._brake_set():
+                if pb["held"]:
+                    self._push_still(pb)
                 pb["t"] = now
                 return                                   # waiting for the brake to be released
             pb["await_brake"] = False
-            self._override_path(True)
+            pb["go_at"] = now + 1.5
         elif not pb["braked"] and self._brake_set():
             # brake set during the push: stop at once (a real tow bar would be at risk); Resume once released
             pb["braked"], pb["paused"], pb["v"] = True, True, 0.0
+        if now < pb["go_at"]:
+            self._push_still(pb)                         # the tug takes up the load
+            pb["t"] = now
+            return
+        if not pb["held"]:
+            self._override_path(True)
+            pb["held"] = True
         dt, pb["t"] = min(0.1, max(0.0, now - pb["t"])), now
         remaining = pb["total"] - pb["s"]
         # speed: accelerate gently to towing speed, slow down smoothly to stop at the end (or when paused)
@@ -241,6 +296,7 @@ class PushbackMixin:
         f = 0.0 if b[0] == a[0] else (pb["s"] - a[0]) / (b[0] - a[0])
         x, z = a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f
         dh = ((b[3] - a[3] + 540) % 360) - 180
+        pb["phi"] = a[4] + (b[4] - a[4]) * f if len(a) > 4 else 0.0
         sl = pb["sl"]
         sl["hdg"] = (a[3] + dh * f) % 360
         self._slew_place(x, z, sl)
@@ -261,8 +317,12 @@ class PushbackMixin:
     def _push_state(self):
         pb = getattr(self, 'push', None)
         st = {"pushing": bool(pb), "push_done": getattr(self, 'push_done', None)}
+        try:
+            st.update(self._tug_state())
+        except Exception:
+            pass
         if pb:
-            st.update(push_paused=pb["paused"], push_s=round(pb["s"], 1), push_total=round(pb["total"], 1),
+            st.update(push_connecting=bool(pb.get("connecting")), push_paused=pb["paused"], push_s=round(pb["s"], 1), push_total=round(pb["total"], 1),
                       push_kt=round(pb["v"] / 0.514444, 1), push_forward=pb["forward"],
                       push_await_brake=pb["await_brake"], push_braked=pb["braked"], push_hold=bool(pb.get("hold")))
         return st

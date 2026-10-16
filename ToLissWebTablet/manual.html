@@ -160,7 +160,7 @@ dl.defs dd { margin: 0; }
     <p class="sub">The browser-based electronic flight bag for the ToLiss Airbus family in X-Plane 12: dispatch, ground handling, moving map, cockpit displays, instructor station and your own airline operations centre.</p>
   </div>
   <div class="docid" aria-label="Document information">
-    <div><span class="k">Software</span><b>ToLiss EFB 0.68.7</b></div>
+    <div><span class="k">Software</span><b>ToLiss EFB 0.69</b></div>
     <div><span class="k">Aircraft</span><b>ToLiss A319 · A320 · A321 · A330 · A340</b></div>
     <div><span class="k">Simulator</span><b>X-Plane 12 + XPPython3</b></div>
     <div><span class="k">Source</span><b>github.com/Soarbywire/toliss-efb</b></div>
@@ -238,6 +238,12 @@ dl.defs dd { margin: 0; }
       <p>The default port is 8080. If another program uses it, the plugin tries the next free port (8081, 8082 and so on). You can set the port in <span class="ui">Settings</span>, or in <code>config.json</code> in the <code>ToLissWebTablet</code> folder.</p>
       <h3>Updating</h3>
       <p>New versions appear under <span class="ui">Settings → Updates</span> and install in one tap, checked against the published SHA-256 checksum. Your settings, recordings, checklists, learned stands, CG learning and Ops Centre history are kept, and <span class="ui">Undo last update</span> restores the previous version.</p>
+      <p><b>After an update (or an undo), two steps finish it, in this order:</b></p>
+      <ol class="steps">
+        <li><b>In X-Plane:</b> choose <span class="ui">Plugins → XPPython3 → Reload scripts</span> (or restart X-Plane). Until then X-Plane keeps running the old version.</li>
+        <li><b>In the browser:</b> reload the EFB page. Settings → Updates enables <span class="ui">Reload page now</span> as soon as the plugin is running the new version.</li>
+      </ol>
+      <p>The EFB checks that the page and the plugin are the same version. If they are not (for example after copying a new version in by hand and doing only one of the two steps), a banner at the top says which step is left.</p>
       <ul>
         <li>Updates install only while the aircraft is parked, and never while the flight recorder is recording.</li>
         <li>Updating from 0.66 or earlier: install as usual, then choose Plugins → XPPython3 → Reload scripts. The EFB downloads the rest of the new version itself and shows its progress at the EFB address. When it says so, choose Reload scripts once more.</li>
@@ -292,11 +298,13 @@ dl.defs dd { margin: 0; }
       </ul>
       <ol class="steps">
         <li><b>Plan</b> the push and check the preview.</li>
-        <li><b>Start pushback.</b>The push begins when you release the parking brake, like a real tug. Pause/Resume and Stop are available throughout.</li>
+        <li><b>Start pushback.</b>The tug drives up and connects its towbar to the nose wheel first (about 8 s); then release the parking brake and the push begins, like a real tug. Pause/Resume and Stop are available throughout; Stop before the tug has connected cancels the push.</li>
         <li><b>Set the parking brake</b> at the end. Until you do, the EFB holds the aircraft in place so idle thrust cannot move it.</li>
       </ol>
       <p>Settings are remembered on every device; <span class="ui">Reset</span> returns to the defaults. Pushback is available on the ground only.</p>
-      <div class="caution"><b>Caution</b>Setting the parking brake during the push stops it, as a real tug driver would. The EFB pushback does not show a tug or the NWS DISC memo yet.</div>
+      <p><b>The tug.</b> X-Plane's own towbar tractor (the GT110, with its driver) drives in from the side, turns to face the aircraft and creeps up until its towbar is on the nose wheel; nothing moves until it is connected. During the push it swings round with the nose wheel in the turn; it stays until you set the parking brake, then the towbar comes off and it drives away. While it is connected, ToLiss shows <b>NWS DISC</b> on the E/WD. Untick <span class="ui">Show the pushback truck</span> to push without it.</p>
+      <p>After <span class="ui">Stop</span>, and when a push has finished, the page goes straight back to planning from where the aircraft is.</p>
+      <div class="caution"><b>Caution</b>Setting the parking brake during the push stops it, as a real tug driver would. There is no collision detection: check the path is clear.</div>
     </section>
 
     <!-- ===================================================== 5 -->
@@ -525,7 +533,7 @@ PLEASE ACKNOWLEDGE</div>
 </div>
 
 <footer class="foot">
-  <span>ToLiss EFB 0.68.7 · Free for personal, non-commercial use</span>
+  <span>ToLiss EFB 0.69 · Free for personal, non-commercial use</span>
   <span>Not for real-world navigation or flight operations</span>
 </footer>
 

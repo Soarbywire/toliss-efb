@@ -6,7 +6,7 @@ Usage (from the folder that contains "ToLiss EFB <version>"):
 
 The folder holds PI_ToLissWebTablet.py, the ToLissWebTablet package (with index.html) and CHANGELOG.md.
 It checks that the version matches everywhere (ToLissWebTablet/__init__.py EFB_VERSION, STUB_VERSION in
-PI_ToLissWebTablet.py and "Version: ..." in index.html), that every Python file compiles and that the package is
+PI_ToLissWebTablet.py, and "Version: ..." and EFB_PAGE_VERSION in index.html), that every Python file compiles and that the package is
 complete, then writes ToLiss_EFB_0_67.zip and ToLiss_EFB_0_67.zip.sha256. Users' data (settings, recordings,
 caches, backups) is never packed, even if it is in the folder.
 """
@@ -34,6 +34,7 @@ def main():
         "ToLissWebTablet/__init__.py EFB_VERSION": re.search(r'^EFB_VERSION\s*=\s*"([^"]+)"', read("ToLissWebTablet", "__init__.py"), re.M),
         "PI_ToLissWebTablet.py STUB_VERSION": re.search(r'^STUB_VERSION\s*=\s*"([^"]+)"', read("PI_ToLissWebTablet.py"), re.M),
         "index.html Version": re.search(r"Version:\s*([\d.]+)", read("ToLissWebTablet", "index.html")),
+        "index.html EFB_PAGE_VERSION": re.search(r"const EFB_PAGE_VERSION = '([^']+)'", read("ToLissWebTablet", "index.html")),
     }
     problems = [f'{k} is "{v.group(1) if v else "?"}"' for k, v in found.items() if not v or v.group(1) != version]
     if problems:

@@ -3,18 +3,21 @@
 A web-based electronic flight bag for the ToLiss Airbus family in X-Plane 12. It runs as an XPPython3 plugin and
 opens in any browser on your network, including an iPad:
 
-- **Preflight:** SimBrief dispatch with takeoff and landing performance, weight & balance, ground services, and a
-  built-in pushback (a towing model planned on a map, works with the parking brake like a real tug).
+- **Preflight:** SimBrief dispatch with takeoff and landing performance, weight & balance with the live CG, ground
+  services, and a built-in pushback: planned on a map with a towing model, done by X-Plane's own towbar tug, which
+  drives up and connects (with NWS DISC on the E/WD) and works with the parking brake like a real tug.
 - **Flight:** moving map with airport ground detail, satellite view and taxi routing to the stand or runway, ToLiss checklists, an MCDU laid out like the
   real unit, live PFD / E/WD / FCU, and a flight data recorder with landing reports.
 - **IOS (Instructor Operating Station):** aircraft state (set speed, altitude, heading and attitude in flight),
   freezes, slew, repositioning with quick positions and an approach trainer, quick weather (wind, turbulence,
   visibility, armed wind shear), TCAS traffic injection for TA/RA practice, X-Plane replay controls, and ToLiss
   situations and malfunctions.
-- **Network:** VATSIM radar, xPilot and nearby ATC, real-world airport frequencies with one-tap tuning, and an **Ops Centre** that acts as your airline's operations
+- **Network:** VATSIM radar with live pilot details (flight levels, climb and descent), xPilot and nearby ATC, real-world airport frequencies with one-tap tuning, and an **Ops Centre** that acts as your airline's operations
   centre on the Hoppie ACARS network, dispatching the flight to the ToLiss MCDU (release, weather, NOTAMs, load sheets,
   takeoff data, ATIS, ETA and fuel updates, stand assignment, landing data and a block-in summary), shown as a
-  message list or on an A320-family DCDU with response keys.
+  message list or on an A320-family DCDU with response keys. Load sheets carry the CG (MACZFW, MACTOW, MACLAW),
+  with LMC messages and revised load sheets for last-minute changes.
+- **Manual:** a full user manual is built in (📖 Manual in the sidebar).
 
 ## Installation
 
@@ -24,7 +27,13 @@ opens in any browser on your network, including an iPad:
    and the `ToLissWebTablet` folder to the same `PythonPlugins` folder.
 4. Start X-Plane, load a ToLiss aircraft and open the address shown by the plugin in your browser.
 
-From version 0.59, updates can be installed from **Settings → Updates** inside the EFB.
+From version 0.59, updates can be installed from **Settings → Updates** inside the EFB. After installing an update
+(or copying a new version in by hand), finish it in this order:
+
+1. In X-Plane: **Plugins → XPPython3 → Reload scripts** (or restart X-Plane).
+2. Reload the EFB page in your browser.
+
+From 0.69 the EFB reminds you of both steps, and shows a banner if the page and the plugin are different versions.
 
 Recommended ToLiss ISCS setting: **"X-Plane pause acts as freeze motion"**.
 

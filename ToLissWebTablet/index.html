@@ -427,6 +427,15 @@
         .upd-row b.new { color: #4caf50; }
         .upd-go { background: #2e7d32 !important; color: #fff !important; border-color: #2e7d32 !important; }
         .upd-notes { white-space: pre-wrap; font-size: 13px; color: var(--text-muted); max-height: 260px; overflow-y: auto; padding: 8px 0; line-height: 1.5; }
+        .upd-steps { margin-top: 10px; padding: 10px 12px; border: 1px solid #ff9800; border-radius: 8px; background: rgba(255,152,0,0.08); font-size: 13px; line-height: 1.5; color: var(--text-main); }
+        .upd-steps ol { margin: 4px 0 8px 18px; padding: 0; }
+        .upd-steps li.done { color: #4caf50; }
+        .upd-steps b.menu { font-family: var(--font-mono); font-weight: 600; }
+        .upd-steps button { margin: 0; }
+        .ver-banner { position: fixed; top: 0; left: 0; right: 0; z-index: 99999; display: none; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;
+                      padding: 8px 16px; background: #e65100; color: #fff; font-size: 14px; line-height: 1.4; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
+        .ver-banner .ver-x { background: transparent !important; color: #fff !important; font-size: 16px; padding: 0 8px; min-height: 28px; }
+        .ver-banner button { margin: 0; min-height: 32px; padding: 0 12px; background: #fff !important; color: #e65100 !important; border: 0; border-radius: 6px; font-weight: 600; cursor: pointer; }
         .upd-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #4caf50; margin-left: 8px; vertical-align: middle; }
         #settings a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
         .lic { margin-top: 18px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--slider-bg); font-size: 12px; color: var(--text-muted); line-height: 1.55; }
@@ -710,6 +719,7 @@
     </style>
 </head>
 <body>
+    <div class="ver-banner" id="ver-banner"></div>
 
     <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
 
@@ -1227,9 +1237,12 @@
                             <button class="mc-btn" id="pb-pause" onclick="pbPause()" disabled>Pause</button>
                             <button class="mc-btn pb-stop" id="pb-stop" onclick="pbStop()" disabled>Stop</button>
                         </div>
-                        <button class="mc-btn" id="pb-new" onclick="pbNewPlan()" style="display:none; width:100%; margin-top:6px;">Plan another push</button>
                         <div class="pb-progress"><div id="pb-bar"></div></div>
                         <div class="rp-note" id="pb-msg" style="min-height:18px;"></div>
+                        <div style="margin-top:14px; padding-top:12px; border-top:1px solid var(--border); display:flex; flex-direction:column; gap:8px; font-size:13px;">
+                            <label style="display:flex; gap:8px; align-items:center; cursor:pointer;"><input type="checkbox" id="pb-truck" checked onchange="pbSaveSettings()"> Show the pushback truck</label>
+                            <div class="rp-note" id="pb-tug-note" style="margin:0;">The truck is X-Plane's own towbar tractor (GT110) with its driver.</div>
+                        </div>
                         <div class="pb-reset-row">
                             <button id="pb-reset" onclick="pbReset()" title="Back to 20 m straight, tail left 90°, 0 m final, 3 kt, Normal steering, push back">Reset settings to defaults</button>
                         </div>
@@ -1239,7 +1252,7 @@
                         <div class="rp-note">The dashed line is the path of the aircraft's nose (hidden where it passes under the aircraft or the outline); the outline shows where the aircraft ends up. The push follows a towing model: the tug steers the nose wheel (within Airbus's 90° towing limit) and the aircraft pivots about its main gear. Once you start, the plan stays on the map: the travelled part turns solid. Check the path is clear: there is no collision detection.</div>
                     </div>
                 </div>
-                <div class="rp-note" style="margin-top:10px;">As with a real tug, the push starts when you release the parking brake, and stops if you set it during the push. You can start the engines during the push. The tug model isn't shown, and X-Plane may not animate the wheels while the EFB moves the aircraft.</div>
+                <div class="rp-note" style="margin-top:10px;">As with a real tug: after Start, the tug drives up and connects its towbar to the nose wheel (about 8 s; the aircraft is held still meanwhile). Once it is connected, release the parking brake and the push starts. Setting the brake during the push stops it. You can start the engines during the push. The tug drives away after you set the parking brake at the end.</div>
             </div>
 
             <!-- 8. CHECKLIST -->
@@ -2037,10 +2050,10 @@
                     <div class="upd-row"><span>Installed version</span><b id="upd-cur">...</b></div>
                     <div class="upd-row"><span>Latest version</span><b id="upd-latest">Checking...</b></div>
                     <div class="cl-msg" id="upd-msg"></div>
+                    <div class="upd-steps" id="upd-steps" style="display:none;"></div>
                     <div class="cl-src-row">
                         <button onclick="updRefresh(true)">Check now</button>
                         <button id="upd-install" class="upd-go" onclick="updInstall()" style="display:none;">Update now</button>
-                        <button id="upd-reload" class="upd-go" onclick="location.reload()" style="display:none;">Reload page</button>
                         <button id="upd-undo" onclick="updUndo()" style="display:none;">Undo last update</button>
                     </div>
                     <details id="upd-notes-box" style="display:none;"><summary>What's new</summary><div id="upd-notes" class="upd-notes"></div></details>
@@ -2054,7 +2067,7 @@
                 <div style="line-height: 1.5; color: var(--text-muted); font-size: 13px;">
                     <p>A web-based, remote interface for the ToLiss line of aircraft in X-Plane 12.</p>
                     <p>By Soarbywire &middot; <a href="https://soarbywire.com" target="_blank" rel="noopener">soarbywire.com</a></p>
-                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.68.7 Release Beta</p>
+                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.69 Release Beta</p>
                     <p style="font-size: 11px; color: #ff9800; margin-top: 5px;"><strong>Caution:</strong> Some features may not work as intended.</p>
                     <p style="font-size: 11px; color: var(--text-dim); margin-top: 5px;">New versions are published on <a href="https://github.com/Soarbywire/toliss-efb/releases" target="_blank" rel="noopener">GitHub</a> and the X-Plane.org forums, and can be installed from <b>Updates</b> above.</p>
                     <div class="lic">
@@ -6793,7 +6806,8 @@
         // settings are kept by the plugin (config.json), so every device and every session gets the same ones
         const PB_DEFAULTS = { back: 20, turn: 90, final: 0, speed: 3, side: 'L', tight: 'normal', fwd: false };
         let pbSaveTimer = null;
-        const pbSettingsNow = () => ({ back: pbVal('back'), turn: pbVal('turn'), final: pbVal('final'), speed: pbVal('speed'), side: PB.side, tight: PB.tight, fwd: !!PB.fwd });
+        const pbSettingsNow = () => ({ back: pbVal('back'), turn: pbVal('turn'), final: pbVal('final'), speed: pbVal('speed'), side: PB.side, tight: PB.tight, fwd: !!PB.fwd,
+                                       truck: !!document.getElementById('pb-truck').checked });
         function pbSaveSettings() {
             clearTimeout(pbSaveTimer);
             pbSaveTimer = setTimeout(() => {
@@ -6805,6 +6819,7 @@
             pbSetDir(!!s.fwd, restoring);
             pbSide(s.side === 'R' ? 'R' : 'L', restoring);
             pbTight(['gentle', 'normal', 'tight'].includes(s.tight) ? s.tight : 'normal', restoring);
+            if (s.truck !== undefined) document.getElementById('pb-truck').checked = s.truck !== false;
         }
         function pbReset() {
             if (PB.st && PB.st.pushing) return;
@@ -6892,7 +6907,8 @@
             const p = pbPlanLL(PB.plan);
             PB.fixed = { nose: p.nose, endLL: p.endLL, endHdg: p.endHdg, total: p.nose.length - 1 };
         }
-        function pbNewPlan() { PB.fixed = null; PB.wasPushing = false; document.getElementById('pb-msg').textContent = ''; document.getElementById('pb-bar').style.width = '0%'; pbAskPlan(); pbPreview(); pbButtons(); }
+        // back to planning: the map shows the live plan from where the aircraft is (keepMsg keeps the last message)
+        function pbNewPlan(keepMsg) { PB.fixed = null; PB.wasPushing = false; PB.stoppedAt = undefined; if (!keepMsg) document.getElementById('pb-msg').textContent = ''; document.getElementById('pb-bar').style.width = '0%'; pbAskPlan(); pbPreview(); pbButtons(); }
         const PB_END_STYLE = { color: '#4fc3f7', weight: 2, dashArray: '4 4', fillColor: '#4fc3f7', fillOpacity: 0.12 };
         function pbPreview() {
             if (!PB.map || !PB.st) return;
@@ -6946,7 +6962,10 @@
             pbMapInit();
             if (PB.map && first) { PB.map.setView([st.lat, st.lon], 18); setTimeout(() => PB.map.invalidateSize(), 200); }
             if (PB.map) pbLoadGround(st);
-            const status = st.pushing ? (st.push_hold ? 'Holding: set the parking brake' : st.push_await_brake ? 'Tug ready: waiting for the brake' : st.push_braked ? 'Stopped: parking brake set' : st.push_paused ? 'Paused' : (st.push_forward ? 'Pulling forward' : 'Pushing back') + ` · ${st.push_kt} kt`)
+            const tugTxt = { arrive: 'driving in to the nose wheel' + (st.tug_eta != null ? ` (${st.tug_eta} s)` : ''), attached: 'connected (NWS DISC)', leave: 'driving away' }[st.tug_phase];
+            const tn = document.getElementById('pb-tug-note');
+            if (tn && tugTxt) tn.textContent = `Tug ${tugTxt}` + (st.tug_missing ? ' · the X-Plane tug model (Tug_GT110) was not found, so no truck is shown' : (st.tug_shown ? '' : ' · truck not shown'));
+            const status = st.pushing ? (st.push_hold ? 'Holding: set the parking brake' : st.push_connecting ? 'Tug connecting' + (st.tug_eta != null ? ` · ${st.tug_eta} s` : '') : st.push_await_brake ? 'Tug connected: waiting for the brake' : st.push_braked ? 'Stopped: parking brake set' : st.push_paused ? 'Paused' : (st.push_forward ? 'Pulling forward' : 'Pushing back') + ` · ${st.push_kt} kt`)
                                       : (st.on_ground ? 'On the ground' + (st.park_brake ? ' · parking brake set' : '') : 'In flight');
             document.getElementById('pb-status').textContent = status;
             document.getElementById('pb-start').disabled = !!st.pushing || !st.on_ground;
@@ -6962,7 +6981,8 @@
             document.getElementById('pb-bar').style.width = st.pushing ? Math.round(100 * (st.push_hold ? 1 : st.push_s / Math.max(1, st.push_total))) + '%' : (PB.wasPushing ? '100%' : '0%');
             const msg = document.getElementById('pb-msg');
             if (st.pushing && st.push_hold) { msg.textContent = 'Holding the aircraft in place: set the parking brake. (Release now lets go without it.)'; msg.style.color = '#ff9800'; }
-            else if (st.pushing && st.push_await_brake) { msg.textContent = 'Release the parking brake to start the push.'; msg.style.color = '#ff9800'; }
+            else if (st.pushing && st.push_connecting) { msg.textContent = 'The tug is driving up to the nose wheel. The push starts once it is connected.'; msg.style.color = ''; }
+            else if (st.pushing && st.push_await_brake) { msg.textContent = 'Tug connected: release the parking brake to start the push.'; msg.style.color = '#ff9800'; }
             else if (st.pushing && st.push_braked) { msg.textContent = 'Stopped: the parking brake was set during the push. Release it, then press Resume.'; msg.style.color = '#f44336'; }
             else if (st.pushing) { msg.textContent = `${Math.round(st.push_s)} of ${Math.round(st.push_total)} m`; msg.style.color = ''; }
             else if (PB.wasPushing && st.push_done) {
@@ -6971,6 +6991,8 @@
             }
             else if (!st.on_ground) msg.textContent = '';
             PB.wasPushing = PB.wasPushing && !st.push_done ? true : (st.pushing ? true : (PB.wasPushing && !!st.push_done));
+            if (PB.prevPushing && !st.pushing && PB.fixed) pbNewPlan(true);       // the push has finished: plan the next one
+            PB.prevPushing = !!st.pushing;
             if (st.pushing && PB.map) { PB.map.panTo([st.lat, st.lon], { animate: false }); }
             if (!st.pushing && !PB.fixed && st.on_ground && pbPlanStale(st) && !pbPlanTimer) pbAskPlan();
             pbPreview();
@@ -6997,7 +7019,7 @@
         }
         function pbStop() {
             if (PB.fixed && PB.st && PB.st.pushing && !PB.st.push_hold) PB.stoppedAt = Math.round(PB.fixed.total * (PB.st.push_s / Math.max(0.1, PB.st.push_total)));
-            fetch('/api/push/stop', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then(r => r.json()).then(pbRender); }
+            fetch('/api/push/stop', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then(r => r.json()).then(res => { pbRender(res); pbNewPlan(true); }); }
         function pbStartPage() {
             // this browser's copy first (instant), then the plugin's saved settings (shared by all devices)
             const local = {};
@@ -8039,7 +8061,6 @@
             $('upd-install').style.display = st.available && st.state !== 'installed' ? '' : 'none';
             $('upd-install').disabled = busy;
             $('upd-install').textContent = busy ? 'Installing...' : `Update to ${st.latest}`;
-            $('upd-reload').style.display = st.state === 'installed' || st.state === 'restored' ? '' : 'none';
             $('upd-undo').style.display = st.backup && st.state !== 'downloading' ? '' : 'none';
             let msg = st.message || st.error || '';
             if (!msg && st.checked_at) msg = `Last checked ${new Date(st.checked_at * 1000).toLocaleString()}.`;
@@ -8050,6 +8071,7 @@
             $('upd-notes').textContent = (st.notes || '').replace(/^#+\s*/gm, '').replace(/\*\*|__|`/g, '').replace(/^\s*[-*]\s+/gm, '• ').replace(/\r/g, '');
             clearTimeout(updTimer);
             if (busy) updTimer = setTimeout(() => updRefresh(false), 1500);
+            updVersionCheck(st);
         }
         function updRefresh(check) {
             return fetch('/api/update/status' + (check ? '?check=1' : '')).then(r => r.json()).then(updRender).catch(() => {});
@@ -8073,6 +8095,62 @@
         }
         function updSetAuto(on) { updPost('/api/update/settings', { enabled: on }).then(updRender); }
         document.addEventListener('DOMContentLoaded', () => setTimeout(() => updRefresh(false), 1500));
+        // ---- after an update: the plugin (Python) and this page must both be reloaded, in that order ----
+        // This page knows its own version; the plugin reports the version it is running. While they differ, a banner
+        // says which step is left: Reload scripts in X-Plane (the plugin is older), or reload this page (it is newer).
+        const EFB_PAGE_VERSION = '0.69';
+        const XPPY_RELOAD = 'Plugins → XPPython3 → Reload scripts';
+        function verCmp(a, b) {
+            const x = String(a || '').split('.').map(n => parseInt(n, 10) || 0), y = String(b || '').split('.').map(n => parseInt(n, 10) || 0);
+            for (let i = 0; i < Math.max(x.length, y.length); i++) { const d = (x[i] || 0) - (y[i] || 0); if (d) return d; }
+            return 0;
+        }
+        const UPDV = { plugin: null, pending: false, before: null, kind: null, timer: null };
+        function updVersionCheck(st) {
+            if (!st || !st.current) return;
+            const justDone = st.state === 'installed' || st.state === 'restored';
+            if (justDone && !UPDV.pending) { UPDV.pending = true; UPDV.before = st.current; UPDV.kind = st.state; }
+            UPDV.plugin = st.current;
+            const diff = verCmp(st.current, EFB_PAGE_VERSION);
+            // has the plugin restarted since the update or undo? (it then reports another version and no install state)
+            const pluginDone = UPDV.pending ? (!justDone && st.current !== UPDV.before) : diff > 0;
+            const banner = document.getElementById('ver-banner');
+            if (banner) {
+                let text = '', btn = '';
+                if (diff !== 0 && pluginDone) {
+                    text = `The EFB plugin is now running ${escapeHtml(st.current)}: reload this page to finish.`;
+                    btn = '<button onclick="location.reload()">Reload page</button>';
+                } else if (diff !== 0 || (UPDV.pending && !pluginDone)) {
+                    text = UPDV.pending
+                        ? `To finish the ${UPDV.kind === 'restored' ? 'undo' : 'update'}: in X-Plane, <b>${XPPY_RELOAD}</b> (or restart X-Plane), then reload this page.`
+                        : `This page is version ${EFB_PAGE_VERSION} but X-Plane is still running the EFB plugin ${escapeHtml(st.current)}. In X-Plane: <b>${XPPY_RELOAD}</b> (or restart X-Plane), then reload this page.`;
+                }
+                const key = text;
+                if (text && UPDV.dismissed !== key) {
+                    banner.innerHTML = `<span>${text}</span>${btn}<button class="ver-x" title="Hide" onclick="UPDV.dismissed=${JSON.stringify(key).replace(/"/g, '&quot;')};document.getElementById('ver-banner').style.display='none';document.body.style.paddingTop=''">✕</button>`;
+                    banner.style.display = 'flex';
+                } else banner.style.display = 'none';
+                document.body.style.paddingTop = banner.style.display === 'flex' ? banner.offsetHeight + 'px' : '';
+            }
+            // the steps in Settings → Updates
+            const box = document.getElementById('upd-steps');
+            if (box) {
+                if (UPDV.pending) {
+                    box.innerHTML = `<b>${UPDV.kind === 'restored' ? 'Previous version restored' : 'Update installed'}: two steps to finish</b>
+                        <ol><li class="${pluginDone ? 'done' : ''}">In X-Plane: <b class="menu">${XPPY_RELOAD}</b> (or restart X-Plane)${pluginDone ? ` · done, the plugin is running ${escapeHtml(st.current)}` : ''}</li>
+                        <li>Then reload this page.</li></ol>
+                        <button class="upd-go" onclick="location.reload()" ${pluginDone ? '' : 'disabled'}>${pluginDone ? 'Reload page now' : 'Waiting for Reload scripts…'}</button>`;
+                    box.style.display = '';
+                } else box.style.display = 'none';
+            }
+            // while waiting for Reload scripts, ask the plugin every few seconds (it is briefly away while it restarts)
+            clearTimeout(UPDV.timer);
+            if (UPDV.pending && !pluginDone) UPDV.timer = setTimeout(updVersionPoll, 3000);
+        }
+        function updVersionPoll() {
+            fetch('/api/update/status').then(r => r.json()).then(st => { updRender(st); }).catch(() => { clearTimeout(UPDV.timer); UPDV.timer = setTimeout(updVersionPoll, 3000); });
+        }
+        setInterval(() => { if (!UPDV.pending || UPDV.plugin !== UPDV.before) fetch('/api/update/status').then(r => r.json()).then(updVersionCheck).catch(() => {}); }, 60000);
 
         // ===== Cockpit displays (PFD, E/WD) =====
         const DSP = { es: null, last: null, lastRx: 0, hist: [], raf: null, built: false, show: safeGetStorage('toliss_dsp_show') || 'both',

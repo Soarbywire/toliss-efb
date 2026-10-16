@@ -4,8 +4,9 @@
 
 1. Copy `PI_ToLissWebTablet.py` to `X-Plane 12/Resources/plugins/PythonPlugins/`.
 2. Copy the `ToLissWebTablet` folder to the same `PythonPlugins` folder (replace the files; your settings and data in it are kept).
-3. Restart X-Plane, or use XPPython3's "Reload scripts".
-4. Check **Settings → About** shows the new version. The page is no longer cached by browsers, so a normal reload picks up updates.
+3. Restart X-Plane, or in X-Plane choose **Plugins → XPPython3 → Reload scripts**.
+4. Then reload the EFB page in your browser, and check **Settings → About** shows the new version. If only one of these two
+   steps was done, a banner at the top of the EFB says which one is left.
 
 On first start the plugin builds two indexes in the background and saves them in the plugin folder:
 `apt_index_cache.json` (airports) and `navdata_cache.pkl` (waypoints and navaids). Later starts load them in well under a second.
@@ -15,6 +16,112 @@ They rebuild automatically when your scenery or navigation data (e.g. a Navigrap
 as soon as the aircraft is positioned and finishes setting it up while paused, which needs the aircraft systems to keep running.
 
 ---
+
+## 0.69
+
+Everything since 0.68, in one update (the changes of 0.68.1 to 0.68.12). Details of each step are in CHANGELOG.md.
+
+### Pushback: a real tug, with NWS DISC
+- **X-Plane's own towbar tractor** (the GT110, with its driver) now does the push. After **Start** it drives in from
+  the side, turns to face the aircraft and creeps up until its towbar is on the nose wheel (about 8 s, with a
+  countdown). The aircraft is held still until then. Once it is connected, release the parking brake and the push
+  starts. During the push the tug faces the aircraft and swings round with the nose wheel in the turn. After you set
+  the parking brake, the towbar comes off and the tug backs off and drives away. Untick **Show the pushback truck** to
+  push without it.
+- **NWS DISC on the E/WD while the tug is connected**: the EFB tells ToLiss a tug is connected the way Better
+  Pushback does (it does not need to be installed), and the nose wheel turns with the tug. Steering goes back to
+  ToLiss when the tug disconnects, on Stop, on errors and when the plugin stops.
+- **Stop** before the tug has connected cancels the push. After Stop, and when a push has finished, the page goes
+  straight back to planning from where the aircraft is (no "Plan another push" button).
+
+### Weight & Balance and the Ops Centre: CG on the load sheet
+- **The final load sheet shows the CG in % MAC**, as on a real Airbus load sheet: `MACZFW 27.4  MACTOW 28.9  MACLAW 26.1`.
+  MACTOW is ToLiss's own CG; MACZFW (for INIT B / FUEL PRED) is learned for each aircraft type from how ToLiss's CG
+  moves when the fuel changes, and is marked EST until it is confirmed; MACLAW is the landing CG after the planned
+  taxi and trip fuel is burnt. **Weight & Balance** shows the live CG and the ZFW CG.
+- **The final load sheet comes when boarding is done** (the doors have been opened and closed again and the payload
+  has not changed for a minute), or at beacon on as before if you choose.
+- **Last-minute changes** after the final load sheet: an **LMC** message for 100 kg or more, a **revised final load
+  sheet** for 500 kg or more.
+- **The aircraft callsign comes from your SimBrief plan**, with no need to connect again.
+- If the CG cannot be read, the load sheet is sent without it and the X-Plane log and Weight & Balance say why.
+
+### VATSIM and ATC
+- **Pilots on the VATSIM map:** the panel updates live, shows the **flight level** above about 10,000 ft (worked out
+  from true altitude and QNH), a climb or descent arrow with the rate, ground speed and the filed level and TAS.
+- **Nearby ATC works again:** COM1 / COM2 set the frequency, a green dot shows stations in radio range, each row shows
+  the station type, controller and ATIS text.
+- **Airport frequencies:** the green dot lights only for a controller or ATIS of that airport.
+- The observer and ATC counts are right again.
+
+### A manual, built in
+- **📖 Manual** at the bottom of the sidebar (also at `http://<EFB address>/manual`): installation and updating, a
+  flight start to finish, every page, the Ops Centre, VATSIM, settings and troubleshooting.
+
+### Updating: a reminder to finish
+- After an update (or **Undo last update**) in **Settings → Updates**, two steps are shown: in X-Plane,
+  **Plugins → XPPython3 → Reload scripts** (or restart X-Plane), then reload the EFB page. The page waits until the
+  plugin has restarted on the new version, then offers **Reload page now**.
+- Every page now compares its own version with the plugin's. If they differ (for example after a manual install with
+  only one of the two steps done), a banner at the top says which step is left.
+
+### Fixes
+- **Slew: Climb works from the ground**, and descending to the lowest slew height puts the aircraft back on its wheels.
+- **Cockpit Displays: the FCU and EFIS buttons work** (AP1, AP2, A/THR, LOC, APPR, EXPED, FD and LS), lit from
+  ToLiss's own state.
+- **Secure connections on Macs:** when the computer's own certificates are rejected, the EFB also uses the operating
+  system's certificate file (on a Mac `/etc/ssl/cert.pem`). Updating from older versions uses the same fallback.
+
+---
+
+## 0.68.12
+
+### Pushback: starts when you release the parking brake again
+- With the tug connected (NWS DISC), releasing the parking brake did not start the push: the EFB also looked at
+  X-Plane's own parking brake value, which ToLiss holds on while a tug is connected. The EFB now goes by the ToLiss
+  parking brake switch (X-Plane's value only for aircraft without it). Log.txt notes each brake change during a push
+  with both values.
+
+## 0.68.11
+
+### Pushback: X-Plane's towbar tractor, with its towbar
+- **The truck is X-Plane's own GT110 towbar tractor** (`Dynamic_Vehicles/Tug_GT110.obj`) with its driver. Its
+  towbar is part of the model, and X-Plane only shows it when told to: the EFB now drives the model's animations
+  (engine running, towbar shown once connected, wheels turning and steering).
+- **It works like a towbar tug**: it drives in from the side, turns to face the aircraft and creeps up until the
+  towbar is on the nose wheel (about 8 s). During the push it faces the aircraft and swings round with the nose
+  wheel in the turn. After the parking brake is set, the towbar goes, the tug backs off and drives away.
+- **Towbar fit** (Closer / Further 0.5 m) replaces Truck model and Truck fit, in case the towbar tip does not sit on
+  the nose wheel.
+- Everything from 0.68.10 stays: the tug connects before anything moves, the aircraft is held still meanwhile, and the
+  push starts when you release the parking brake.
+
+## 0.68.10
+
+### Pushback: the right truck, and the tug connects first
+- **Truck model**: the EFB lists the tug models in your X-Plane scenery (default and custom scenery libraries, and the
+  default scenery's vehicles) and **Automatic** picks the one most likely to be a pushback tug. 0.68.9 could pick a
+  baggage tractor (Tug_GT110). Choose another under **Truck model** on the Pushback page; **Truck fit** is kept for
+  each model. The models found are listed in X-Plane's Log.txt ("pushback truck models found").
+- **The tug connects before anything moves**: after Start the tug drives up (about 10 s, down from about 22 s) and
+  the aircraft is held still. Once it is connected (NWS DISC), release the parking brake and the push starts. If the
+  brake was already released, the push starts 2 s after the tug connects. The page counts down while it drives up.
+- **Stop while the tug is still driving up** cancels the push.
+
+## 0.68.9
+
+### Pushback: a tug you can see, and NWS DISC
+- **The tug**: X-Plane's own pushback tug drives in from the side, swings round in front of the aircraft and reverses
+  onto the nose wheel. The push starts once it has the nose wheel. It turns with the nose wheel during the push, stays
+  through the hold for the parking brake, then backs off and drives away. If your scenery library has no tug, the push
+  runs without one (the page says so). Untick **Show the pushback truck** to push without it.
+- **Truck fit**: if the tug sits back to front, or too far forward or back on the nose wheel, use **Turn 180°** and
+  **Forward / Back 0.5 m** on the Pushback page; the setting is kept.
+- **NWS DISC on the E/WD while the tug is connected**: the EFB tells ToLiss a tug is connected the way Better
+  Pushback does (it does not need to be installed). The nose wheel also turns with the tug; steering goes back to
+  ToLiss when the tug disconnects, on Stop, on errors and when the plugin stops.
+- **No more "Plan another push"**: after Stop, and when a push has finished, the page goes straight back to planning
+  from where the aircraft is.
 
 ## 0.68.7
 

@@ -14,16 +14,18 @@ Releases are published by a GitHub Actions workflow in this repository. The EFB'
 
 ## Each release (e.g. 0.68)
 
-1. Set the version in three places:
+1. Set the version in these places:
    - `ToLissWebTablet/__init__.py`: `EFB_VERSION = "0.68"`
    - `PI_ToLissWebTablet.py`: `STUB_VERSION = "0.68"`
    - `ToLissWebTablet/index.html`: `Version: 0.68 Release Beta`
+   - `ToLissWebTablet/index.html`: `const EFB_PAGE_VERSION = '0.68';` (from 0.69; the page compares it with the plugin's
+     version to remind users to reload)
 2. Add a `## 0.68` section at the top of `CHANGELOG.md`. Its text becomes the release notes users see.
 3. Upload the changed files to the repository (they replace the old ones).
 4. Open the **Actions** tab → **Publish release** → **Run workflow**, type `0.68`, and press **Run workflow**.
 
 After about a minute the release `v0.68` appears under **Releases**, with the zip and its `.sha256` checksum
-attached. The workflow stops without publishing if the version numbers in the three places don't match what you
+attached. The workflow stops without publishing if the version numbers in those places don't match what you
 typed, if a Python file has an error, if a package file is missing, if `CHANGELOG.md` has no section for it, or if that version was already published.
 
 Optionally post the same zip on the X-Plane.org forum.

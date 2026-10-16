@@ -93,6 +93,12 @@ def handle_post(req, plugin):
                     clean["tight"] = s["tight"]
                 if "fwd" in s:
                     clean["fwd"] = bool(s["fwd"])
+                # the truck options: kept unless given
+                old = plugin.config.get("push_settings") or {}
+                for k in ("truck",):
+                    v = s.get(k, old.get(k))
+                    if isinstance(v, bool):
+                        clean[k] = v
                 plugin.config["push_settings"] = clean
             plugin.save_config(plugin.config)
             req.send_response(200)
