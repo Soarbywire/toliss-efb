@@ -953,6 +953,16 @@ class OpsCentre:
         return "\n".join(lines)
 
     def msg_atis(self, icao, arrival=False):
+        """The ATIS the weather strip shows: a VATSIM controller's with real weather, else the EFB's own ATIS built
+        from the weather (the METAR with real weather, X-Plane's custom weather otherwise)."""
+        wxbar = getattr(self.plugin, "wxbar", None)
+        if wxbar is not None and icao:
+            letter, text, source = wxbar.atis_for(icao, arrival)
+            if letter:
+                title = f"{icao} ATIS {letter}" if source == "vatsim" else f"{icao} EFB ATIS {letter}"
+                if source != "vatsim":
+                    text = text.rstrip(".").replace(". ", "\n")        # one item per line on the MCDU
+                return letter, "\n".join([title] + ops_wrap(text))
         letter, text = self._atis(icao, arrival)
         if not letter and not text:
             return None, None

@@ -17,6 +17,24 @@ as soon as the aircraft is positioned and finishes setting it up while paused, w
 
 ---
 
+## 0.69.3
+
+### Weather strip: X-Plane's weather when it is custom, and an ATIS offline
+- **Real weather** (X-Plane downloading real weather): the strip uses the METAR, for both airports (tag METAR). Near
+  the airport, if X-Plane is still blending in a new report and its wind or QNH differs noticeably, the panel says
+  what X-Plane is simulating.
+- **Custom weather** (manual, or injected by another tool): the strip uses **X-Plane's own weather** for both
+  airports (tag SIM): the surface wind and gusts, QNH, visibility, cloud and temperature (corrected for each airport's
+  elevation). It is what you will fly in. The real METAR stays in the panel for reference.
+- **EFB ATIS**: when there is no VATSIM ATIS (offline), or the weather is custom, the EFB builds its own ATIS from the
+  same weather: information letter, time, runway in use, wind, visibility, cloud, temperature and QNH. The letter moves
+  on like a real ATIS: with each new METAR (real weather), when the custom weather changes enough to matter (wind,
+  QNH or conditions), or when the runway in use changes, so **ATIS NEW** works offline too.
+- **Runway in use**: the VATSIM ATIS's (real weather), otherwise your planned runway while its tailwind is 5 kt or
+  less, else the runway most into wind; an alert says when it differs from your plan.
+- **Ops Centre**: the ATIS message to the MCDU uses the EFB ATIS when there is no VATSIM ATIS (or the weather is
+  custom), and is sent again when its letter changes.
+
 ## 0.69.2
 
 ### Weather strip (new)

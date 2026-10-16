@@ -2099,7 +2099,7 @@
                 <div style="line-height: 1.5; color: var(--text-muted); font-size: 13px;">
                     <p>A web-based, remote interface for the ToLiss line of aircraft in X-Plane 12.</p>
                     <p>By Soarbywire &middot; <a href="https://soarbywire.com" target="_blank" rel="noopener">soarbywire.com</a></p>
-                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.69.2 Release Beta</p>
+                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.69.3 Release Beta</p>
                     <p style="font-size: 11px; color: #ff9800; margin-top: 5px;"><strong>Caution:</strong> Some features may not work as intended.</p>
                     <p style="font-size: 11px; color: var(--text-dim); margin-top: 5px;">New versions are published on <a href="https://github.com/Soarbywire/toliss-efb/releases" target="_blank" rel="noopener">GitHub</a> and the X-Plane.org forums, and can be installed from <b>Updates</b> above.</p>
                     <div class="lic">
@@ -7521,18 +7521,19 @@
             const compact = document.getElementById('taxi-global').style.display !== 'none';      // a taxi route: keep it short
             const role = { dep: 'DEP', arr: 'ARR', here: '' }[d.role] || '';
             const parts = [];
-            if (d.atis && d.atis.letter) parts.push(`ATIS ${esc(d.atis.letter)}`);
+            if (d.atis && d.atis.letter) parts.push(`ATIS ${esc(d.atis.letter)}${d.atis.source === 'efb' ? ' <span class="muted">EFB</span>' : ''}`);
             if (!compact && d.runway) parts.push(`RWY ${esc(d.runway)}${d.runway_src === 'wind' ? '<span class="muted">?</span>' : ''}`);
             if (w.wind_spd != null) parts.push(esc(wxFmtWind(w)));
             if (!compact && d.components) parts.push(esc(wxFmtComp(d.components)));
             if (!compact && w.qnh != null) parts.push(esc(wxFmtQnh(w)));
             if (!compact && wxFmtVis(w)) parts.push(esc(wxFmtVis(w)));
             if (!compact && w.temp != null) parts.push(`${w.temp}°`);
-            if (!d.metar) parts.push('<span class="muted">no METAR yet</span>');
+            if (!d.wx) parts.push('<span class="muted">no weather yet</span>');
             const badges = (isNew ? `<span class="wx-badge new">ATIS ${esc(d.atis.letter)} NEW</span>` : '') +
                 alerts.map(a => `<span class="wx-badge ${a.level}">${esc(a.text)}</span>`).join('');
-            s.innerHTML = `<span class="dot ${esc(d.category || '')}" title="${esc(d.category || 'no METAR')}"></span><span class="apt">${esc(d.icao)}</span>` +
-                (role ? `<span class="role">${role}</span>` : '') + badges + parts.join('<span class="sep">·</span>');
+            const srcTag = d.wx_src ? `<span class="role" title="${d.wx_src === 'sim' ? "X-Plane's weather" : 'The real-world METAR'}">${d.wx_src === 'sim' ? 'SIM' : 'METAR'}</span>` : '';
+            s.innerHTML = `<span class="dot ${esc(d.category || '')}" title="${esc(d.category || 'no weather')}"></span><span class="apt">${esc(d.icao)}</span>` +
+                (role ? `<span class="role">${role}</span>` : '') + srcTag + badges + parts.join('<span class="sep">·</span>');
             s.style.display = 'flex';
             if (WX.open) wxPanelRender();
         }
@@ -7549,25 +7550,37 @@
             if (!d) { p.innerHTML = '<span class="x" onclick="wxTogglePanel(false)">✕</span>Loading weather…'; return; }
             const btn = (icao, label) => icao ? `<button class="${d.icao === icao ? 'active' : ''}" onclick="event.stopPropagation(); wxChoose('${esc(icao)}')">${label} ${esc(icao)}</button>` : '';
             const age = d.metar_age_s != null ? ` <span class="note" style="display:inline">(checked ${Math.max(0, Math.round(d.metar_age_s / 60))} min ago)</span>` : '';
+            const w = d.wx || {};
+            const summary = x => [wxFmtWind(x), wxFmtQnh(x), wxFmtVis(x), (x.clouds || []).join(' '), x.temp != null ? x.temp + '°' : ''].filter(Boolean).join(' · ');
+            let wxs = '';
+            if (d.wx_src === 'sim') {
+                wxs = `<h4>X-Plane's weather at ${esc(d.icao)}</h4><pre>${esc(summary(w) || '—')}</pre>
+                       <div class="note">${d.sim_real_wx ? 'No METAR yet, so this is what X-Plane is simulating.' : 'X-Plane\'s weather is set manually (or by another tool), so the strip and the EFB ATIS use it: it is what you will fly in.'}</div>`;
+            }
+            const metarHead = d.wx_src === 'sim' && !d.sim_real_wx ? 'Real-world METAR (for reference: not what X-Plane is simulating)' : 'METAR';
+            const metar = `<h4>${metarHead}</h4>${d.metar ? `<pre>${esc(d.metar)}</pre>${age}` : '<div class="note">No METAR available.</div>'}` +
+                (d.sim_note ? `<div class="note">X-Plane is simulating ${esc(summary(d.sim_note))} here at the moment (it blends new reports in gradually).</div>` : '');
             const c = d.components;
             let comp = '';
             if (d.runway) {
-                const src = { atis: 'from the ATIS', ofp: 'planned in your SimBrief OFP', wind: 'estimate: the runway most into wind' }[d.runway_src] || '';
+                const src = { atis: 'from the VATSIM ATIS', ofp: 'planned in your SimBrief OFP; the wind suits it', wind: d.planned_rwy ? `the most into wind (your planned RWY ${esc(d.planned_rwy)} would have too much tailwind or crosswind)` : 'the most into wind' }[d.runway_src] || '';
                 comp = `<h4>Runway ${esc(d.runway)} <span style="text-transform:none">· ${src}</span></h4>`;
                 if (c && !c.vrb) comp += `<div>${c.hw >= 0 ? 'Headwind' : 'Tailwind'} ${Math.abs(c.hw)} kt, crosswind ${c.xw} kt${c.xw ? ' from the ' + (c.xw_side === 'L' ? 'left' : 'right') : ''}` +
                     (c.xw_g != null ? `; in the gusts ${c.hw_g >= 0 ? 'headwind' : 'tailwind'} ${Math.abs(c.hw_g)} kt, crosswind ${c.xw_g} kt` : '') + '</div>';
                 else if (c && c.vrb) comp += '<div>Variable wind: no components.</div>';
-                if (d.planned_rwy && d.runway_src === 'atis' && d.planned_rwy !== d.runway) comp += `<div class="note">Your OFP planned RWY ${esc(d.planned_rwy)}.</div>`;
             }
-            const atis = d.atis ? `<h4>ATIS ${esc(d.atis.letter || '')} (VATSIM)</h4><pre>${esc(d.atis.text || '')}</pre>` : `<h4>ATIS</h4><div class="note">No ATIS online on VATSIM.</div>`;
+            let atis;
+            if (d.atis && d.atis.source === 'vatsim') atis = `<h4>ATIS ${esc(d.atis.letter || '')} (VATSIM)</h4><pre>${esc(d.atis.text || '')}</pre>`;
+            else if (d.atis) atis = `<h4>EFB ATIS ${esc(d.atis.letter || '')}</h4><pre>${esc(d.atis.text || '')}</pre>
+                <div class="note">Built by the EFB from ${d.wx_src === 'sim' ? "X-Plane's weather" : 'the METAR'}${d.vatsim_atis ? '' : ' (no VATSIM ATIS online)'}. Its letter moves on ${d.wx_src === 'sim' ? 'when the weather changes enough to matter' : 'with each new METAR'} or the runway in use changes.</div>`;
+            else atis = `<h4>ATIS</h4><div class="note">No ATIS: no weather for this airport yet.</div>`;
+            if (d.vatsim_atis) atis += `<h4>VATSIM ATIS ${esc(d.vatsim_atis.letter || '')} (real-world weather: does not match your custom weather)</h4><pre>${esc(d.vatsim_atis.text || '')}</pre>`;
             p.innerHTML = `<span class="x" onclick="wxTogglePanel(false)">✕</span>
                 <div class="row">${btn(d.orig, 'Departure')}${btn(d.dest, 'Destination')}${d.role === 'here' ? `<button class="active">${esc(d.icao)}</button>` : ''}
                     ${WX.icao ? `<button onclick="event.stopPropagation(); wxChoose(null)">Automatic</button>` : ''}</div>
-                <h4>METAR</h4>${d.metar ? `<pre>${esc(d.metar)}</pre>${age}` : '<div class="note">No METAR available yet.</div>'}
-                ${comp}${atis}
+                ${wxs}${comp}${atis}${metar}
                 <h4>TAF</h4>${d.taf ? `<pre>${esc(d.taf)}</pre>` : '<div class="note">No TAF available.</div>'}
-                ${d.sim_manual_wx ? '<div class="note">X-Plane\'s weather is set manually, so the sim may not match this real-world weather.</div>' : ''}
-                <div class="note">The strip shows the departure airport on the ground and while climbing out, then the destination; tap Departure or Destination to look at the other. Alerts: crosswind from ${20} kt, tailwind over 5 kt, thunderstorms, wind shear, freezing precipitation, snow, CB, conditions below CAT I, and an ATIS runway that differs from your plan. Advisory only: ATC and your own checks come first.
+                <div class="note">With real weather the strip uses the METAR; with custom weather it uses X-Plane's own weather, for both airports. The strip shows the departure airport on the ground and while climbing out, then the destination. Alerts: crosswind from 20 kt, tailwind over 5 kt, thunderstorms, wind shear, freezing precipitation, snow, CB, conditions below CAT I, and a runway in use that differs from your plan. Advisory only: ATC and your own checks come first.
                 Show it: <select onchange="wxSetMode(this.value)" onclick="event.stopPropagation()" style="min-height:28px; margin:0 0 0 4px; width:auto; display:inline-block; padding:2px 8px;">
                     <option value="always" ${WX.mode === 'always' ? 'selected' : ''}>Always</option><option value="alerts" ${WX.mode === 'alerts' ? 'selected' : ''}>Only with an alert</option><option value="off" ${WX.mode === 'off' ? 'selected' : ''}>Off</option></select></div>`;
         }
@@ -8256,7 +8269,7 @@
         // ---- after an update: the plugin (Python) and this page must both be reloaded, in that order ----
         // This page knows its own version; the plugin reports the version it is running. While they differ, a banner
         // says which step is left: Reload scripts in X-Plane (the plugin is older), or reload this page (it is newer).
-        const EFB_PAGE_VERSION = '0.69.2';
+        const EFB_PAGE_VERSION = '0.69.3';
         const XPPY_RELOAD = 'Plugins → XPPython3 → Reload scripts';
         function verCmp(a, b) {
             const x = String(a || '').split('.').map(n => parseInt(n, 10) || 0), y = String(b || '').split('.').map(n => parseInt(n, 10) || 0);
