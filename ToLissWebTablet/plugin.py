@@ -31,6 +31,7 @@ from .features.traffic import TrafficMixin
 from .services.airports import AirportMixin
 from .services.navdata import NavDatabase
 from .services.ops import OpsCentre
+from .services.wxbar import WxBar
 from .services.updater import Updater
 from .services.vatsim import VatsimService
 from .sim.datarefs import DataRefMixin
@@ -99,6 +100,7 @@ class PythonInterface(
         self.fdr = FlightRecorder(self)
         self.updater = Updater(self)
         self.ops = OpsCentre(self)
+        self.wxbar = WxBar(self)
         from .services.cg import CgTracker
         self.cg = CgTracker(self)
         threading.Thread(target=self.cg.run, args=(self.stop_event,), name="ToLissEFB-CG", daemon=True).start()

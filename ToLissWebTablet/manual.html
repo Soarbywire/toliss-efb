@@ -160,7 +160,7 @@ dl.defs dd { margin: 0; }
     <p class="sub">The browser-based electronic flight bag for the ToLiss Airbus family in X-Plane 12: dispatch, ground handling, moving map, cockpit displays, instructor station and your own airline operations centre.</p>
   </div>
   <div class="docid" aria-label="Document information">
-    <div><span class="k">Software</span><b>ToLiss EFB 0.69</b></div>
+    <div><span class="k">Software</span><b>ToLiss EFB 0.69.2</b></div>
     <div><span class="k">Aircraft</span><b>ToLiss A319 · A320 · A321 · A330 · A340</b></div>
     <div><span class="k">Simulator</span><b>X-Plane 12 + XPPython3</b></div>
     <div><span class="k">Source</span><b>github.com/Soarbywire/toliss-efb</b></div>
@@ -177,7 +177,7 @@ dl.defs dd { margin: 0; }
       <li><a href="#preflight">Preflight</a>
         <ol><li><a href="#dispatch">Dispatch &amp; OFP</a></li><li><a href="#wb">Weight &amp; Balance</a></li><li><a href="#ground">Ground Services</a></li><li><a href="#pushback">Pushback</a></li></ol></li>
       <li><a href="#flight">Flight pages</a>
-        <ol><li><a href="#map">Map &amp; Telemetry</a></li><li><a href="#taxi">Taxi routing</a></li><li><a href="#mcdu">MCDU &amp; Checklist</a></li><li><a href="#displays">Cockpit Displays</a></li><li><a href="#fdr">Flight Recorder</a></li></ol></li>
+        <ol><li><a href="#map">Map &amp; Telemetry</a></li><li><a href="#taxi">Taxi routing</a></li><li><a href="#wxstrip">Weather strip</a></li><li><a href="#mcdu">MCDU &amp; Checklist</a></li><li><a href="#displays">Cockpit Displays</a></li><li><a href="#fdr">Flight Recorder</a></li></ol></li>
       <li><a href="#ios">Instructor station (IOS)</a>
         <ol><li><a href="#state">Aircraft State</a></li><li><a href="#slew">Slew</a></li><li><a href="#repo">Reposition &amp; approaches</a></li><li><a href="#wx">Weather &amp; Time</a></li><li><a href="#tcas">TCAS Traffic</a></li><li><a href="#replay">Replay</a></li><li><a href="#fail">Malfunctions</a></li></ol></li>
       <li><a href="#ops">Operations Centre</a>
@@ -329,6 +329,19 @@ dl.defs dd { margin: 0; }
         <dt>After landing</dt><dd>Optional tickbox: the route to the Ops Centre's stand, or the one you chose.</dd>
       </dl>
       <div class="note"><b>Note</b>Routing needs an airport whose scenery includes a taxi network. Directions are advisory: ATC and your clearance come first.</div>
+
+      <h3 id="wxstrip">Weather strip</h3>
+      <p class="where">Under the top bar, on every page</p>
+      <p>One line with the weather of the airport that matters now: the departure airport on the ground and while climbing out (within 40 nm), then your destination; on the ground anywhere else, the airport you are at. For example: <code>YSSY DEP · ATIS K · RWY 16R · 190/18G28 · HW 15 XW 9R · Q1012 · 10KM+ CIG 4500 · 22°</code>.</p>
+      <ul>
+        <li><b>The coloured dot</b> is the conditions: green VMC, blue marginal, red IFR, magenta low IFR.</li>
+        <li><b>The runway</b> is the one the ATIS names (your planned one if the ATIS names it too), else the OFP's; a <code>?</code> marks an estimate (the runway most into wind). The wind is split into headwind or tailwind (HW/TW) and crosswind (XW) for that runway.</li>
+        <li><b>Alerts</b> appear only when something matters: <span class="ui">ATIS L NEW</span> when the ATIS letter changes (until you open the strip), crosswind from 20 kt, tailwind over 5 kt, thunderstorm, wind shear, hail, freezing precipitation, snow, CB, conditions below CAT I, and an ATIS runway that differs from your plan.</li>
+        <li><b>Tap the strip</b> for the full METAR (with its age), the runway and wind components including the gusts, the ATIS text and the TAF. <span class="ui">Departure</span> and <span class="ui">Destination</span> switch airports; <span class="ui">Automatic</span> goes back to the one that matters now.</li>
+        <li>Beside a taxi route the strip shortens to the ATIS letter and wind.</li>
+        <li>Show it <span class="ui">Always</span>, <span class="ui">Only with an alert</span> or <span class="ui">Off</span>: in the strip's panel or in <span class="ui">Settings → Weather strip</span> (kept on each device).</li>
+      </ul>
+      <div class="note"><b>Note</b>The METAR and ATIS come from VATSIM, the TAF from aviationweather.gov (or your OFP). If X-Plane's weather is set manually, the panel says so: the sim may then differ from this real-world weather. Advisory only.</div>
 
       <h3 id="mcdu">MCDU and Airbus Checklist</h3>
       <p>A live MCDU in Airbus colours with a keypad laid out like the real unit. Your computer keyboard types into the scratchpad as well. The <span class="ui">Airbus Checklist</span> reads your aircraft's ToLiss checklist, or one you upload in the same XML format.</p>
@@ -533,7 +546,7 @@ PLEASE ACKNOWLEDGE</div>
 </div>
 
 <footer class="foot">
-  <span>ToLiss EFB 0.69 · Free for personal, non-commercial use</span>
+  <span>ToLiss EFB 0.69.2 · Free for personal, non-commercial use</span>
   <span>Not for real-world navigation or flight operations</span>
 </footer>
 

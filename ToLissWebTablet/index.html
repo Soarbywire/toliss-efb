@@ -695,6 +695,25 @@
         .taxi-strip.hold { border-color: #f44336; } .taxi-strip.hold .next { color: #ff5252; }
         .taxi-strip.off { border-color: #ff9800; }
         .taxi-strip .x { position: absolute; right: 6px; top: 4px; cursor: pointer; color: #aaa; font-size: 14px; }
+        .wx-strip { display: flex; align-items: center; gap: 8px; background: var(--panel); border-bottom: 1px solid var(--border); padding: 4px 15px;
+                    font: 600 13px var(--font-mono); color: var(--text-main); cursor: pointer; white-space: nowrap; overflow-x: auto; scrollbar-width: none; flex-shrink: 0; }
+        .wx-strip::-webkit-scrollbar { display: none; }
+        .wx-strip .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; background: #888; }
+        .wx-strip .dot.VMC { background: #4caf50; } .wx-strip .dot.MVFR { background: #2196f3; } .wx-strip .dot.IFR { background: #f44336; } .wx-strip .dot.LIFR { background: #e040fb; }
+        .wx-strip .apt { color: var(--accent); } .wx-strip .role { font: 600 10px var(--font-ui); color: var(--text-dim); border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; }
+        .wx-strip .sep { color: var(--text-dim); font-weight: 400; }
+        .wx-strip .muted { color: var(--text-dim); font-weight: 400; }
+        .wx-badge { font: bold 11px var(--font-ui); border-radius: 4px; padding: 2px 6px; flex-shrink: 0; letter-spacing: 0.3px; }
+        .wx-badge.amber { background: #ff9800; color: #111; } .wx-badge.red { background: #e53935; color: #fff; } .wx-badge.new { background: #00bcd4; color: #111; }
+        .wx-panel { position: absolute; left: 0; right: 0; z-index: 1500; background: var(--panel); border-bottom: 2px solid var(--accent); box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+                    padding: 12px 16px; max-height: 70vh; overflow-y: auto; font-size: 13px; color: var(--text-main); }
+        .wx-panel h4 { margin: 10px 0 4px 0; font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+        .wx-panel pre { white-space: pre-wrap; word-break: break-word; margin: 0; font: 13px/1.45 var(--font-mono); background: var(--input-bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px; }
+        .wx-panel .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+        .wx-panel .row button { margin: 0; min-height: 32px; padding: 0 10px; font-size: 12px; }
+        .wx-panel .row button.active { background: var(--accent); color: #fff; }
+        .wx-panel .note { color: var(--text-dim); font-size: 12px; margin-top: 6px; line-height: 1.4; }
+        .wx-panel .x { float: right; cursor: pointer; color: var(--text-dim); font-size: 18px; line-height: 1; }
         .taxi-global { display: flex; align-items: center; gap: 10px; background: #2a1030; border-bottom: 2px solid #e040fb; color: #fff; padding: 5px 15px; font: bold 14px var(--font-mono); cursor: pointer; }
         .taxi-global.hold { background: #3a0f0f; border-color: #f44336; color: #ff8a80; }
         .taxi-global span.lbl { color: #e040fb; font-family: var(--font-ui); font-size: 12px; }
@@ -791,6 +810,8 @@
         </div>
 
         <div class="taxi-global" id="taxi-global" style="display:none;" onclick="switchTab('telemetry')"></div>
+        <div class="wx-strip" id="wx-strip" style="display:none;" onclick="wxTogglePanel()" title="Weather: tap for the METAR, ATIS and TAF"></div>
+        <div style="position:relative; flex-shrink:0;"><div class="wx-panel" id="wx-panel" style="display:none;"></div></div>
         <div class="content-area">
 
             <!-- TOLISS PRO SITUATIONS -->
@@ -2034,6 +2055,17 @@
 
                 <hr style="border: 0; border-top: 1px solid var(--border); margin: 30px 0 25px 0;">
 
+                <h3>Weather strip</h3>
+                <div class="toggle-row">
+                    <div style="flex-grow: 1;">
+                        <label for="wx-mode" style="display: block; font-size: 15px; color: var(--text-main); font-weight: 500;">Weather under the top bar</label>
+                        <span style="font-size: 12px; color: var(--text-dim);">The departure or destination weather on every page: ATIS letter, runway, wind components, QNH, alerts. Kept on this device.</span>
+                    </div>
+                    <select id="wx-mode" onchange="wxSetMode(this.value)" style="min-height:36px; margin:0; width:auto; flex-shrink:0;">
+                        <option value="always">Always</option><option value="alerts">Only with an alert</option><option value="off">Off</option>
+                    </select>
+                </div>
+
                 <h3>External Tools</h3>
                 <div class="toggle-row">
                     <div style="flex-grow: 1;">
@@ -2067,7 +2099,7 @@
                 <div style="line-height: 1.5; color: var(--text-muted); font-size: 13px;">
                     <p>A web-based, remote interface for the ToLiss line of aircraft in X-Plane 12.</p>
                     <p>By Soarbywire &middot; <a href="https://soarbywire.com" target="_blank" rel="noopener">soarbywire.com</a></p>
-                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.69 Release Beta</p>
+                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.69.2 Release Beta</p>
                     <p style="font-size: 11px; color: #ff9800; margin-top: 5px;"><strong>Caution:</strong> Some features may not work as intended.</p>
                     <p style="font-size: 11px; color: var(--text-dim); margin-top: 5px;">New versions are published on <a href="https://github.com/Soarbywire/toliss-efb/releases" target="_blank" rel="noopener">GitHub</a> and the X-Plane.org forums, and can be installed from <b>Updates</b> above.</p>
                     <div class="lic">
@@ -2712,7 +2744,32 @@
 
         let map = null;
         let planeMarker = null;
-        let flightPath = null;
+        let flightPath = null, flightPathGroup = null, flightPathLast = null;
+        const FLIGHT_PATH_STYLE = {color: '#4da6ff', weight: 4, opacity: 0.8, interactive: false};
+        // The track behind the aircraft. A jump (reposition, slew placement, replay, a new flight) is not flown, so it
+        // starts a new piece of line instead of drawing a straight line across the map from the old position.
+        function flightPathAdd(ll) {
+            if (!flightPathGroup) return;
+            const now = Date.now();
+            if (flightPathLast && flightPath) {
+                const d = map.distance(flightPathLast.ll, ll), dt = Math.max(0.25, (now - flightPathLast.t) / 1000);
+                if (d / dt > 400 || d > 50000) {                 // faster than about 780 kt, or more than 50 km at once
+                    flightPath = null;
+                }
+            }
+            if (!flightPath) {
+                flightPath = L.polyline([], FLIGHT_PATH_STYLE).addTo(flightPathGroup);
+                const pieces = flightPathGroup.getLayers();
+                if (pieces.length > 20) flightPathGroup.removeLayer(pieces[0]);
+            }
+            flightPath.addLatLng(ll);
+            if (flightPath.getLatLngs().length > 2000) {
+                const pts = flightPath.getLatLngs();
+                pts.shift();
+                flightPath.setLatLngs(pts);
+            }
+            flightPathLast = { ll, t: now };
+        }
         let localAirportsLayer = null;
         let xpTrafficLayer = null;
         
@@ -3233,7 +3290,7 @@
             if (safeGetStorage('toliss_map_tall') === 'true') { document.getElementById('map-tall').checked = true; document.getElementById('map-outer').classList.add('tall'); }
             if (safeGetStorage('toliss_map_hdgup') === 'true') { document.getElementById('map-hdgup').checked = true; setMapHeadingUp(true); }
             
-            flightPath = L.polyline([], {color: '#4da6ff', weight: 4, opacity: 0.8}).addTo(map);
+            flightPathGroup = L.layerGroup().addTo(map);
             xpTrafficLayer = L.layerGroup().addTo(map);
             localAirportsLayer = L.layerGroup().addTo(map);
 
@@ -5941,14 +5998,7 @@
                                 gmUpdateRotation();
                             }
                             
-                            if (flightPath) {
-                                flightPath.addLatLng(newLatLng);
-                                if (flightPath.getLatLngs().length > 2000) {
-                                    let currentPts = flightPath.getLatLngs();
-                                    currentPts.shift();
-                                    flightPath.setLatLngs(currentPts);
-                                }
-                            }
+                            flightPathAdd(newLatLng);
 
                             if (xpTrafficLayer) {
                                 xpTrafficLayer.clearLayers();
@@ -7409,11 +7459,119 @@
         function taxiGlobal(text, hold) {
             const g = document.getElementById('taxi-global');
             const onMap = document.getElementById('telemetry').classList.contains('active');
-            if (onMap || !TAXI.route) { g.style.display = 'none'; return; }
-            g.innerHTML = `<span class="lbl">TAXI</span>${esc(text)}`;
-            g.className = 'taxi-global' + (hold ? ' hold' : '');
-            g.style.display = '';
+            const was = g.style.display;
+            if (onMap || !TAXI.route) { g.style.display = 'none'; }
+            else {
+                g.innerHTML = `<span class="lbl">TAXI</span>${esc(text)}`;
+                g.className = 'taxi-global' + (hold ? ' hold' : '');
+                g.style.display = '';
+            }
+            if (was !== g.style.display && typeof wxRender === 'function') wxRender();     // the weather strip shortens beside a taxi route
         }
+
+        // ===== Weather strip: the airport that matters now, on every page =====
+        // The plugin picks the airport (departure on the ground and climbing out, then the destination) and works out the
+        // runway, the wind components and the alerts; the page shows one line and, on tap, the METAR, ATIS and TAF.
+        const WX = { data: null, icao: null, open: false, timer: null, mode: safeGetStorage('toliss_wx_mode') || 'always', seen: {} };
+        try { WX.seen = JSON.parse(safeGetStorage('toliss_wx_seen') || '{}') || {}; } catch (e) { WX.seen = {}; }
+        function wxSetMode(v) { WX.mode = v; safeSetStorage('toliss_wx_mode', v); wxRender(); }
+        function wxPoll() {
+            if (WX.mode === 'off' && !WX.open) { wxRender(); return; }
+            fetch('/api/wx/strip' + (WX.icao ? '?icao=' + encodeURIComponent(WX.icao) : '')).then(r => r.json()).then(d => {
+                if (!d || d.status !== 'success') return;
+                if (WX.icao && d.auto === WX.icao) WX.icao = null;          // the choice is now the automatic one
+                WX.data = d; wxRender();
+            }).catch(() => {});
+        }
+        function wxStart() { wxPoll(); clearInterval(WX.timer); WX.timer = setInterval(wxPoll, 30000); }
+        function wxAtisNew(d) {
+            const a = d && d.atis && d.atis.letter;
+            if (!a) return false;
+            const seen = WX.seen[d.icao];
+            if (!seen) { WX.seen[d.icao] = a; safeSetStorage('toliss_wx_seen', JSON.stringify(WX.seen)); return false; }   // first sight: not "new"
+            return seen !== a;
+        }
+        function wxAtisSeen() {
+            const d = WX.data; if (!d || !d.atis || !d.atis.letter) return;
+            WX.seen[d.icao] = d.atis.letter; safeSetStorage('toliss_wx_seen', JSON.stringify(WX.seen));
+        }
+        const wxFmtQnh = w => !w || w.qnh == null ? '' : (w.qnh_unit === 'inHg' ? 'A' + Number(w.qnh).toFixed(2) : 'Q' + w.qnh);
+        const wxFmtWind = w => !w || w.wind_spd == null ? '' : (w.vrb ? 'VRB' : String(w.wind_dir).padStart(3, '0')) + '/' + String(w.wind_spd).padStart(2, '0') + (w.gust ? 'G' + w.gust : '');
+        function wxFmtComp(c) {
+            if (!c) return '';
+            if (c.vrb) return 'VRB';
+            const head = c.hw >= 0 ? `HW ${c.hw}` : `TW ${-c.hw}`;
+            return `${head} XW ${c.xw}${c.xw ? c.xw_side : ''}`;
+        }
+        function wxFmtVis(w) {
+            if (!w) return '';
+            const v = w.vis_m == null ? '' : (w.vis_m >= 9999 ? '10KM+' : (w.vis_m >= 5000 ? Math.round(w.vis_m / 1000) + 'KM' : w.vis_m + 'M'));
+            const c = w.cavok ? 'CAVOK' : (w.ceiling_ft == null ? '' : 'CIG ' + w.ceiling_ft);
+            return [w.cavok ? '' : v, c].filter(Boolean).join(' ');
+        }
+        function wxRender() {
+            const s = document.getElementById('wx-strip'), d = WX.data;
+            const sel = document.getElementById('wx-mode'); if (sel && sel.value !== WX.mode) sel.value = WX.mode;
+            if (!s) return;
+            const isNew = d && d.icao ? wxAtisNew(d) : false;
+            const alerts = (d && d.alerts) || [];
+            const show = d && d.icao && (WX.mode === 'always' || (WX.mode === 'alerts' && (alerts.length || isNew)));
+            if (!show) { s.style.display = 'none'; if (WX.open) wxPanelRender(); return; }
+            const w = d.wx || {};
+            const compact = document.getElementById('taxi-global').style.display !== 'none';      // a taxi route: keep it short
+            const role = { dep: 'DEP', arr: 'ARR', here: '' }[d.role] || '';
+            const parts = [];
+            if (d.atis && d.atis.letter) parts.push(`ATIS ${esc(d.atis.letter)}`);
+            if (!compact && d.runway) parts.push(`RWY ${esc(d.runway)}${d.runway_src === 'wind' ? '<span class="muted">?</span>' : ''}`);
+            if (w.wind_spd != null) parts.push(esc(wxFmtWind(w)));
+            if (!compact && d.components) parts.push(esc(wxFmtComp(d.components)));
+            if (!compact && w.qnh != null) parts.push(esc(wxFmtQnh(w)));
+            if (!compact && wxFmtVis(w)) parts.push(esc(wxFmtVis(w)));
+            if (!compact && w.temp != null) parts.push(`${w.temp}°`);
+            if (!d.metar) parts.push('<span class="muted">no METAR yet</span>');
+            const badges = (isNew ? `<span class="wx-badge new">ATIS ${esc(d.atis.letter)} NEW</span>` : '') +
+                alerts.map(a => `<span class="wx-badge ${a.level}">${esc(a.text)}</span>`).join('');
+            s.innerHTML = `<span class="dot ${esc(d.category || '')}" title="${esc(d.category || 'no METAR')}"></span><span class="apt">${esc(d.icao)}</span>` +
+                (role ? `<span class="role">${role}</span>` : '') + badges + parts.join('<span class="sep">·</span>');
+            s.style.display = 'flex';
+            if (WX.open) wxPanelRender();
+        }
+        function wxTogglePanel(force) {
+            WX.open = force !== undefined ? force : !WX.open;
+            if (WX.open) wxAtisSeen();
+            wxPanelRender(); wxRender();
+        }
+        function wxChoose(icao) { WX.icao = icao || null; WX.data = null; wxPoll(); }
+        function wxPanelRender() {
+            const p = document.getElementById('wx-panel'), d = WX.data;
+            if (!WX.open) { p.style.display = 'none'; return; }
+            p.style.display = '';
+            if (!d) { p.innerHTML = '<span class="x" onclick="wxTogglePanel(false)">✕</span>Loading weather…'; return; }
+            const btn = (icao, label) => icao ? `<button class="${d.icao === icao ? 'active' : ''}" onclick="event.stopPropagation(); wxChoose('${esc(icao)}')">${label} ${esc(icao)}</button>` : '';
+            const age = d.metar_age_s != null ? ` <span class="note" style="display:inline">(checked ${Math.max(0, Math.round(d.metar_age_s / 60))} min ago)</span>` : '';
+            const c = d.components;
+            let comp = '';
+            if (d.runway) {
+                const src = { atis: 'from the ATIS', ofp: 'planned in your SimBrief OFP', wind: 'estimate: the runway most into wind' }[d.runway_src] || '';
+                comp = `<h4>Runway ${esc(d.runway)} <span style="text-transform:none">· ${src}</span></h4>`;
+                if (c && !c.vrb) comp += `<div>${c.hw >= 0 ? 'Headwind' : 'Tailwind'} ${Math.abs(c.hw)} kt, crosswind ${c.xw} kt${c.xw ? ' from the ' + (c.xw_side === 'L' ? 'left' : 'right') : ''}` +
+                    (c.xw_g != null ? `; in the gusts ${c.hw_g >= 0 ? 'headwind' : 'tailwind'} ${Math.abs(c.hw_g)} kt, crosswind ${c.xw_g} kt` : '') + '</div>';
+                else if (c && c.vrb) comp += '<div>Variable wind: no components.</div>';
+                if (d.planned_rwy && d.runway_src === 'atis' && d.planned_rwy !== d.runway) comp += `<div class="note">Your OFP planned RWY ${esc(d.planned_rwy)}.</div>`;
+            }
+            const atis = d.atis ? `<h4>ATIS ${esc(d.atis.letter || '')} (VATSIM)</h4><pre>${esc(d.atis.text || '')}</pre>` : `<h4>ATIS</h4><div class="note">No ATIS online on VATSIM.</div>`;
+            p.innerHTML = `<span class="x" onclick="wxTogglePanel(false)">✕</span>
+                <div class="row">${btn(d.orig, 'Departure')}${btn(d.dest, 'Destination')}${d.role === 'here' ? `<button class="active">${esc(d.icao)}</button>` : ''}
+                    ${WX.icao ? `<button onclick="event.stopPropagation(); wxChoose(null)">Automatic</button>` : ''}</div>
+                <h4>METAR</h4>${d.metar ? `<pre>${esc(d.metar)}</pre>${age}` : '<div class="note">No METAR available yet.</div>'}
+                ${comp}${atis}
+                <h4>TAF</h4>${d.taf ? `<pre>${esc(d.taf)}</pre>` : '<div class="note">No TAF available.</div>'}
+                ${d.sim_manual_wx ? '<div class="note">X-Plane\'s weather is set manually, so the sim may not match this real-world weather.</div>' : ''}
+                <div class="note">The strip shows the departure airport on the ground and while climbing out, then the destination; tap Departure or Destination to look at the other. Alerts: crosswind from ${20} kt, tailwind over 5 kt, thunderstorms, wind shear, freezing precipitation, snow, CB, conditions below CAT I, and an ATIS runway that differs from your plan. Advisory only: ATC and your own checks come first.
+                Show it: <select onchange="wxSetMode(this.value)" onclick="event.stopPropagation()" style="min-height:28px; margin:0 0 0 4px; width:auto; display:inline-block; padding:2px 8px;">
+                    <option value="always" ${WX.mode === 'always' ? 'selected' : ''}>Always</option><option value="alerts" ${WX.mode === 'alerts' ? 'selected' : ''}>Only with an alert</option><option value="off" ${WX.mode === 'off' ? 'selected' : ''}>Off</option></select></div>`;
+        }
+        document.addEventListener('DOMContentLoaded', () => setTimeout(wxStart, 2500));
 
         // ===== DCDU: Ops Centre messages on an A320-family DCDU, with response keys =====
         // Uplinks (ops centre -> aircraft) and the crew's downlinks; the keys answer as the crew over Hoppie.
@@ -8098,7 +8256,7 @@
         // ---- after an update: the plugin (Python) and this page must both be reloaded, in that order ----
         // This page knows its own version; the plugin reports the version it is running. While they differ, a banner
         // says which step is left: Reload scripts in X-Plane (the plugin is older), or reload this page (it is newer).
-        const EFB_PAGE_VERSION = '0.69';
+        const EFB_PAGE_VERSION = '0.69.2';
         const XPPY_RELOAD = 'Plugins → XPPython3 → Reload scripts';
         function verCmp(a, b) {
             const x = String(a || '').split('.').map(n => parseInt(n, 10) || 0), y = String(b || '').split('.').map(n => parseInt(n, 10) || 0);

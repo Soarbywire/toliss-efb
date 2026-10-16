@@ -17,6 +17,34 @@ as soon as the aircraft is positioned and finishes setting it up while paused, w
 
 ---
 
+## 0.69.2
+
+### Weather strip (new)
+- **One line under the top bar, on every page**, with the weather of the airport that matters now: the departure
+  airport on the ground and while climbing out, then your destination. ATIS letter, runway in use, wind with its
+  **headwind/tailwind and crosswind components for that runway**, QNH in the airport's unit, visibility and ceiling,
+  temperature, and a coloured dot for the conditions (VMC, marginal, IFR, low IFR).
+- **Alerts only when something matters**: a **new ATIS letter** (until you open the strip), crosswind from 20 kt,
+  tailwind over 5 kt, thunderstorm, wind shear, hail, freezing precipitation, snow, CB, conditions below CAT I, and an
+  ATIS runway that differs from your plan.
+- **Tap it** for the full METAR, ATIS and TAF, the wind components in the gusts, and Departure / Destination buttons.
+- Beside a taxi route it shortens to the ATIS letter and wind. Show it always, only with an alert, or off
+  (Settings → Weather strip).
+- METAR and ATIS from VATSIM, TAF from aviationweather.gov or your OFP. If X-Plane's weather is set manually, the
+  panel says the sim may differ from the real weather.
+
+### Fix (also in 0.69.1)
+- **Map & Telemetry: no more line across the map after a reposition.** The blue track behind the aircraft followed
+  every instant move (Reposition, slew placement, the approach trainer, replay) with a straight line from the old
+  position. A jump faster than any aircraft flies now starts a new piece of track instead.
+
+## 0.69.1
+
+### Fix
+- **Map & Telemetry: no more line across the map after a reposition.** The blue track behind the aircraft followed
+  every instant move (Reposition, slew placement, the approach trainer, replay) with a straight line from the old
+  position. A jump faster than any aircraft flies now starts a new piece of track instead.
+
 ## 0.69
 
 Everything since 0.68, in one update (the changes of 0.68.1 to 0.68.12). Details of each step are in CHANGELOG.md.

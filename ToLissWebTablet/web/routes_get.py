@@ -647,6 +647,18 @@ def handle_get(req, plugin):
                 plugin.stream_clients = max(0, getattr(plugin, 'stream_clients', 1) - 1)
             return
 
+        elif req.path.startswith('/api/wx/strip'):
+            # the weather strip under the top bar (?icao= for a particular airport, else the one that matters now)
+            qs = urllib.parse.parse_qs(urllib.parse.urlparse(req.path).query)
+            try:
+                body = plugin.wxbar.status((qs.get("icao", [""])[0] or "").upper().strip() or None)
+            except Exception as exc:
+                body = {"status": "error", "message": "No response from the sim" if isinstance(exc, TimeoutError) else f"Weather: {exc}"}
+            req.send_response(200)
+            req.send_header('Content-type', 'application/json')
+            req.end_headers()
+            req.wfile.write(json.dumps(body).encode('utf-8'))
+
         elif req.path.startswith('/api/taxi/options'):
             try:
                 body = taxi_options(plugin)

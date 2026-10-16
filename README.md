@@ -6,6 +6,8 @@ opens in any browser on your network, including an iPad:
 - **Preflight:** SimBrief dispatch with takeoff and landing performance, weight & balance with the live CG, ground
   services, and a built-in pushback: planned on a map with a towing model, done by X-Plane's own towbar tug, which
   drives up and connects (with NWS DISC on the E/WD) and works with the parking brake like a real tug.
+- **Weather strip:** on every page, the departure or destination weather in one line (ATIS letter, runway, wind
+  components, QNH) with alerts only when something matters, and the full METAR, ATIS and TAF on a tap.
 - **Flight:** moving map with airport ground detail, satellite view and taxi routing to the stand or runway, ToLiss checklists, an MCDU laid out like the
   real unit, live PFD / E/WD / FCU, and a flight data recorder with landing reports.
 - **IOS (Instructor Operating Station):** aircraft state (set speed, altitude, heading and attitude in flight),
