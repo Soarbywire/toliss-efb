@@ -695,6 +695,40 @@
         .taxi-strip.hold { border-color: #f44336; } .taxi-strip.hold .next { color: #ff5252; }
         .taxi-strip.off { border-color: #ff9800; }
         .taxi-strip .x { position: absolute; right: 6px; top: 4px; cursor: pointer; color: #aaa; font-size: 14px; }
+        .atc-strip { display: flex; align-items: center; gap: 8px; background: #0f2233; border-bottom: 1px solid #1e88e5; color: #e3f2fd; padding: 4px 15px;
+                     font: 600 13px var(--font-ui); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+        .atc-strip .lbl { font: bold 11px var(--font-ui); color: #111; background: #64b5f6; border-radius: 4px; padding: 1px 6px; flex-shrink: 0; }
+        .atc-strip .who { color: #90caf9; font-weight: 500; flex-shrink: 0; }
+        .atc-strip .txt { overflow: hidden; text-overflow: ellipsis; }
+        .atc-strip.new { background: #0d47a1; animation: atcpulse 1s ease-in-out 3; }
+        @keyframes atcpulse { 50% { background: #1565c0; } }
+        body.light-theme .atc-strip { background: #e3f2fd; color: #0d47a1; } body.light-theme .atc-strip .who { color: #1565c0; }
+        body.light-theme .atc-strip.new { background: #bbdefb; }
+        .batc-wrap { display: grid; grid-template-columns: minmax(280px, 360px) 1fr; gap: 14px; }
+        @media (max-width: 900px) { .batc-wrap { grid-template-columns: 1fr; } }
+        .batc-card { background: var(--slider-bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; }
+        .batc-card h4 { margin: 0 0 8px 0; font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+        .batc-kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; font-size: 14px; align-items: baseline; }
+        .batc-kv .k { color: var(--text-dim); font-size: 12px; }
+        .batc-kv .v { font: 600 15px var(--font-mono); color: var(--text-main); }
+        .batc-kv .v small { font: 400 11px var(--font-ui); color: var(--text-dim); margin-left: 6px; }
+        .batc-kv .v.fresh { color: #4fc3f7; }
+        .batc-kv .v.warn { color: #ff9800; }
+        .batc-log { height: 62vh; min-height: 320px; overflow-y: auto; background: var(--input-bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px; position: relative; }
+        .batc-msg { max-width: 82%; padding: 6px 10px; border-radius: 10px; font-size: 14px; line-height: 1.35; }
+        .batc-msg .m { font-size: 11px; color: var(--text-dim); margin-bottom: 2px; }
+        .batc-msg.atc { align-self: flex-start; background: #12324d; color: #e3f2fd; border-top-left-radius: 2px; }
+        .batc-msg.pilot { align-self: flex-end; background: #1b4d2e; color: #e8f5e9; border-top-right-radius: 2px; }
+        .batc-msg.party { align-self: flex-start; background: transparent; color: var(--text-dim); border: 1px dashed var(--border); font-size: 13px; }
+        .batc-msg.party.p-air { align-self: flex-end; }
+        .batc-msg .m b { color: inherit; }
+        .batc-msg.atc .m { color: #90caf9; } .batc-msg.pilot .m { color: #a5d6a7; }
+        body.light-theme .batc-msg.atc { background: #e3f2fd; color: #0d47a1; } body.light-theme .batc-msg.pilot { background: #e8f5e9; color: #1b5e20; }
+        .batc-div { align-self: center; font-size: 11px; color: var(--text-dim); border-top: 1px solid var(--border); padding-top: 3px; width: 100%; text-align: center; }
+        .batc-msg button { margin: 6px 0 0 0; min-height: 28px; padding: 0 10px; font-size: 12px; }
+        .batc-jump { position: sticky; bottom: 0; align-self: center; margin: 0; min-height: 30px; padding: 0 12px; font-size: 12px; display: none; }
+        .batc-status { font-size: 13px; color: var(--text-dim); margin: 0 0 10px 0; line-height: 1.4; }
+        .batc-status b.ok { color: #4caf50; } .batc-status b.warn { color: #ff9800; } .batc-status b.off { color: var(--text-dim); }
         .wx-strip { display: flex; align-items: center; gap: 8px; background: var(--panel); border-bottom: 1px solid var(--border); padding: 4px 15px;
                     font: 600 13px var(--font-mono); color: var(--text-main); cursor: pointer; white-space: nowrap; overflow-x: auto; scrollbar-width: none; flex-shrink: 0; }
         .wx-strip::-webkit-scrollbar { display: none; }
@@ -782,6 +816,7 @@
                 <div class="nav-group-title">Network</div>
                 <div class="nav-item" id="nav-vatsim" onclick="switchTab('vatsim')" style="display:none;">VATSIM Network</div>
                 <div class="nav-item" id="nav-xpilot" onclick="switchTab('xpilot')" style="display:none;">xPilot &amp; ATC</div>
+                <div class="nav-item" id="nav-batc" onclick="switchTab('batc')" style="display:none;">BeyondATC</div>
                 <div class="nav-item" id="nav-ops" onclick="switchTab('ops')" style="display:none;">Ops Centre<span class="ops-badge" id="ops-badge" style="display:none;"></span></div>
             </div>
             <div class="nav-group-spacer"></div>
@@ -810,6 +845,7 @@
         </div>
 
         <div class="taxi-global" id="taxi-global" style="display:none;" onclick="switchTab('telemetry')"></div>
+        <div class="atc-strip" id="atc-strip" style="display:none;" onclick="switchTab('batc')" title="BeyondATC: the last instruction to you. Tap for the transcript."></div>
         <div class="wx-strip" id="wx-strip" style="display:none;" onclick="wxTogglePanel()" title="Weather: tap for the METAR, ATIS and TAF"></div>
         <div style="position:relative; flex-shrink:0;"><div class="wx-panel" id="wx-panel" style="display:none;"></div></div>
         <div class="content-area">
@@ -1663,6 +1699,26 @@
             </div>
 
             <!-- xPILOT & NEARBY ATC -->
+            <!-- BEYONDATC: its log, read live -->
+            <div id="batc" class="tab-content">
+                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px; gap: 10px; flex-wrap: wrap;">
+                    <h3 style="margin: 0; border: none; padding: 0;">BeyondATC</h3>
+                    <label style="font-size:13px; display:flex; gap:6px; align-items:center;"><input type="checkbox" id="batc-party" onchange="batcSetParty(this.checked)"> Show other aircraft</label>
+                </div>
+                <div class="batc-status" id="batc-status">Looking for BeyondATC's log…</div>
+                <div class="batc-wrap">
+                    <div>
+                        <div class="batc-card"><h4>Your clearance</h4><div class="batc-kv" id="batc-clr"><span class="k">—</span><span class="v">No instructions yet</span></div></div>
+                        <div class="batc-card"><h4>Radios (as BeyondATC sees them)</h4><div class="batc-kv" id="batc-radios"></div></div>
+                        <div class="batc-card" id="batc-atis-card"><h4>BeyondATC ATIS</h4><div id="batc-atis" style="font-size:13px;"></div></div>
+                    </div>
+                    <div>
+                        <div class="batc-log" id="batc-log" onscroll="batcScrolled()"></div>
+                        <div class="rp-note" style="margin-top:6px;">Read live from BeyondATC's log (<code>Player.log</code>): ATC's instructions to you, what BeyondATC understood you to say, and, if ticked, the other aircraft on the frequency. Read only; it is BeyondATC's own debug log, not an official interface, so a BeyondATC update may change what can be shown.</div>
+                    </div>
+                </div>
+            </div>
+
             <div id="xpilot" class="tab-content">
                 <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 12px;">
                     <h3 style="margin: 0; border: none; padding: 0;">xPilot &amp; Nearby ATC</h3>
@@ -2053,6 +2109,30 @@
                     <input type="checkbox" id="toggle-ops" onchange="toggleIntegration('ops', this.checked)">
                 </div>
 
+                <div class="toggle-row">
+                    <div style="flex-grow: 1;">
+                        <label for="toggle-batc" style="display: block; font-size: 15px; color: var(--text-main); font-weight: 500; cursor: pointer;">BeyondATC</label>
+                        <span style="font-size: 12px; color: var(--text-dim);">Read BeyondATC's log live (same PC, Windows): the ATC transcript, your clearance, its ATIS. Read only.</span>
+                    </div>
+                    <input type="checkbox" id="toggle-batc" onchange="toggleIntegration('batc', this.checked); batcStart()">
+                </div>
+                <div class="toggle-row" id="batc-settings-row">
+                    <div style="flex-grow: 1;">
+                        <label for="atc-mode" style="display: block; font-size: 15px; color: var(--text-main); font-weight: 500;">BeyondATC: last instruction under the top bar</label>
+                        <span style="font-size: 12px; color: var(--text-dim);">One line with ATC's last instruction to you, on every page.</span>
+                    </div>
+                    <select id="atc-mode" onchange="atcSetMode(this.value)" style="min-height:36px; margin:0; width:auto; flex-shrink:0;">
+                        <option value="always">Always</option><option value="recent">For 30 s after a new one</option><option value="off">Off</option>
+                    </select>
+                </div>
+                <div class="toggle-row">
+                    <div style="flex-grow: 1;">
+                        <label for="batc-path" style="display: block; font-size: 15px; color: var(--text-main); font-weight: 500;">BeyondATC log file</label>
+                        <span style="font-size: 12px; color: var(--text-dim);">Leave empty for the usual place (%USERPROFILE%\AppData\LocalLow\Skirmish Mode Games, Inc\BeyondATC\Player.log).</span>
+                        <input type="text" id="batc-path" placeholder="(the usual place)" style="margin-top:6px;" onchange="batcSavePath(this.value)">
+                    </div>
+                </div>
+
                 <hr style="border: 0; border-top: 1px solid var(--border); margin: 30px 0 25px 0;">
 
                 <h3>Weather strip</h3>
@@ -2099,7 +2179,7 @@
                 <div style="line-height: 1.5; color: var(--text-muted); font-size: 13px;">
                     <p>A web-based, remote interface for the ToLiss line of aircraft in X-Plane 12.</p>
                     <p>By Soarbywire &middot; <a href="https://soarbywire.com" target="_blank" rel="noopener">soarbywire.com</a></p>
-                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.69.3 Release Beta</p>
+                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.69.4 Release Beta</p>
                     <p style="font-size: 11px; color: #ff9800; margin-top: 5px;"><strong>Caution:</strong> Some features may not work as intended.</p>
                     <p style="font-size: 11px; color: var(--text-dim); margin-top: 5px;">New versions are published on <a href="https://github.com/Soarbywire/toliss-efb/releases" target="_blank" rel="noopener">GitHub</a> and the X-Plane.org forums, and can be installed from <b>Updates</b> above.</p>
                     <div class="lic">
@@ -7521,7 +7601,7 @@
             const compact = document.getElementById('taxi-global').style.display !== 'none';      // a taxi route: keep it short
             const role = { dep: 'DEP', arr: 'ARR', here: '' }[d.role] || '';
             const parts = [];
-            if (d.atis && d.atis.letter) parts.push(`ATIS ${esc(d.atis.letter)}${d.atis.source === 'efb' ? ' <span class="muted">EFB</span>' : ''}`);
+            if (d.atis && d.atis.letter) parts.push(`ATIS ${esc(d.atis.letter)}${d.atis.source === 'efb' ? ' <span class="muted">EFB</span>' : (d.atis.source === 'batc' ? ' <span class="muted">BATC</span>' : '')}`);
             if (!compact && d.runway) parts.push(`RWY ${esc(d.runway)}${d.runway_src === 'wind' ? '<span class="muted">?</span>' : ''}`);
             if (w.wind_spd != null) parts.push(esc(wxFmtWind(w)));
             if (!compact && d.components) parts.push(esc(wxFmtComp(d.components)));
@@ -7563,7 +7643,7 @@
             const c = d.components;
             let comp = '';
             if (d.runway) {
-                const src = { atis: 'from the VATSIM ATIS', ofp: 'planned in your SimBrief OFP; the wind suits it', wind: d.planned_rwy ? `the most into wind (your planned RWY ${esc(d.planned_rwy)} would have too much tailwind or crosswind)` : 'the most into wind' }[d.runway_src] || '';
+                const src = { batc: 'from the BeyondATC ATIS', atis: 'from the VATSIM ATIS', ofp: 'planned in your SimBrief OFP; the wind suits it', wind: d.planned_rwy ? `the most into wind (your planned RWY ${esc(d.planned_rwy)} would have too much tailwind or crosswind)` : 'the most into wind' }[d.runway_src] || '';
                 comp = `<h4>Runway ${esc(d.runway)} <span style="text-transform:none">· ${src}</span></h4>`;
                 if (c && !c.vrb) comp += `<div>${c.hw >= 0 ? 'Headwind' : 'Tailwind'} ${Math.abs(c.hw)} kt, crosswind ${c.xw} kt${c.xw ? ' from the ' + (c.xw_side === 'L' ? 'left' : 'right') : ''}` +
                     (c.xw_g != null ? `; in the gusts ${c.hw_g >= 0 ? 'headwind' : 'tailwind'} ${Math.abs(c.hw_g)} kt, crosswind ${c.xw_g} kt` : '') + '</div>';
@@ -7571,10 +7651,11 @@
             }
             let atis;
             if (d.atis && d.atis.source === 'vatsim') atis = `<h4>ATIS ${esc(d.atis.letter || '')} (VATSIM)</h4><pre>${esc(d.atis.text || '')}</pre>`;
+            else if (d.atis && d.atis.source === 'batc') atis = `<h4>ATIS ${esc(d.atis.letter || '')} (BeyondATC)</h4><pre>${esc(d.atis.text || '')}</pre><div class="note">BeyondATC is connected, so its ATIS is used: its controllers expect this letter and these runways.</div>`;
             else if (d.atis) atis = `<h4>EFB ATIS ${esc(d.atis.letter || '')}</h4><pre>${esc(d.atis.text || '')}</pre>
                 <div class="note">Built by the EFB from ${d.wx_src === 'sim' ? "X-Plane's weather" : 'the METAR'}${d.vatsim_atis ? '' : ' (no VATSIM ATIS online)'}. Its letter moves on ${d.wx_src === 'sim' ? 'when the weather changes enough to matter' : 'with each new METAR'} or the runway in use changes.</div>`;
             else atis = `<h4>ATIS</h4><div class="note">No ATIS: no weather for this airport yet.</div>`;
-            if (d.vatsim_atis) atis += `<h4>VATSIM ATIS ${esc(d.vatsim_atis.letter || '')} (real-world weather: does not match your custom weather)</h4><pre>${esc(d.vatsim_atis.text || '')}</pre>`;
+            if (d.vatsim_atis) atis += `<h4>VATSIM ATIS ${esc(d.vatsim_atis.letter || '')} (${d.atis && d.atis.source === 'batc' ? 'not used while BeyondATC is connected' : 'real-world weather: does not match your custom weather'})</h4><pre>${esc(d.vatsim_atis.text || '')}</pre>`;
             p.innerHTML = `<span class="x" onclick="wxTogglePanel(false)">✕</span>
                 <div class="row">${btn(d.orig, 'Departure')}${btn(d.dest, 'Destination')}${d.role === 'here' ? `<button class="active">${esc(d.icao)}</button>` : ''}
                     ${WX.icao ? `<button onclick="event.stopPropagation(); wxChoose(null)">Automatic</button>` : ''}</div>
@@ -7585,6 +7666,123 @@
                     <option value="always" ${WX.mode === 'always' ? 'selected' : ''}>Always</option><option value="alerts" ${WX.mode === 'alerts' ? 'selected' : ''}>Only with an alert</option><option value="off" ${WX.mode === 'off' ? 'selected' : ''}>Off</option></select></div>`;
         }
         document.addEventListener('DOMContentLoaded', () => setTimeout(wxStart, 2500));
+
+        // ===== BeyondATC: its log, read live by the plugin =====
+        const BATC = { last: 0, session: null, timer: null, st: null, pinned: true, mode: safeGetStorage('toliss_atc_mode') || 'recent',
+                       party: safeGetStorage('toliss_batc_party') === '1', lastAtcId: 0, atcSeenAt: 0, count: 0 };
+        const batcOn = () => safeGetStorage('toliss_int_batc') === 'true';
+        function batcStart(force) {
+            const cb = document.getElementById('batc-party'); if (cb) cb.checked = BATC.party;
+            const sel = document.getElementById('atc-mode'); if (sel) sel.value = BATC.mode;
+            clearInterval(BATC.timer); BATC.timer = null;
+            if (!batcOn()) { document.getElementById('atc-strip').style.display = 'none'; return; }
+            batcPoll(); BATC.timer = setInterval(batcPoll, 1500);
+        }
+        function atcSetMode(v) { BATC.mode = v; safeSetStorage('toliss_atc_mode', v); batcStrip(); }
+        function batcSetParty(on) { BATC.party = !!on; safeSetStorage('toliss_batc_party', on ? '1' : '0'); document.querySelectorAll('#batc-log .party').forEach(e => e.style.display = on ? '' : 'none'); }
+        function batcSavePath(v) { fetch('/api/batc/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: v }) }).then(() => { BATC.session = null; BATC.last = 0; batcPoll(); }).catch(() => {}); }
+        function batcPoll() {
+            fetch('/api/batc/state?since=' + BATC.last).then(r => r.json()).then(st => {
+                if (!st || st.status_ok === false) return;
+                const log = document.getElementById('batc-log');
+                if (BATC.session !== st.session_t || st.last_id < BATC.last) {          // BeyondATC restarted: a new session
+                    BATC.session = st.session_t; log.innerHTML = '<button class="mc-btn batc-jump" id="batc-jump" onclick="batcJump()">Jump to latest ↓</button>'; BATC.count = 0;
+                    if (BATC.last) { BATC.last = 0; return batcPoll(); }
+                }
+                BATC.st = st;
+                (st.events || []).forEach(batcAdd);
+                BATC.last = Math.max(BATC.last, st.last_id || 0);
+                if (BATC.pinned) log.scrollTop = log.scrollHeight;
+                batcRender(); batcStrip();
+            }).catch(() => {});
+        }
+        const batcTime = t => { const d = new Date(t * 1000); return d.toTimeString().slice(0, 8); };
+        function batcAdd(e) {
+            const log = document.getElementById('batc-log');
+            const jump = document.getElementById('batc-jump');
+            let el = document.createElement('div');
+            if (e.kind === 'atc' || e.kind === 'pilot' || e.kind === 'party') {
+                const who = e.kind === 'pilot' ? 'You' : (e.kind === 'atc' ? (e.who || 'ATC') + (e.freq ? ' · ' + e.freq : '') : (e.who || ''));
+                el.className = 'batc-msg ' + e.kind + (e.kind === 'party' && e.who === 'Aircraft' ? ' p-air' : '');
+                el.innerHTML = `<div class="m"><b>${esc(who)}</b> · ${batcTime(e.t)}</div>${esc(e.text)}`;
+                if (e.kind === 'party' && !BATC.party) el.style.display = 'none';
+                if (e.kind === 'atc' && /\btaxi\b|\bhold short\b/i.test(e.text) && !/request taxi/i.test(e.text)) el.dataset.taxi = '1';
+            } else {
+                el.className = 'batc-div';
+                el.textContent = (e.kind === 'atis' ? 'ATIS ' : '') + e.text.replace(/^(\w+) ATIS (\w)$/, '$1 information $2') + ' · ' + batcTime(e.t);
+            }
+            el.dataset.id = e.id;
+            log.insertBefore(el, jump);
+            if (++BATC.count > 1500) { const first = log.querySelector('.batc-msg, .batc-div'); if (first) first.remove(); BATC.count--; }
+        }
+        function batcScrolled() {
+            const log = document.getElementById('batc-log');
+            BATC.pinned = log.scrollTop + log.clientHeight >= log.scrollHeight - 30;
+            const j = document.getElementById('batc-jump'); if (j) j.style.display = BATC.pinned ? 'none' : 'block';
+        }
+        function batcJump() { const log = document.getElementById('batc-log'); log.scrollTop = log.scrollHeight; BATC.pinned = true; batcScrolled(); }
+        const batcAgo = t => { const s = Math.max(0, Date.now() / 1000 - t); return s < 60 ? Math.round(s) + ' s ago' : Math.round(s / 60) + ' min ago'; };
+        function batcRender() {
+            const st = BATC.st; if (!st) return;
+            const pf = document.getElementById('batc-path'); if (pf && st.path) pf.placeholder = st.path;
+            const S = { connected: ['ok', 'Connected'], running: ['ok', 'Running'], paused: ['warn', 'X-Plane paused or reloading'],
+                        not_running: ['off', 'BeyondATC is not running'], no_log: ['off', 'BeyondATC\'s log was not found'],
+                        unrecognised: ['warn', 'Log format not recognised (a BeyondATC update?): nothing is shown'] }[st.status] || ['off', st.status];
+            const where = st.status === 'no_log' ? (st.windows === false ? ' BeyondATC runs on Windows only, on the same PC as X-Plane.' : ` Looked for: ${esc(st.path)}. Start BeyondATC, or set the path in Settings.`) : '';
+            document.getElementById('batc-status').innerHTML = `<b class="${S[0]}">${esc(S[1])}</b>` + (st.callsign ? ` · ${esc(st.callsign)}` : '') +
+                (st.controller ? ` · on ${esc(st.controller)}` : '') + (st.age_s != null && st.status !== 'no_log' ? ` · log updated ${batcAgo(Date.now() / 1000 - st.age_s)}` : '') + where;
+            // the clearance
+            const c = st.clearance || {}, r = st.radios || {};
+            const rows = [['departure', 'Cleared to'], ['squawk', 'Squawk'], ['altitude', 'Altitude'], ['heading', 'Heading'], ['speed', 'Speed'], ['direct', 'Direct'],
+                          ['next_freq', 'Contact'], ['expect', 'Expect'], ['approach', 'Approach'], ['runway', 'Runway'], ['taxi', 'Taxi']];
+            let h = '';
+            rows.forEach(([k, label]) => {
+                const v = c[k]; if (!v) return;
+                let val = v.value, extra = '';
+                if (k === 'taxi') {
+                    const tv = v.value || {};
+                    val = [(tv.route || []).join(' '), tv.hold_short ? 'HOLD SHORT ' + tv.hold_short : '', tv.to ? 'to ' + tv.to : ''].filter(Boolean).join(' · ') || '—';
+                    extra = `<br><button class="mc-btn" style="margin:4px 0 0 0; min-height:28px; padding:0 10px; font-size:12px;" onclick="batcTaxi()">Show on the map</button>`;
+                }
+                const fresh = Date.now() / 1000 - v.t < 15;
+                const warn = k === 'squawk' && r.xpdr && r.xpdr !== v.value;
+                h += `<span class="k">${label}</span><span class="v${fresh ? ' fresh' : ''}${warn ? ' warn' : ''}" title="${esc(v.text || '')}">${esc(val)}<small>${batcAgo(v.t)}${warn ? ' · set ' + esc(r.xpdr) : ''}</small>${extra}</span>`;
+            });
+            document.getElementById('batc-clr').innerHTML = h || '<span class="k">—</span><span class="v" style="font-size:13px;">No instructions yet</span>';
+            document.getElementById('batc-radios').innerHTML = r.com1 ? `<span class="k">COM1</span><span class="v">${esc(r.com1)}</span><span class="k">COM2</span><span class="v">${esc(r.com2)}</span><span class="k">Squawk</span><span class="v">${esc(r.xpdr)}</span>` : '<span class="k">—</span><span class="v" style="font-size:13px;">Not reported yet</span>';
+            const at = Object.values(st.atis || {}).sort((a, b) => b.t - a.t);
+            document.getElementById('batc-atis').innerHTML = at.length ? at.map(a => `<div style="margin-bottom:6px;"><b style="font-family:var(--font-mono);">${esc(a.icao)} ${esc(a.letter)}</b>${a.runways && a.runways.length ? ' · RWY ' + esc(a.runways.join(' / ')) : ''}<div style="color:var(--text-dim); font-size:12px;">${esc(a.text)}</div></div>`).join('') : '<span style="color:var(--text-dim);">None yet</span>';
+        }
+        function batcStrip() {
+            const s = document.getElementById('atc-strip'), st = BATC.st;
+            const live = st && ['connected', 'running', 'paused'].includes(st.status);
+            const a = st && st.last_atc;
+            if (!batcOn() || !live || !a || BATC.mode === 'off') { s.style.display = 'none'; return; }
+            if (a.id !== BATC.lastAtcId) { BATC.lastAtcId = a.id; BATC.atcSeenAt = Date.now(); }
+            const recent = Date.now() - BATC.atcSeenAt < 30000;
+            if (BATC.mode === 'recent' && !recent) { s.style.display = 'none'; return; }
+            s.innerHTML = `<span class="lbl">ATC</span>${a.who ? `<span class="who">${esc(a.who)}</span>` : ''}<span class="txt">${esc(a.text)}</span>`;
+            s.classList.toggle('new', Date.now() - BATC.atcSeenAt < 10000);
+            s.style.display = 'flex';
+        }
+        // the taxi clearance onto the map: the EFB's taxi routing with BeyondATC's route as the clearance
+        function batcTaxi() {
+            const t = BATC.st && BATC.st.clearance && BATC.st.clearance.taxi && BATC.st.clearance.taxi.value;
+            if (!t) return;
+            switchTab('telemetry');
+            setTimeout(() => {
+                taxiOpen(true);
+                document.getElementById('taxi-clr').value = t.clearance || '';
+                const stand = t.to && /^(stand|gate)\s+(\w+)/i.exec(t.to);
+                const rwy = t.runway || (t.to && /^(?:runway\s+)?(\d{2}[LRC]?)$/i.exec(t.to) || [])[1];
+                setTimeout(() => {
+                    if (stand) { taxiSetType('stand'); const sel = document.getElementById('taxi-stand'); if ([...sel.options].some(o => o.value === stand[2])) sel.value = stand[2]; }
+                    else if (rwy) { taxiSetType('runway'); const sel = document.getElementById('taxi-rwy'); if ([...sel.options].some(o => o.value === rwy)) sel.value = rwy; }
+                    const src = document.getElementById('taxi-src'); if (src) src.textContent = 'Clearance from BeyondATC: ' + (BATC.st.clearance.taxi.text || '') + ' Press Plan route.';
+                }, 900);
+            }, 200);
+        }
+        document.addEventListener('DOMContentLoaded', () => setTimeout(() => batcStart(), 3000));
 
         // ===== DCDU: Ops Centre messages on an A320-family DCDU, with response keys =====
         // Uplinks (ops centre -> aircraft) and the crew's downlinks; the keys answer as the crew over Hoppie.
@@ -8269,7 +8467,7 @@
         // ---- after an update: the plugin (Python) and this page must both be reloaded, in that order ----
         // This page knows its own version; the plugin reports the version it is running. While they differ, a banner
         // says which step is left: Reload scripts in X-Plane (the plugin is older), or reload this page (it is newer).
-        const EFB_PAGE_VERSION = '0.69.3';
+        const EFB_PAGE_VERSION = '0.69.4';
         const XPPY_RELOAD = 'Plugins → XPPython3 → Reload scripts';
         function verCmp(a, b) {
             const x = String(a || '').split('.').map(n => parseInt(n, 10) || 0), y = String(b || '').split('.').map(n => parseInt(n, 10) || 0);
@@ -9688,9 +9886,9 @@
             if (proToggle) proToggle.checked = proEnabled;
             toggleTolissPro(proEnabled);
 
-            ['checklist', 'dispatch', 'vatsim', 'xpilot', 'ops', 'externallinks', 'fdr', 'displays'].forEach(name => {
+            ['checklist', 'dispatch', 'vatsim', 'xpilot', 'ops', 'externallinks', 'fdr', 'displays', 'batc'].forEach(name => {
                 let saved = safeGetStorage(`toliss_int_${name}`);
-                const isEnabled = saved === null ? true : (saved === 'true');
+                const isEnabled = saved === null ? name !== 'batc' : (saved === 'true');     // BeyondATC is off until switched on
                 const toggle = document.getElementById(`toggle-${name}`);
                 if (toggle) toggle.checked = isEnabled;
                 toggleIntegration(name, isEnabled);
@@ -9783,6 +9981,10 @@
 
             if (tabName === 'ops') {
                 opsStart();
+            }
+
+            if (tabName === 'batc') {
+                batcStart(true);
             }
 
             if (tabName === 'displays') {

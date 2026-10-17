@@ -959,8 +959,8 @@ class OpsCentre:
         if wxbar is not None and icao:
             letter, text, source = wxbar.atis_for(icao, arrival)
             if letter:
-                title = f"{icao} ATIS {letter}" if source == "vatsim" else f"{icao} EFB ATIS {letter}"
-                if source != "vatsim":
+                title = f"{icao} ATIS {letter}" if source in ("vatsim", "batc") else f"{icao} EFB ATIS {letter}"
+                if source == "efb":
                     text = text.rstrip(".").replace(". ", "\n")        # one item per line on the MCDU
                 return letter, "\n".join([title] + ops_wrap(text))
         letter, text = self._atis(icao, arrival)

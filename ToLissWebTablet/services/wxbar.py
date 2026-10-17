@@ -425,18 +425,30 @@ class WxBar:
             except Exception:
                 letter, vtext = None, None
         vatsim = {"letter": letter, "text": vtext, "source": "vatsim", "runways": _atis_runways(vtext, arrival)} if (letter or vtext) else None
+        # BeyondATC's own ATIS while BeyondATC is connected: its controllers expect that letter and those runways
+        batc = None
+        b = getattr(p, "batc", None)
+        if b is not None:
+            try:
+                if b.active():
+                    a = b.atis_for(icao)
+                    if a and a.get("letter"):
+                        batc = {"letter": a["letter"], "text": a["text"], "source": "batc", "runways": a.get("runways") or []}
+            except Exception:
+                batc = None
         planned = str(_ops_g(o, "origin" if role == "dep" else "destination", "plan_rwy") or "").upper() if role in ("dep", "arr") else ""
         ends = self._runway_ends(icao)
         names = dict(ends)
-        use_vatsim = vatsim is not None and real
-        if use_vatsim and vatsim["runways"]:
-            rwy = planned if planned in vatsim["runways"] else vatsim["runways"][0]
-            rwy_src = "atis"
+        use_vatsim = vatsim is not None and real and batc is None
+        ext = batc or (vatsim if use_vatsim else None)
+        if ext and ext["runways"]:
+            rwy = planned if planned in ext["runways"] else ext["runways"][0]
+            rwy_src = "batc" if batc else "atis"
         else:
             rwy, rwy_src = self._pick_runway(ends, wx, planned)
-        atis = vatsim if use_vatsim else self._efb_atis(icao, wx, rwy, real and src == "metar", (mt or {}).get("time") if src == "metar" else None,
+        atis = ext if ext else self._efb_atis(icao, wx, rwy, real and src == "metar", (mt or {}).get("time") if src == "metar" else None,
                                                          _num(v.get("sim/time/zulu_time_sec")))
-        if atis is not None and not use_vatsim:
+        if atis is not None and not ext:
             atis["runways"] = [rwy] if rwy else []
         comp = components(wx, names.get((rwy or "").upper()))
         # alerts: only what matters
@@ -464,10 +476,10 @@ class WxBar:
                 alerts.append({"level": "red", "text": f"TAILWIND {tw} KT"})
             elif tw > TW_AMBER:
                 alerts.append({"level": "amber", "text": f"TAILWIND {tw} KT"})
-        if planned and rwy and rwy != planned and rwy_src in ("atis", "wind"):
-            alerts.append({"level": "amber", "text": f"{'ATIS' if rwy_src == 'atis' else 'IN USE'} RWY {rwy}, PLANNED {planned}"})
+        if planned and rwy and rwy != planned and rwy_src in ("atis", "batc", "wind"):
+            alerts.append({"level": "amber", "text": f"{'ATIS' if rwy_src in ('atis', 'batc') else 'IN USE'} RWY {rwy}, PLANNED {planned}"})
         return {"icao": icao, "role": role, "metar": metar, "metar_age_s": int(time.time() - metar_t) if metar_t else None,
-                "taf": taf, "atis": atis, "vatsim_atis": vatsim if not use_vatsim else None,
+                "taf": taf, "atis": atis, "vatsim_atis": vatsim if (vatsim and not use_vatsim) else None,
                 "runway": rwy, "runway_src": rwy_src, "planned_rwy": planned or None,
                 "wx": wx, "wx_src": src, "sim_note": sim_note, "category": flight_category(wx["vis_m"], wx["ceiling_ft"]) if wx else None,
                 "components": comp, "alerts": alerts, "sim_real_wx": real}

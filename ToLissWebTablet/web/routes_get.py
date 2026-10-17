@@ -647,6 +647,22 @@ def handle_get(req, plugin):
                 plugin.stream_clients = max(0, getattr(plugin, 'stream_clients', 1) - 1)
             return
 
+        elif req.path.startswith('/api/batc/state'):
+            # BeyondATC, read from its log: transcript events after ?since=<id>, clearance, ATIS, radios
+            qs = urllib.parse.parse_qs(urllib.parse.urlparse(req.path).query)
+            try:
+                since = int(qs.get("since", ["0"])[0] or 0)
+            except ValueError:
+                since = 0
+            try:
+                body = {"status_ok": True, **plugin.batc.state(since)}
+            except Exception as exc:
+                body = {"status_ok": False, "status": "error", "message": str(exc), "events": []}
+            req.send_response(200)
+            req.send_header('Content-type', 'application/json')
+            req.end_headers()
+            req.wfile.write(json.dumps(body).encode('utf-8'))
+
         elif req.path.startswith('/api/wx/strip'):
             # the weather strip under the top bar (?icao= for a particular airport, else the one that matters now)
             qs = urllib.parse.parse_qs(urllib.parse.urlparse(req.path).query)

@@ -15,6 +15,9 @@ opens in any browser on your network, including an iPad:
   freezes, slew, repositioning with quick positions and an approach trainer, quick weather (wind, turbulence,
   visibility, armed wind shear), TCAS traffic injection for TA/RA practice, X-Plane replay controls, and ToLiss
   situations and malfunctions.
+- **BeyondATC (optional):** the ATC transcript read live from BeyondATC's log, your current clearance (squawk,
+  altitude, heading, speed, next frequency, approach, taxi route onto the map), its ATIS in the weather strip, and
+  ATC's last instruction under the top bar.
 - **Network:** VATSIM radar with live pilot details (flight levels, climb and descent), xPilot and nearby ATC, real-world airport frequencies with one-tap tuning, and an **Ops Centre** that acts as your airline's operations
   centre on the Hoppie ACARS network, dispatching the flight to the ToLiss MCDU (release, weather, NOTAMs, load sheets,
   takeoff data, ATIS, ETA and fuel updates, stand assignment, landing data and a block-in summary), shown as a

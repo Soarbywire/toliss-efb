@@ -160,7 +160,7 @@ dl.defs dd { margin: 0; }
     <p class="sub">The browser-based electronic flight bag for the ToLiss Airbus family in X-Plane 12: dispatch, ground handling, moving map, cockpit displays, instructor station and your own airline operations centre.</p>
   </div>
   <div class="docid" aria-label="Document information">
-    <div><span class="k">Software</span><b>ToLiss EFB 0.69.3</b></div>
+    <div><span class="k">Software</span><b>ToLiss EFB 0.69.4</b></div>
     <div><span class="k">Aircraft</span><b>ToLiss A319 · A320 · A321 · A330 · A340</b></div>
     <div><span class="k">Simulator</span><b>X-Plane 12 + XPPython3</b></div>
     <div><span class="k">Source</span><b>github.com/Soarbywire/toliss-efb</b></div>
@@ -496,6 +496,16 @@ PLEASE ACKNOWLEDGE</div>
       <p>xPilot connection status, COM radios, SELCAL alerts, and <b>Nearby ATC</b>: online controllers within 400 nm, with a green dot for those in VHF radio range. <span class="ui">COM1</span> / <span class="ui">COM2</span> set the standby frequency; swap it to active on the RMP.</p>
       <h3>Airport frequencies</h3>
       <p>The real-world stations of the nearest airport, your departure or your destination (ATIS, Delivery, Ground, Tower, Departure, Approach, CTAF), read from your scenery. A green dot and the callsign show a VATSIM controller online for that airport on that frequency. The list refreshes every 30 seconds while open.</p>
+      <h3 id="batc">BeyondATC</h3>
+      <p class="where">Settings → Pages → BeyondATC (off until you switch it on)</p>
+      <p>When BeyondATC runs on the same PC as X-Plane (Windows), the EFB reads its log live, <code>%USERPROFILE%\AppData\LocalLow\Skirmish Mode Games, Inc\BeyondATC\Player.log</code> (another place can be set in Settings), and shows:</p>
+      <ul>
+        <li><b>The transcript</b>: ATC's instructions to you, with the controller and frequency, and what BeyondATC understood you to say. Tick <span class="ui">Show other aircraft</span> for everyone else on the frequency. It scrolls by itself; scroll up to read back, and <span class="ui">Jump to latest</span> returns.</li>
+        <li><b>Your clearance</b>, kept up to date from ATC's instructions: departure clearance, squawk (amber if your transponder differs), altitude, heading, speed, direct, the next frequency, expected and cleared approach, runway clearances and taxi route. <span class="ui">Show on the map</span> puts the taxi route into the EFB's <a href="#taxi">taxi routing</a> as your clearance.</li>
+        <li><b>The radios</b> and <b>BeyondATC's ATIS</b> for each airport. While BeyondATC is connected, the <a href="#wxstrip">weather strip</a> and the Ops Centre use its ATIS, so the letter and runways match what its controllers expect.</li>
+        <li><b>The last instruction under the top bar</b> on every page (Always, for 30 s after a new one, or Off: Settings → Pages). Tap it for the transcript.</li>
+      </ul>
+      <div class="note"><b>Note</b>This is BeyondATC's own debug log, not an official interface. The EFB only reads it and never affects BeyondATC. A BeyondATC update may change what can be shown; if the EFB no longer recognises the log, it says so instead of showing wrong data. The log starts again each time BeyondATC starts.</div>
     </section>
 
     <!-- ===================================================== 9 -->
@@ -505,7 +515,7 @@ PLEASE ACKNOWLEDGE</div>
         <dt>SimBrief</dt><dd>Username or user ID, and automatic plan loading.</dd>
         <dt>Units</dt><dd>Runway distances in feet or metres, shared by the performance sheets and the Ops Centre's landing data.</dd>
         <dt>Appearance</dt><dd>Light and dark themes, and the start page.</dd>
-        <dt>Pages</dt><dd>Show or hide optional pages, such as xPilot &amp; Nearby ATC.</dd>
+        <dt>Pages</dt><dd>Show or hide optional pages, such as xPilot &amp; Nearby ATC and <a href="#batc">BeyondATC</a> (with its log file and the ATC line under the top bar).</dd>
         <dt>Updates</dt><dd>Check, install and undo (<a href="#install">chapter 2</a>).</dd>
         <dt>External tools</dt><dd>Links to SimBrief, Navigraph, Chartfox and VATSIM Radar.</dd>
         <dt>About</dt><dd>The installed version.</dd>
@@ -552,7 +562,7 @@ PLEASE ACKNOWLEDGE</div>
 </div>
 
 <footer class="foot">
-  <span>ToLiss EFB 0.69.3 · Free for personal, non-commercial use</span>
+  <span>ToLiss EFB 0.69.4 · Free for personal, non-commercial use</span>
   <span>Not for real-world navigation or flight operations</span>
 </footer>
 

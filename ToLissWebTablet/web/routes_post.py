@@ -76,6 +76,18 @@ def handle_post(req, plugin):
             req.end_headers()
             req.wfile.write(json.dumps({"status": "success", "dist_unit": plugin.config.get("dist_unit", "ft")}).encode('utf-8'))
 
+        elif req.path == '/api/batc/settings':
+            # where BeyondATC's Player.log is (empty: the usual place)
+            p = str((data or {}).get("path") or "").strip() if isinstance(data, dict) else ""
+            if len(p) > 500:
+                p = ""
+            plugin.config["batc_log_path"] = p
+            plugin.save_config(plugin.config)
+            req.send_response(200)
+            req.send_header('Content-type', 'application/json')
+            req.end_headers()
+            req.wfile.write(json.dumps({"status": "success", "path": plugin.batc.path()}).encode('utf-8'))
+
         elif req.path == '/api/push/settings':
             # the pushback page's settings, kept in config.json so every device and every session shares them
             s = data.get("settings") if isinstance(data, dict) else None

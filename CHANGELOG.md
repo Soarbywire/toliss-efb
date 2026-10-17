@@ -17,6 +17,24 @@ as soon as the aircraft is positioned and finishes setting it up while paused, w
 
 ---
 
+## 0.69.4
+
+### BeyondATC (new, optional)
+- **A BeyondATC page** (Settings → Pages → BeyondATC, off until switched on). When BeyondATC runs on the same PC as
+  X-Plane, the EFB reads its log live (read only) and shows:
+  - **the transcript**: ATC's instructions to you with the controller and frequency, and what BeyondATC understood you
+    to say; optionally everyone else on the frequency, cleaned up for reading;
+  - **your clearance**, kept up to date: departure clearance, squawk (amber if your transponder differs), altitude,
+    heading, speed, direct, next frequency, approach, runway clearances and taxi route, with **Show on the map** to
+    plan the taxi route in the EFB;
+  - the radios as BeyondATC sees them, and **BeyondATC's ATIS** for each airport.
+- **ATC's last instruction under the top bar** on every page: always, for 30 s after a new one (the default), or off.
+- **The weather strip and the Ops Centre use BeyondATC's ATIS** while BeyondATC is connected, so the letter and the
+  runways match what its controllers expect.
+- The log is `%USERPROFILE%\AppData\LocalLow\Skirmish Mode Games, Inc\BeyondATC\Player.log` (another place can be
+  set in Settings). It is BeyondATC's debug log, not an official interface: if a BeyondATC update changes it beyond
+  recognition, the page says so instead of showing wrong data.
+
 ## 0.69.3
 
 ### Weather strip: X-Plane's weather when it is custom, and an ATIS offline

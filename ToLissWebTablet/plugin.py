@@ -101,6 +101,9 @@ class PythonInterface(
         self.updater = Updater(self)
         self.ops = OpsCentre(self)
         self.wxbar = WxBar(self)
+        from .services.beyondatc import BeyondAtc
+        self.batc = BeyondAtc(self)
+        self.batc.start(self.stop_event)
         from .services.cg import CgTracker
         self.cg = CgTracker(self)
         threading.Thread(target=self.cg.run, args=(self.stop_event,), name="ToLissEFB-CG", daemon=True).start()
