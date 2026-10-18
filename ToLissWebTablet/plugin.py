@@ -25,6 +25,7 @@ from .features.payload import PayloadMixin
 from .features.pushback import PushbackMixin
 from .features.tug import TugMixin
 from .features.replay import ReplayMixin
+from .features.camera import CameraMixin
 from .features.reposition import RepositionMixin
 from .features.situations import SituationMixin
 from .features.traffic import TrafficMixin
@@ -41,7 +42,7 @@ from .web.server import ThreadingHTTPServer, make_handler
 
 class PythonInterface(
     AirportMixin, SituationMixin, FailureMixin, PayloadMixin, DataRefMixin,
-    DisplayMixin, InstructorMixin, PushbackMixin, TugMixin, RepositionMixin, ReplayMixin, TrafficMixin,
+    DisplayMixin, InstructorMixin, PushbackMixin, TugMixin, RepositionMixin, ReplayMixin, CameraMixin, TrafficMixin,
 ):
     """Thin coordinator. Feature behavior lives in injected mixins/services."""
 
@@ -211,6 +212,8 @@ class PythonInterface(
             return reply.get_nowait()
         if operation == "replay":
             return self._replay_request(dict(payload or {}))
+        if operation == "camera":
+            return self._camera_request(dict(payload or {}))
         if operation == "traffic":
             return self._traffic_request(dict(payload or {}))
         if operation == "mcdu_screen":
@@ -315,6 +318,11 @@ class PythonInterface(
                 self._replay_tick()
             except Exception as exc:
                 self.log.xplane(f"ToLiss EFB: replay error: {exc}")
+            try:
+                self._camera_tick()
+            except Exception as exc:
+                self.log.xplane(f"ToLiss EFB: camera error: {exc}")
+                self.__dict__.get("camera", {})["jump"] = None
             try:
                 self._traffic_tick()
             except Exception as exc:

@@ -160,7 +160,7 @@ dl.defs dd { margin: 0; }
     <p class="sub">The browser-based electronic flight bag for the ToLiss Airbus family in X-Plane 12: dispatch, ground handling, moving map, cockpit displays, instructor station and your own airline operations centre.</p>
   </div>
   <div class="docid" aria-label="Document information">
-    <div><span class="k">Software</span><b>ToLiss EFB 0.69.4</b></div>
+    <div><span class="k">Software</span><b>ToLiss EFB 0.69.6</b></div>
     <div><span class="k">Aircraft</span><b>ToLiss A319 · A320 · A321 · A330 · A340</b></div>
     <div><span class="k">Simulator</span><b>X-Plane 12 + XPPython3</b></div>
     <div><span class="k">Source</span><b>github.com/Soarbywire/toliss-efb</b></div>
@@ -370,6 +370,7 @@ dl.defs dd { margin: 0; }
 
       <h3 id="slew">Slew</h3>
       <p>Move the aircraft with the hold-to-move pad, the keyboard, or by tapping the map. On the ground it follows the terrain; <span class="ui">Climb</span> lifts it off, and descending to the lowest slew height (50 ft) puts it back on its wheels. Ending slew in the air hands control back at the airspeed you choose.</p>
+      <p><b>Camera:</b> the same view buttons and move/zoom pad as on the <a href="#replay">Replay</a> page, to watch the aircraft while you place it.</p>
       <div class="tbl"><table>
         <thead><tr><th>Key</th><th>Movement</th></tr></thead>
         <tbody>
@@ -397,6 +398,12 @@ dl.defs dd { margin: 0; }
 
       <h3 id="replay">Replay</h3>
       <p>X-Plane's replay on the EFB: Start, Fast reverse, Reverse, Slow reverse, Pause, Slow forward, Play, Fast forward, End, and <span class="ui">Exit to Real-Time</span>. A REPLAY badge shows on every page while you are in replay.</p>
+      <p><b>Camera.</b> X-Plane's views in one tap: Cockpit, Chase, Orbit, Tower, Runway, Fly-by, Moving spot and Free camera (only those your X-Plane has). Hold the arrow and zoom buttons to move the orbit, chase or free camera. <b>Your Quick Looks</b> are the views you saved in X-Plane; tick <span class="ui">Name them</span> to give them names (kept on each device). They work outside replay too.</p>
+      <dl class="defs">
+        <dt>Jump to the landing</dt><dd>Enters replay, rewinds to about 30 s before the last touchdown, switches to the runway view and pauses: press Play. X-Plane keeps only the last part of a flight in its replay.</dd>
+        <dt>Touchdown camera</dt><dd>In a replay, the runway view from 150 ft above the ground until the aircraft has slowed down on the runway, then back to the view you had.</dd>
+        <dt>Auto-cycle</dt><dd>In a replay, change view every 10, 20, 30 or 60 seconds through the views and Quick Looks you tick. The plugin runs it, so it carries on with the EFB page closed.</dd>
+      </dl>
 
       <h3 id="fail">Situations and Malfunctions</h3>
       <p>Requires ToLiss Pro. ToLiss situations and the full failure list, plus one-tap malfunctions: engine failure at V1 (V1 from your SimBrief takeoff data), engine fire, engine failure after takeoff, hydraulic loss, generator and bleed faults, and cabin decompression.</p>
@@ -562,7 +569,7 @@ PLEASE ACKNOWLEDGE</div>
 </div>
 
 <footer class="foot">
-  <span>ToLiss EFB 0.69.4 · Free for personal, non-commercial use</span>
+  <span>ToLiss EFB 0.69.6 · Free for personal, non-commercial use</span>
   <span>Not for real-world navigation or flight operations</span>
 </footer>
 

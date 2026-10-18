@@ -17,6 +17,36 @@ as soon as the aircraft is positioned and finishes setting it up while paused, w
 
 ---
 
+## 0.69.6
+
+### Camera views on the Replay and Slew pages
+- **Camera** on the Replay page: X-Plane's views in one tap (Cockpit, Chase, Orbit, Tower, Runway, Fly-by, Moving
+  spot, Free camera; only those your X-Plane has), and arrow and zoom buttons (hold them) to move the orbit, chase or
+  free camera.
+- **Your Quick Looks** (Replay page): the views you saved in X-Plane, as buttons, with names you can give them.
+- **Replay extras**:
+  - **Jump to the landing**: enters replay and rewinds to about 30 s before the last touchdown, in the runway view,
+    paused and ready to play;
+  - **Touchdown camera**: in a replay, the runway view from 150 ft until the aircraft has slowed down, then back to
+    your view;
+  - **Auto-cycle**: in a replay, change view every 10 to 60 seconds through the views you choose. It runs in the
+    plugin, so it carries on with the page closed.
+- **Slew page**: the same view buttons and move/zoom pad, to watch the aircraft while you place it.
+
+## 0.69.5
+
+### Replay: camera views
+- **Camera** on the Replay page: X-Plane's views in one tap (Cockpit, Chase, Orbit, Tower, Runway, Fly-by, Moving
+  spot, Free camera; only those your X-Plane has), and arrow and zoom buttons (hold them) to move the orbit, chase or
+  free camera.
+- **Your Quick Looks**: the views you saved in X-Plane, as buttons, with names you can give them.
+- **Jump to the landing**: enters replay and rewinds to about 30 s before the last touchdown, in the runway view,
+  paused and ready to play.
+- **Touchdown camera**: in a replay, the runway view from 150 ft until the aircraft has slowed down, then back to
+  your view.
+- **Auto-cycle**: in a replay, change view every 10 to 60 seconds through the views you choose. It runs in the
+  plugin, so it carries on with the page closed.
+
 ## 0.69.4
 
 ### BeyondATC (new, optional)

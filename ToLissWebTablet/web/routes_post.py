@@ -118,10 +118,12 @@ def handle_post(req, plugin):
             req.end_headers()
             req.wfile.write(json.dumps({"status": "success", "settings": plugin.config.get("push_settings")}).encode('utf-8'))
 
-        elif req.path in ('/api/replay/cmd', '/api/traffic/add', '/api/traffic/remove', '/api/traffic/clear'):
+        elif req.path in ('/api/replay/cmd', '/api/camera', '/api/traffic/add', '/api/traffic/remove', '/api/traffic/clear'):
             item = dict(data) if isinstance(data, dict) else {}
             if req.path == '/api/replay/cmd':
                 op = "replay"
+            elif req.path == '/api/camera':
+                op = "camera"
             else:
                 op, item["kind"] = "traffic", req.path.rsplit('/', 1)[1]
             try:

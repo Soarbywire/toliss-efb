@@ -758,6 +758,17 @@
         .rpl-bar button small { font-size: 10px; color: var(--text-dim); font-family: var(--font-mono); }
         .rpl-bar button.active { border-color: var(--accent); background: rgba(79,195,247,0.15); }
         .rpl-bar button:disabled { opacity: 0.35; cursor: default; }
+        .cam-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 6px; margin-top: 8px; }
+        .cam-grid button { margin: 0 !important; min-height: 46px; font-size: 13px; padding: 4px 6px; }
+        .cam-grid button.active { border-color: var(--accent) !important; background: rgba(79,195,247,0.18) !important; color: var(--text-main) !important; }
+        .cam-pad { display: grid; grid-template-columns: repeat(3, 52px) 16px 52px 52px; grid-template-rows: 44px 44px; gap: 6px; margin-top: 8px; align-items: center; }
+        .cam-pad button { margin: 0 !important; min-height: 44px; padding: 0; font-size: 18px; touch-action: none; user-select: none; }
+        .cam-sec { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--border); }
+        .cam-sec h4 { margin: 0 0 4px 0; font-size: 13px; color: var(--text-muted); }
+        .cam-cyc { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 6px; font-size: 13px; }
+        .cam-cyc label { display: flex; gap: 5px; align-items: center; cursor: pointer; }
+        .cam-names { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; margin-top: 8px; }
+        .cam-names input { margin: 0; min-height: 32px; font-size: 13px; }
         .rpl-top { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
         .rpl-top button { flex: 1; min-width: 160px; }
         .rpl-exit { background-color: #1565c0 !important; color: #fff !important; font-weight: bold; min-height: 44px; margin: 0 !important; }
@@ -1498,7 +1509,37 @@
                     <button data-c="end" onclick="rplCmd('end')" title="Go to the end of the recording (the latest recorded moment)">⏭<small>End</small></button>
                 </div>
                 <div class="rp-note" id="rpl-msg" style="min-height:18px;"></div>
-                <div class="rp-note">These are X-Plane's own replay controls: X-Plane records the flight continuously and plays it back. Pressing a playback button enters replay if needed. <b>Exit to Real-Time</b> leaves replay and returns to the live flight where the aircraft actually is now (X-Plane does not resume flying from a rewound point). The EFB's Flight Recorder is separate and keeps recording. Replay is not available during a pushback or slew. Buttons this X-Plane version does not have are greyed out.</div>
+                <div class="cam-sec">
+                    <h4>Camera</h4>
+                    <div class="cam-grid cam-views-host" id="cam-views"></div>
+                    <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start;">
+                        <div>
+                            <div class="rp-note" style="margin:8px 0 0 0;">Move the view (orbit, chase, free camera): hold a button</div>
+                            <div class="cam-pad" id="cam-pad">
+                                <span></span><button class="mc-btn" data-d="up" title="Up">▲</button><span></span><span></span><button class="mc-btn" data-d="in" title="Zoom in">＋</button><span></span>
+                                <button class="mc-btn" data-d="left" title="Left">◀</button><button class="mc-btn" data-d="down" title="Down">▼</button><button class="mc-btn" data-d="right" title="Right">▶</button><span></span><button class="mc-btn" data-d="out" title="Zoom out">－</button><span></span>
+                            </div>
+                        </div>
+                    </div>
+                    <h4 style="margin-top:14px;">Your Quick Looks <span style="font-weight:400; color:var(--text-dim);">(the views you saved in X-Plane)</span></h4>
+                    <div class="cam-grid" id="cam-quick"></div>
+                    <label style="font-size:12px; display:inline-flex; gap:6px; align-items:center; margin-top:6px; cursor:pointer;"><input type="checkbox" id="cam-edit" onchange="camRender()"> Name them</label>
+                    <div class="cam-names" id="cam-names" style="display:none;"></div>
+                </div>
+                <div class="cam-sec">
+                    <h4>Replay extras</h4>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:6px;">
+                        <button class="rp-go" id="cam-jump" onclick="camJump()" style="margin:0;">Jump to the landing</button>
+                        <button class="mc-btn" id="cam-jump-stop" onclick="camCmd({ cmd: 'jump_cancel' })" style="margin:0; display:none;">Stop</button>
+                    </div>
+                    <div class="rp-note" style="margin-top:4px;">Rewinds X-Plane's replay to about 30 s before the last touchdown, in the runway view, and pauses there: press Play. X-Plane keeps only the last part of a flight in its replay.</div>
+                    <label style="display:flex; gap:8px; align-items:center; margin-top:12px; font-size:14px; cursor:pointer;"><input type="checkbox" id="cam-td" onchange="camCmd({ cmd: 'settings', td: this.checked })"> Touchdown camera: in a replay, the runway view from 150 ft until the aircraft has slowed down, then back to your view</label>
+                    <div style="margin-top:12px; font-size:14px;">Auto-cycle the views in a replay, every
+                        <select id="cam-int" onchange="camSaveCycle()" style="width:auto; display:inline-block; min-height:30px; margin:0 4px; padding:2px 8px;"><option value="10">10 s</option><option value="20">20 s</option><option value="30">30 s</option><option value="60">60 s</option></select>, through:</div>
+                    <div class="cam-cyc" id="cam-cyc"></div>
+                    <div class="rp-note" id="cam-msg" style="min-height:18px; margin-top:8px;"></div>
+                </div>
+                <div class="rp-note" style="margin-top:14px;">These are X-Plane's own replay controls: X-Plane records the flight continuously and plays it back. Pressing a playback button enters replay if needed. <b>Exit to Real-Time</b> leaves replay and returns to the live flight where the aircraft actually is now (X-Plane does not resume flying from a rewound point). The EFB's Flight Recorder is separate and keeps recording. Replay is not available during a pushback or slew. Buttons this X-Plane version does not have are greyed out.</div>
             </div>
 
             <!-- TCAS TRAFFIC (IOS) -->
@@ -1564,6 +1605,15 @@
                     <div class="slw-right">
                         <div id="slw-map" class="slw-map"></div>
                         <div class="rp-note" id="slw-map-note">Start slew, then tap the map to place the aircraft there.</div>
+                    </div>
+                </div>
+                <div class="cam-sec">
+                    <h4>Camera</h4>
+                    <div class="cam-grid cam-views-host" id="slw-cam-views"></div>
+                    <div class="rp-note" style="margin:8px 0 0 0;">Move the view (orbit, chase, free camera): hold a button</div>
+                    <div class="cam-pad" id="slw-cam-pad">
+                        <span></span><button class="mc-btn" data-d="up" title="Up">▲</button><span></span><span></span><button class="mc-btn" data-d="in" title="Zoom in">＋</button><span></span>
+                        <button class="mc-btn" data-d="left" title="Left">◀</button><button class="mc-btn" data-d="down" title="Down">▼</button><button class="mc-btn" data-d="right" title="Right">▶</button><span></span><button class="mc-btn" data-d="out" title="Zoom out">－</button><span></span>
                     </div>
                 </div>
                 <div class="rp-note" style="margin-top:10px;">While slewing, X-Plane stops moving the aircraft and the EFB moves it: on the ground it slides along the terrain, in the air it keeps its altitude (never below 50 ft above the terrain). Ending slew hands control back: in the air at the resume airspeed, level; on the ground stopped. If X-Plane was paused, it is paused again.</div>
@@ -2179,7 +2229,7 @@
                 <div style="line-height: 1.5; color: var(--text-muted); font-size: 13px;">
                     <p>A web-based, remote interface for the ToLiss line of aircraft in X-Plane 12.</p>
                     <p>By Soarbywire &middot; <a href="https://soarbywire.com" target="_blank" rel="noopener">soarbywire.com</a></p>
-                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.69.4 Release Beta</p>
+                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.69.6 Release Beta</p>
                     <p style="font-size: 11px; color: #ff9800; margin-top: 5px;"><strong>Caution:</strong> Some features may not work as intended.</p>
                     <p style="font-size: 11px; color: var(--text-dim); margin-top: 5px;">New versions are published on <a href="https://github.com/Soarbywire/toliss-efb/releases" target="_blank" rel="noopener">GitHub</a> and the X-Plane.org forums, and can be installed from <b>Updates</b> above.</p>
                     <div class="lic">
@@ -7194,7 +7244,59 @@
                 .then(r => r.json()).then(res => { msg.textContent = res.message || ''; msg.style.color = res.status === 'success' ? '' : '#f44336'; rplRender(res); })
                 .catch(() => { msg.textContent = 'No response from the sim.'; msg.style.color = '#f44336'; });
         }
-        function rplStart() { rplPoll(); clearInterval(RPL.timer); RPL.timer = setInterval(rplPoll, 700); }
+        function rplStart() { rplPoll(); clearInterval(RPL.timer); RPL.timer = setInterval(rplPoll, 700); camStart(); }
+
+        // ---- camera views: X-Plane's view commands, run by the plugin (auto-cycle and the touchdown camera too) ----
+        const CAM = { st: null, timer: null, hold: null, names: {} };
+        try { CAM.names = JSON.parse(safeGetStorage('toliss_cam_names') || '{}') || {}; } catch (e) { CAM.names = {}; }
+        const camQName = i => CAM.names[i] || `Quick Look ${i + 1}`;
+        function camStart() {
+            camPoll(); clearInterval(CAM.timer);
+            CAM.timer = setInterval(() => { if (!['replay', 'slew'].some(id => document.getElementById(id).classList.contains('active'))) { clearInterval(CAM.timer); CAM.timer = null; return; } camPoll(); }, 1500);
+            if (!CAM.padReady) {
+                CAM.padReady = true;
+                document.querySelectorAll('#cam-pad button, #slw-cam-pad button').forEach(b => {
+                    const go = () => camCmd({ cmd: 'move', dir: b.dataset.d }, true);
+                    b.addEventListener('pointerdown', e => { e.preventDefault(); go(); clearInterval(CAM.hold); CAM.hold = setInterval(go, 200); });
+                    ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => b.addEventListener(ev, () => { clearInterval(CAM.hold); CAM.hold = null; }));
+                });
+            }
+        }
+        function camPoll() { camCmd({ cmd: 'state' }, true); }
+        function camCmd(body, quiet) {
+            return fetch('/api/camera', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(r => r.json()).then(res => {
+                if (res && res.views) { CAM.st = res; camRender(); }
+                if (!quiet && res && res.message !== undefined) { const m = document.getElementById('cam-msg'); m.textContent = res.message || ''; m.style.color = res.status === 'success' ? '' : '#f44336'; }
+            }).catch(() => {});
+        }
+        function camJump() { camCmd({ cmd: 'jump_landing', runway: true }); }
+        function camSaveCycle() {
+            const sel = [...document.querySelectorAll('#cam-cyc input:checked')].map(i => i.value);
+            camCmd({ cmd: 'settings', cycle: sel, interval: Number(document.getElementById('cam-int').value) }, true);
+        }
+        function camSaveName(i, v) { if (v.trim()) CAM.names[i] = v.trim(); else delete CAM.names[i]; safeSetStorage('toliss_cam_names', JSON.stringify(CAM.names)); camRender(); }
+        function camRender() {
+            const st = CAM.st; if (!st) return;
+            const vHtml = st.views.map(v => `<button class="mc-btn${st.current === v.key ? ' active' : ''}" onclick="camCmd({ cmd: 'view', view: '${v.key}' })">${esc(v.label)}</button>`).join('') || '<span class="rp-note">X-Plane did not report any view commands.</span>';
+            document.querySelectorAll('.cam-views-host').forEach(el => { el.innerHTML = vHtml; });
+            document.querySelectorAll('#cam-pad button, #slw-cam-pad button').forEach(b => b.disabled = !st.moves.includes(b.dataset.d));
+            const order = st.quick.slice().sort((a, b) => a - b).filter(i => i <= 9);
+            document.getElementById('cam-quick').innerHTML = order.map(i => `<button class="mc-btn${st.current === 'q' + i ? ' active' : ''}" onclick="camCmd({ cmd: 'quick', n: ${i} })">${esc(camQName(i))}</button>`).join('');
+            const ed = document.getElementById('cam-edit').checked, nm = document.getElementById('cam-names');
+            nm.style.display = ed ? '' : 'none';
+            if (ed && !nm.dataset.built) { nm.dataset.built = '1'; nm.innerHTML = order.map(i => `<input type="text" placeholder="Quick Look ${i + 1}" value="${esc(CAM.names[i] || '')}" onchange="camSaveName(${i}, this.value)">`).join(''); }
+            if (!ed) delete nm.dataset.built;
+            document.getElementById('cam-td').checked = !!st.td;
+            const ci = document.getElementById('cam-int'); if (document.activeElement !== ci) ci.value = String(st.interval);
+            const cyc = document.getElementById('cam-cyc');
+            const items = st.views.map(v => [v.key, v.label]).concat(order.map(i => ['q' + i, camQName(i)]));
+            const key = items.map(x => x.join(':')).join('|');
+            if (cyc.dataset.key !== key) { cyc.dataset.key = key; cyc.innerHTML = items.map(([k, l]) => `<label><input type="checkbox" value="${esc(k)}" onchange="camSaveCycle()"> ${esc(l)}</label>`).join(''); }
+            cyc.querySelectorAll('input').forEach(i => { i.checked = st.cycle.includes(i.value); });
+            document.getElementById('cam-jump').disabled = !!st.jumping;
+            document.getElementById('cam-jump-stop').style.display = st.jumping ? '' : 'none';
+            if (st.message) document.getElementById('cam-msg').textContent = st.message;
+        }
 
         // ===== TCAS training traffic (IOS) =====
         const TFC = { timer: null, sc: 'head_on', built: false };
@@ -8467,7 +8569,7 @@
         // ---- after an update: the plugin (Python) and this page must both be reloaded, in that order ----
         // This page knows its own version; the plugin reports the version it is running. While they differ, a banner
         // says which step is left: Reload scripts in X-Plane (the plugin is older), or reload this page (it is newer).
-        const EFB_PAGE_VERSION = '0.69.4';
+        const EFB_PAGE_VERSION = '0.69.6';
         const XPPY_RELOAD = 'Plugins → XPPython3 → Reload scripts';
         function verCmp(a, b) {
             const x = String(a || '').split('.').map(n => parseInt(n, 10) || 0), y = String(b || '').split('.').map(n => parseInt(n, 10) || 0);
@@ -9965,6 +10067,7 @@
 
             if (tabName === 'slew') {
                 slwStart();
+                camStart();
             }
 
             if (tabName === 'replay') {

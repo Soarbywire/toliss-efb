@@ -12,7 +12,8 @@ opens in any browser on your network, including an iPad:
 - **Flight:** moving map with airport ground detail, satellite view and taxi routing to the stand or runway, ToLiss checklists, an MCDU laid out like the
   real unit, live PFD / E/WD / FCU, and a flight data recorder with landing reports.
 - **IOS (Instructor Operating Station):** aircraft state (set speed, altitude, heading and attitude in flight),
-  freezes, slew, repositioning with quick positions and an approach trainer, quick weather (wind, turbulence,
+  freezes, slew, repositioning with quick positions and an approach trainer, camera views (with your Quick Looks,
+  a jump to the landing and a touchdown camera in replay), quick weather (wind, turbulence,
   visibility, armed wind shear), TCAS traffic injection for TA/RA practice, X-Plane replay controls, and ToLiss
   situations and malfunctions.
 - **BeyondATC (optional):** the ATC transcript read live from BeyondATC's log, your current clearance (squawk,
