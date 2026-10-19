@@ -2229,7 +2229,7 @@
                 <div style="line-height: 1.5; color: var(--text-muted); font-size: 13px;">
                     <p>A web-based, remote interface for the ToLiss line of aircraft in X-Plane 12.</p>
                     <p>By Soarbywire &middot; <a href="https://soarbywire.com" target="_blank" rel="noopener">soarbywire.com</a></p>
-                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.69.6 Release Beta</p>
+                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.69.7 Release Beta</p>
                     <p style="font-size: 11px; color: #ff9800; margin-top: 5px;"><strong>Caution:</strong> Some features may not work as intended.</p>
                     <p style="font-size: 11px; color: var(--text-dim); margin-top: 5px;">New versions are published on <a href="https://github.com/Soarbywire/toliss-efb/releases" target="_blank" rel="noopener">GitHub</a> and the X-Plane.org forums, and can be installed from <b>Updates</b> above.</p>
                     <div class="lic">
@@ -7745,7 +7745,7 @@
             const c = d.components;
             let comp = '';
             if (d.runway) {
-                const src = { batc: 'from the BeyondATC ATIS', atis: 'from the VATSIM ATIS', ofp: 'planned in your SimBrief OFP; the wind suits it', wind: d.planned_rwy ? `the most into wind (your planned RWY ${esc(d.planned_rwy)} would have too much tailwind or crosswind)` : 'the most into wind' }[d.runway_src] || '';
+                const src = { atc: 'assigned by BeyondATC', batc: 'from the BeyondATC ATIS', atis: 'from the VATSIM ATIS', ofp: 'planned in your SimBrief OFP; the wind suits it', wind: d.planned_rwy ? `the most into wind (your planned RWY ${esc(d.planned_rwy)} would have too much tailwind or crosswind)` : 'the most into wind' }[d.runway_src] || '';
                 comp = `<h4>Runway ${esc(d.runway)} <span style="text-transform:none">· ${src}</span></h4>`;
                 if (c && !c.vrb) comp += `<div>${c.hw >= 0 ? 'Headwind' : 'Tailwind'} ${Math.abs(c.hw)} kt, crosswind ${c.xw} kt${c.xw ? ' from the ' + (c.xw_side === 'L' ? 'left' : 'right') : ''}` +
                     (c.xw_g != null ? `; in the gusts ${c.hw_g >= 0 ? 'headwind' : 'tailwind'} ${Math.abs(c.hw_g)} kt, crosswind ${c.xw_g} kt` : '') + '</div>';
@@ -8569,7 +8569,7 @@
         // ---- after an update: the plugin (Python) and this page must both be reloaded, in that order ----
         // This page knows its own version; the plugin reports the version it is running. While they differ, a banner
         // says which step is left: Reload scripts in X-Plane (the plugin is older), or reload this page (it is newer).
-        const EFB_PAGE_VERSION = '0.69.6';
+        const EFB_PAGE_VERSION = '0.69.7';
         const XPPY_RELOAD = 'Plugins → XPPython3 → Reload scripts';
         function verCmp(a, b) {
             const x = String(a || '').split('.').map(n => parseInt(n, 10) || 0), y = String(b || '').split('.').map(n => parseInt(n, 10) || 0);

@@ -17,6 +17,20 @@ as soon as the aircraft is positioned and finishes setting it up while paused, w
 
 ---
 
+## 0.69.7
+
+### Weather strip: the runway BeyondATC gave you
+- While BeyondATC is connected, the strip's runway is the one BeyondATC actually assigned you, so the strip matches
+  what its controllers say. It is read from BeyondATC's flight set-up (its departure and arrival runways) and kept up
+  to date from each instruction that names a runway: the departure clearance, taxi to the holding point, line up,
+  takeoff, "expect runway", the approach clearance and the landing clearance.
+- Before, the strip took the runway from BeyondATC's ATIS, which lists landing and departing runways together, so it
+  could show your SimBrief runway (or the first one listed) while BeyondATC had cleared you for another. Before the
+  first ATIS was in BeyondATC's log it fell back to the wind, which could also differ.
+- The headwind, tailwind and crosswind are for the assigned runway, and the amber alert says
+  **ATC RWY 35, PLANNED 17** when it differs from your plan, so you know to update the MCDU.
+- The BeyondATC transcript notes each new runway ("Departure runway 35 at YSCB").
+
 ## 0.69.6
 
 ### Camera views on the Replay and Slew pages

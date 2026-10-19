@@ -1,1 +1,1 @@
-EFB_VERSION = "0.69.6"
+EFB_VERSION = "0.69.7"

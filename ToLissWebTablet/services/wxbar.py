@@ -441,7 +441,16 @@ class WxBar:
         names = dict(ends)
         use_vatsim = vatsim is not None and real and batc is None
         ext = batc or (vatsim if use_vatsim else None)
-        if ext and ext["runways"]:
+        # the runway BeyondATC actually gave us (flight set-up, clearance, taxi, approach) beats its ATIS list
+        given = None
+        if b is not None and role in ("dep", "arr"):
+            try:
+                given = b.assigned_runway(icao, role == "arr") if b.active() else None
+            except Exception:
+                given = None
+        if given and given.get("rwy"):
+            rwy, rwy_src = given["rwy"], "atc"
+        elif ext and ext["runways"]:
             rwy = planned if planned in ext["runways"] else ext["runways"][0]
             rwy_src = "batc" if batc else "atis"
         else:
@@ -476,8 +485,9 @@ class WxBar:
                 alerts.append({"level": "red", "text": f"TAILWIND {tw} KT"})
             elif tw > TW_AMBER:
                 alerts.append({"level": "amber", "text": f"TAILWIND {tw} KT"})
-        if planned and rwy and rwy != planned and rwy_src in ("atis", "batc", "wind"):
-            alerts.append({"level": "amber", "text": f"{'ATIS' if rwy_src in ('atis', 'batc') else 'IN USE'} RWY {rwy}, PLANNED {planned}"})
+        if planned and rwy and rwy != planned and rwy_src in ("atc", "atis", "batc", "wind"):
+            lab = {"atc": "ATC", "atis": "ATIS", "batc": "ATIS"}.get(rwy_src, "IN USE")
+            alerts.append({"level": "amber", "text": f"{lab} RWY {rwy}, PLANNED {planned}"})
         return {"icao": icao, "role": role, "metar": metar, "metar_age_s": int(time.time() - metar_t) if metar_t else None,
                 "taf": taf, "atis": atis, "vatsim_atis": vatsim if (vatsim and not use_vatsim) else None,
                 "runway": rwy, "runway_src": rwy_src, "planned_rwy": planned or None,

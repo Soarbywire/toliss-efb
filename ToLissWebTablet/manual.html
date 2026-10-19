@@ -160,7 +160,7 @@ dl.defs dd { margin: 0; }
     <p class="sub">The browser-based electronic flight bag for the ToLiss Airbus family in X-Plane 12: dispatch, ground handling, moving map, cockpit displays, instructor station and your own airline operations centre.</p>
   </div>
   <div class="docid" aria-label="Document information">
-    <div><span class="k">Software</span><b>ToLiss EFB 0.69.6</b></div>
+    <div><span class="k">Software</span><b>ToLiss EFB 0.69.7</b></div>
     <div><span class="k">Aircraft</span><b>ToLiss A319 · A320 · A321 · A330 · A340</b></div>
     <div><span class="k">Simulator</span><b>X-Plane 12 + XPPython3</b></div>
     <div><span class="k">Source</span><b>github.com/Soarbywire/toliss-efb</b></div>
@@ -339,7 +339,7 @@ dl.defs dd { margin: 0; }
       </dl>
       <ul>
         <li><b>The coloured dot</b> is the conditions: green VMC, blue marginal, red IFR, magenta low IFR.</li>
-        <li><b>The runway in use</b>: with a VATSIM ATIS (real weather), the one it names; otherwise your planned runway while its tailwind is 5 kt or less, else the runway most into wind. The wind is split into headwind or tailwind (HW/TW) and crosswind (XW) for that runway.</li>
+        <li><b>The runway in use</b>: while BeyondATC is connected, the runway it assigned you (from its flight set-up, then each clearance, taxi, takeoff or approach instruction that names one), else the runway its ATIS names; with a VATSIM ATIS (real weather), the one it names; otherwise your planned runway while its tailwind is 5 kt or less, else the runway most into wind. The wind is split into headwind or tailwind (HW/TW) and crosswind (XW) for that runway.</li>
         <li><b>ATIS</b>: a VATSIM controller's ATIS when one is online and X-Plane uses real weather. Otherwise the <b>EFB ATIS</b> (marked EFB), built from the same weather as the strip: information letter, time, runway in use, wind, visibility, cloud, temperature and QNH. Its letter moves on like a real ATIS: with each new METAR (real weather), or when the custom weather changes enough to matter (wind, QNH, conditions), or when the runway in use changes.</li>
         <li><b>Alerts</b> appear only when something matters: <span class="ui">ATIS D NEW</span> when the letter changes (until you open the strip), crosswind from 20 kt, tailwind over 5 kt, thunderstorm, wind shear, hail, freezing precipitation, snow, CB, conditions below CAT I, and a runway in use that differs from your plan.</li>
         <li><b>Tap the strip</b> for the weather in full, the runway and wind components including the gusts, the ATIS text, the METAR and the TAF. <span class="ui">Departure</span> and <span class="ui">Destination</span> switch airports; <span class="ui">Automatic</span> goes back to the one that matters now.</li>
@@ -509,7 +509,7 @@ PLEASE ACKNOWLEDGE</div>
       <ul>
         <li><b>The transcript</b>: ATC's instructions to you, with the controller and frequency, and what BeyondATC understood you to say. Tick <span class="ui">Show other aircraft</span> for everyone else on the frequency. It scrolls by itself; scroll up to read back, and <span class="ui">Jump to latest</span> returns.</li>
         <li><b>Your clearance</b>, kept up to date from ATC's instructions: departure clearance, squawk (amber if your transponder differs), altitude, heading, speed, direct, the next frequency, expected and cleared approach, runway clearances and taxi route. <span class="ui">Show on the map</span> puts the taxi route into the EFB's <a href="#taxi">taxi routing</a> as your clearance.</li>
-        <li><b>The radios</b> and <b>BeyondATC's ATIS</b> for each airport. While BeyondATC is connected, the <a href="#wxstrip">weather strip</a> and the Ops Centre use its ATIS, so the letter and runways match what its controllers expect.</li>
+        <li><b>The radios</b> and <b>BeyondATC's ATIS</b> for each airport. While BeyondATC is connected, the <a href="#wxstrip">weather strip</a> and the Ops Centre use its ATIS, so the letter matches what its controllers expect, and the strip's runway is the one BeyondATC assigned you, with an amber alert if it differs from your plan.</li>
         <li><b>The last instruction under the top bar</b> on every page (Always, for 30 s after a new one, or Off: Settings → Pages). Tap it for the transcript.</li>
       </ul>
       <div class="note"><b>Note</b>This is BeyondATC's own debug log, not an official interface. The EFB only reads it and never affects BeyondATC. A BeyondATC update may change what can be shown; if the EFB no longer recognises the log, it says so instead of showing wrong data. The log starts again each time BeyondATC starts.</div>
@@ -569,7 +569,7 @@ PLEASE ACKNOWLEDGE</div>
 </div>
 
 <footer class="foot">
-  <span>ToLiss EFB 0.69.6 · Free for personal, non-commercial use</span>
+  <span>ToLiss EFB 0.69.7 · Free for personal, non-commercial use</span>
   <span>Not for real-world navigation or flight operations</span>
 </footer>
 

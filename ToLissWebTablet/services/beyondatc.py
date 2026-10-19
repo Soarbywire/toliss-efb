@@ -133,6 +133,8 @@ class BeyondAtc:
         self.digits = None
         self.clearance = {}
         self.atis = {}
+        self.assigned = {"dep": {}, "arr": {}}   # the runways BeyondATC gave us: {"icao", "rwy", "src", "t"}
+        self.landed = False
         self.radios = {}
         self.freq_names = {}
         self.freq_said = set()         # frequencies whose controller ATC has named: BeyondATC's voice list does not override
@@ -226,8 +228,7 @@ class BeyondAtc:
         if self.pending_party and self.line_no - self.pending_party[0][3] > 10:
             self._flush_party(None, self.line_no - 10)       # our own exchange would have shown up by now
         if not line or line[0] != "[":
-            if line.startswith(" text:"):
-                return
+            self._flight_info(line)
             return
         if line.startswith("[Instruction] "):
             self.recognised += 1
@@ -334,7 +335,68 @@ class BeyondAtc:
                 self.controller = fac
         who = fac or self.controller
         self._event("atc", text, who=who, freq=freq)
+        self._assigned_from(text)
         self._clearance(text)
+
+    def _flight_info(self, line):
+        """The FLIGHT INFORMATION block BeyondATC writes when a flight starts: its airports and the runways it assigned."""
+        m = re.match(r"(Departure Airport|Destination Airport|Departure Runway|Arrival Runway): *(\S*)\s*$", line)
+        if not m:
+            return
+        key, val = m.group(1), m.group(2).upper()
+        side = "dep" if key.startswith("Departure") else "arr"
+        a = self.assigned[side]
+        if key.endswith("Airport"):
+            self.landed = False
+            if val != a.get("icao"):
+                self.assigned[side] = {"icao": val or None}
+        elif re.fullmatch(r"\d{2}[LRC]?", val):
+            self._assign(side, val, "flight")
+
+    def _assign(self, side, rwy, src):
+        a = self.assigned[side]
+        if a.get("rwy") != rwy:
+            a.update(rwy=rwy, src=src, t=time.time())
+            if a.get("icao"):
+                self._event("runway", f"{'Departure' if side == 'dep' else 'Arrival'} runway {rwy} at {a['icao']}", icao=a["icao"], side=side, rwy=rwy)
+
+    def _assigned_from(self, t):
+        """A runway named in an instruction to us: the departure runway before takeoff, the arrival runway after."""
+        low = t.lower()
+        r = (re.search(r"\brunway (\d{2}[LRC]?),? cleared to land\b", t, re.I) or re.search(r"\bcleared to land,? runway (\d{2}[LRC]?)", t, re.I)
+             or re.search(r"\bcleared (?:ILS|RNAV|RNP|VOR|LOC|GLS|NDB|visual)\b[^,.]*? approach,? runway (\d{2}[LRC]?)", t, re.I)
+             or re.search(r"\bexpect (?:radar vectors for )?(?:[A-Za-z]+ approach )?runway (\d{2}[LRC]?)", t, re.I))
+        if r:
+            self._assign("arr", r.group(1).upper(), "atc")
+            if "cleared to land" in low:
+                self.landed = True
+            return
+        r = (re.search(r"\brunway (\d{2}[LRC]?),? cleared for take ?off\b", t, re.I) or re.search(r"\bcleared for take ?off,? runway (\d{2}[LRC]?)", t, re.I)
+             or re.search(r"\brunway (\d{2}[LRC]?),? line ?up and wait\b", t, re.I)
+             or re.search(r"\bhold short (?:of )?(?:runway )?(\d{2}[LRC]?) for take ?off\b", t, re.I))
+        if r:
+            if self.landed and self.assigned["arr"].get("icao"):
+                self.assigned["dep"] = {"icao": self.assigned["arr"]["icao"]}     # off again from where we landed
+                self.landed = False
+            self._assign("dep", r.group(1).upper(), "atc")
+            return
+        if str((self.clearance.get("runway") or {}).get("value", "")).startswith("LAND"):
+            return                                   # taxiing in: runways named now are crossings
+        if re.search(r"\bcleared to (?!land)", low) and re.search(r"\bsquawk\b|\bvia\b|\bclimb\b", low):
+            r = re.search(r"\brunway (\d{2}[LRC]?)\b", t, re.I)            # departure clearance
+        if not r and re.search(r"\btaxi\b", low) and not re.search(r"\b(?:request|ready for) taxi\b", low):
+            r = re.search(r"\btaxi to (?:holding point \w+,? )?runway (\d{2}[LRC]?)\b", t, re.I) or \
+                re.search(r"\btaxi\b.*?\bholding point \w+,? runway (\d{2}[LRC]?)\b", t, re.I)
+        if r:
+            self._assign("dep", r.group(1).upper(), "atc")
+
+    def assigned_runway(self, icao, arrival):
+        """The runway BeyondATC assigned at this airport (departure or arrival side), or None."""
+        with self.lock:
+            a = self.assigned["arr" if arrival else "dep"]
+            if a.get("rwy") and (not a.get("icao") or a["icao"] == (icao or "").upper()):
+                return {"rwy": a["rwy"], "src": a.get("src"), "t": a.get("t")}
+            return None
 
     @staticmethod
     def _norm(t):
@@ -495,6 +557,7 @@ class BeyondAtc:
             return {"status": status, "path": self.path(), "callsign": self.callsign, "controller": self.controller,
                     "radios": dict(self.radios), "clearance": {k: dict(v) for k, v in self.clearance.items()},
                     "atis": {k: dict(v) for k, v in self.atis.items()}, "events": ev,
+                    "assigned": {k: dict(v) for k, v in self.assigned.items()},
                     "last_id": self.next_id - 1, "age_s": round(age, 1) if age is not None else None,
                     "last_atc": next((dict(e) for e in reversed(self.events) if e["kind"] == "atc"), None),
                     "session_t": self.session_t, "windows": os.name == "nt"}
