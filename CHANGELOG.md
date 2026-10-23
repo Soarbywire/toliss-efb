@@ -19,7 +19,7 @@ as soon as the aircraft is positioned and finishes setting it up while paused, w
 
 ## 0.70
 
-Everything since 0.69, in one update (the changes of 0.69.1 to 0.69.8). Details of each step are below.
+Everything since 0.69, in one update (the changes of 0.69.1 to 0.69.8). Details of each step are in CHANGELOG.md.
 
 ### Pushback with X-Plane's physics
 - The push works like Better Pushback: X-Plane's flight model stays on and its gear keeps the wheels on the surface,
