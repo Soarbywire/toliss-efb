@@ -76,6 +76,17 @@ def handle_post(req, plugin):
             req.end_headers()
             req.wfile.write(json.dumps({"status": "success", "dist_unit": plugin.config.get("dist_unit", "ft")}).encode('utf-8'))
 
+        elif req.path == '/api/efb/settings':
+            # "Only run with a ToLiss aircraft" (on by default)
+            if isinstance(data, dict) and "toliss_only" in data:
+                plugin.config["toliss_only"] = bool(data["toliss_only"])
+                plugin.save_config(plugin.config)
+                plugin._gate_next, plugin._absent_since = 0.0, None
+            req.send_response(200)
+            req.send_header('Content-type', 'application/json')
+            req.end_headers()
+            req.wfile.write(json.dumps({"status": "success", **plugin.gate_state()}).encode('utf-8'))
+
         elif req.path == '/api/wx/settings':
             # which ATIS the weather strip and the Ops Centre use: auto, batc, vatsim or efb
             c = str((data or {}).get("atis_source") or "") if isinstance(data, dict) else ""

@@ -53,6 +53,9 @@ class VatsimService:
     def _loop(self) -> None:
         last_tx = 0.0
         while not self.stop_event.is_set():
+            if getattr(self, "paused", None) and self.paused():
+                self.stop_event.wait(2.0)                 # no ToLiss aircraft: nothing to fetch for
+                continue
             try:
                 request = urllib.request.Request(
                     "https://data.vatsim.net/v3/vatsim-data.json",

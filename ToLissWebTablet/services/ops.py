@@ -569,6 +569,9 @@ class OpsCentre:
         import random as _r
         stop_event = self.plugin.stop_event
         while not stop_event.is_set():
+            if getattr(self.plugin, "asleep", False):
+                stop_event.wait(2.0)                      # no ToLiss aircraft: no polling, no messages
+                continue
             try:
                 now = time.time()
                 if self.autoload and not self.ofp and self.ofp_user and now >= self._next_autoload and self._autoload_tries < 10:

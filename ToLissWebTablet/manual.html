@@ -160,7 +160,7 @@ dl.defs dd { margin: 0; }
     <p class="sub">The browser-based electronic flight bag for the ToLiss Airbus family in X-Plane 12: dispatch, ground handling, moving map, cockpit displays, instructor station and your own airline operations centre.</p>
   </div>
   <div class="docid" aria-label="Document information">
-    <div><span class="k">Software</span><b>ToLiss EFB 0.70</b></div>
+    <div><span class="k">Software</span><b>ToLiss EFB 0.70.1</b></div>
     <div><span class="k">Aircraft</span><b>ToLiss A319 · A320 · A321 · A330 · A340</b></div>
     <div><span class="k">Simulator</span><b>X-Plane 12 + XPPython3</b></div>
     <div><span class="k">Source</span><b>github.com/Soarbywire/toliss-efb</b></div>
@@ -526,6 +526,7 @@ PLEASE ACKNOWLEDGE</div>
         <dt>Units</dt><dd>Runway distances in feet or metres, shared by the performance sheets and the Ops Centre's landing data.</dd>
         <dt>Appearance</dt><dd>Light and dark themes, and the start page.</dd>
         <dt>Pages</dt><dd>Show or hide optional pages, such as xPilot &amp; Nearby ATC and <a href="#batc">BeyondATC</a> (with its log file and the ATC line under the top bar).</dd>
+        <dt>Aircraft</dt><dd><span class="ui">Only run with a ToLiss aircraft</span> (on by default): with any other aircraft the EFB pauses after about 10 seconds. Nothing runs in X-Plane, there are no downloads or Hoppie polling, and the page says it is paused. It starts again by itself when you load a ToLiss. Turn it off (or press <span class="ui">Run with this aircraft anyway</span> on the paused page) to use the EFB with other aircraft too.</dd>
         <dt>Updates</dt><dd>Check, install and undo (<a href="#install">chapter 2</a>).</dd>
         <dt>External tools</dt><dd>Links to SimBrief, Navigraph, Chartfox and VATSIM Radar.</dd>
         <dt>About</dt><dd>The installed version.</dd>
@@ -539,6 +540,7 @@ PLEASE ACKNOWLEDGE</div>
         <thead><tr><th>Symptom</th><th>What to check</th></tr></thead>
         <tbody>
           <tr><td>The EFB page does not open</td><td>X-Plane running with a ToLiss aircraft loaded; the right address and port (it may have moved to 8081 if 8080 was busy); the tablet on the same network; the PC's firewall allowing Python.</td></tr>
+          <tr><td>"ToLiss EFB is paused"</td><td>No ToLiss aircraft is loaded. Load one and the EFB starts again by itself, or switch off Settings → Aircraft → Only run with a ToLiss aircraft.</td></tr>
           <tr><td>"Secure connection failed" (Hoppie, SimBrief, VATSIM, updates)</td><td>The computer's date, time and time zone. On a Mac, run <em>Install Certificates.command</em> in the Python folder under Applications. The EFB already retries with its own up-to-date certificates; certificate checking always stays on.</td></tr>
           <tr><td>No Ops Centre messages on the MCDU</td><td>Same Hoppie code in the EFB and the ISCS; the aircraft callsign matches the flight number in INIT A; the status shows the ATSU online.</td></tr>
           <tr><td>No CG on the load sheet</td><td>Weight &amp; Balance and the X-Plane log say why, for example when an aircraft has no <code>AirbusFBW/CGLocationPercent</code>.</td></tr>
@@ -572,7 +574,7 @@ PLEASE ACKNOWLEDGE</div>
 </div>
 
 <footer class="foot">
-  <span>ToLiss EFB 0.70 · Free for personal, non-commercial use</span>
+  <span>ToLiss EFB 0.70.1 · Free for personal, non-commercial use</span>
   <span>Not for real-world navigation or flight operations</span>
 </footer>
 

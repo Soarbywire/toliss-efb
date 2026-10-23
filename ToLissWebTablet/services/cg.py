@@ -243,6 +243,8 @@ class CgTracker:
     # ---------- learning in the background ----------
     def run(self, stop_event):
         while not stop_event.wait(5.0):
+            if getattr(self.plugin, "asleep", False):
+                continue
             try:
                 self.sample()
             except Exception:

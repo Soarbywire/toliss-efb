@@ -65,6 +65,9 @@ From version 0.59, updates can be installed from **Settings → Updates** inside
 
 From 0.69 the EFB reminds you of both steps, and shows a banner if the page and the plugin are different versions.
 
+From 0.70.1 the EFB pauses itself when no ToLiss aircraft is loaded (Settings → Aircraft → Only run with a ToLiss
+aircraft, on by default) and starts again by itself when you load one.
+
 Recommended ToLiss ISCS setting: **"X-Plane pause acts as freeze motion"**.
 
 ## License

@@ -17,6 +17,18 @@ as soon as the aircraft is positioned and finishes setting it up while paused, w
 
 ---
 
+## 0.70.1
+
+### Only with a ToLiss aircraft
+- New setting **Only run with a ToLiss aircraft** (Settings → Aircraft, on by default). With any other aircraft the
+  EFB pauses after about 10 seconds: nothing runs in X-Plane each frame, nothing is written to the aircraft, the flight
+  recorder doesn't start, and VATSIM downloads, the Ops Centre's Hoppie polling, BeyondATC log reading and the CG
+  tracker all stop. A push, slew or training traffic in progress is ended.
+- The EFB page says **ToLiss EFB is paused** (with the aircraft's name), and starts again by itself as soon as a ToLiss
+  is loaded, without reloading scripts. **Run with this aircraft anyway** on that page turns the setting off.
+- A ToLiss is recognised by its own AirbusFBW datarefs, not the ICAO code, which other A320s share.
+- The update check still runs, so new versions are still offered.
+
 ## 0.70
 
 Everything since 0.69, in one update (the changes of 0.69.1 to 0.69.8). Details of each step are in CHANGELOG.md.

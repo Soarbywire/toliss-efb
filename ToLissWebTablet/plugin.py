@@ -5,6 +5,7 @@ import queue
 import re
 import shutil
 import threading
+import time
 
 from XPLMDefs import *
 from XPLMUtilities import *
@@ -63,6 +64,9 @@ class PythonInterface(
         os.makedirs(self.sit_dir_toliss, exist_ok=True)
 
         self.stop_event = threading.Event()
+        self.asleep = False                          # no ToLiss aircraft loaded (and "Only run with a ToLiss aircraft")
+        self.toliss_present = None
+        self._gate_next, self._absent_since = 0.0, None
         self.log = MainThreadLogger()
         from .core import net as _net
         _net.set_logger(self.log.xplane)
@@ -111,6 +115,7 @@ class PythonInterface(
         self.navdb = NavDatabase(self.xp_path, self.plugin_dir, self.log, self.stop_event)
         self.navdb.load_async()
         self.vatsim = VatsimService(self.log, self.stop_event)
+        self.vatsim.paused = lambda: self.asleep
         self.vatsim.start()
         self.airport_thread = threading.Thread(target=self.build_apt_db, name="ToLissEFB-Airports", daemon=True)
         self.airport_thread.start()
@@ -175,6 +180,8 @@ class PythonInterface(
         return None
 
     def XPluginReceiveMessage(self, inFromWho, inMessage, inParam):
+        if inMessage == 102 and not inParam:            # XPLM_MSG_PLANE_LOADED, the user's aircraft
+            self._absent_since, self._gate_next = None, 0.0      # the user's aircraft changed: look again shortly
         try:
             self._traffic_message(inMessage)
         except Exception as exc:
@@ -305,7 +312,88 @@ class PythonInterface(
             return
         self._set_num(raw_name, value)
 
+    # ---------------- only with a ToLiss aircraft ----------------
+    TOLISS_REFS = ("AirbusFBW/ParkBrake", "AirbusFBW/PaxDoorModeArray", "AirbusFBW/NoPax")
+
+    def _toliss_loaded(self):
+        """A ToLiss aircraft is loaded: its own AirbusFBW datarefs are there (other A320s share the ICAO codes)."""
+        for name in self.TOLISS_REFS:
+            try:
+                ref = XPLMFindDataRef(name)
+                if ref and (XPLMIsDataRefGood(ref) if "XPLMIsDataRefGood" in globals() else True):
+                    return True
+            except Exception:
+                continue
+        return False
+
+    def _aircraft_name(self):
+        for name in ("sim/aircraft/view/acf_ui_name", "sim/aircraft/view/acf_descrip", "sim/aircraft/view/acf_ICAO"):
+            try:
+                v = self._read_string_dataref(XPLMFindDataRef(name)).strip()
+                if v:
+                    return v
+            except Exception:
+                continue
+        return ""
+
+    def _gate_tick(self, now):
+        """Every 2 s on the main thread: sleep when no ToLiss has been loaded for 10 s, wake as soon as one is."""
+        if now < self._gate_next:
+            return
+        self._gate_next = now + 2.0
+        only = bool(self.config.get("toliss_only", True))
+        present = self._toliss_loaded()
+        self.toliss_present = present
+        if present or not only:
+            self._absent_since = None
+            if self.asleep:
+                self._wake()
+            return
+        if self._absent_since is None:
+            self._absent_since = now
+        if not self.asleep and now - self._absent_since >= 10.0:
+            self._sleep()
+
+    def _sleep(self):
+        self.aircraft_name = self._aircraft_name()
+        self.log.xplane(f"ToLiss EFB: no ToLiss aircraft loaded ({self.aircraft_name or 'another aircraft'}): the EFB is paused until one is.\n")
+        for step in (lambda: self._push_end("Pushback stopped: the aircraft was changed.") if getattr(self, "push", None) else None,
+                     lambda: self._tug_release() if getattr(self, "tug", None) else None,
+                     lambda: self._slew_stop() if getattr(self, "slew", None) else None,
+                     lambda: self._tfc_release(),
+                     lambda: self.fdr.stop("aircraft changed") if self.fdr.recording else None):
+            try:
+                step()
+            except Exception:
+                pass
+        self.asleep = True
+
+    def _wake(self):
+        self.asleep = False
+        self.log.xplane("ToLiss EFB: ToLiss aircraft loaded: the EFB is running again.\n")
+
+    def gate_state(self):
+        return {"asleep": bool(self.asleep), "toliss_only": bool(self.config.get("toliss_only", True)),
+                "toliss": self.toliss_present, "aircraft": getattr(self, "aircraft_name", "") if self.asleep else ""}
+
     def flightLoopCallback(self, elapsedMe, elapsedSim, counter, refcon):
+        now = time.time()
+        try:
+            self._gate_tick(now)
+        except Exception as exc:
+            self.log.xplane(f"ToLiss EFB: aircraft check error: {exc}")
+        if self.asleep:
+            # asleep: only answer anything already waiting on the main thread, and check again for a ToLiss
+            try:
+                for command in self.active_commands:
+                    XPLMCommandEnd(command)
+                self.active_commands.clear()
+                self.bridge.process_pending(self._dispatch_bridge)
+            except Exception:
+                pass
+            finally:
+                self.log.drain_to_xplane(XPLMDebugString)
+            return 0.5
         try:
             for command in self.active_commands:
                 XPLMCommandEnd(command)

@@ -77,6 +77,13 @@ def handle_get(req, plugin):
                 req.end_headers()
                 req.wfile.write(b"manual.html not found in PythonPlugins/ToLissWebTablet/")
 
+        elif req.path.split('?')[0] == '/api/efb/state':
+            # is the EFB running, or paused for want of a ToLiss aircraft?
+            req.send_response(200)
+            req.send_header('Content-type', 'application/json')
+            req.end_headers()
+            req.wfile.write(json.dumps({"status": "success", **plugin.gate_state()}).encode('utf-8'))
+
         elif req.path == '/api/toliss/situations':
             try:
                 result = plugin.bridge.call("situation", {"action": "list"}, timeout=3.0)

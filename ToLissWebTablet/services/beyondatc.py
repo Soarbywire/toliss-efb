@@ -176,6 +176,8 @@ class BeyondAtc:
     # ---------------- following the file ----------------
     def _loop(self, stop_event):
         while not stop_event.wait(0.5):
+            if getattr(self.plugin, "asleep", False):
+                continue
             try:
                 self.poll()
             except Exception as e:

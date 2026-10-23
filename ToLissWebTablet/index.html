@@ -432,6 +432,12 @@
         .upd-steps li.done { color: #4caf50; }
         .upd-steps b.menu { font-family: var(--font-mono); font-weight: 600; }
         .upd-steps button { margin: 0; }
+        .efb-sleep { position: fixed; inset: 0; z-index: 99998; display: none; align-items: center; justify-content: center; padding: 16px;
+            background: var(--bg, #121212); }
+        .efb-sleep .box { max-width: 460px; text-align: center; background: var(--slider-bg); border: 1px solid var(--border); border-radius: 12px; padding: 24px 20px; }
+        .efb-sleep h2 { margin: 0 0 10px; font-size: 20px; color: var(--text-main); }
+        .efb-sleep p { margin: 0 0 14px; color: var(--text-dim); font-size: 14px; line-height: 1.45; }
+        .efb-sleep button { min-height: 40px; padding: 0 16px; }
         .ver-banner { position: fixed; top: 0; left: 0; right: 0; z-index: 99999; display: none; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;
                       padding: 8px 16px; background: #e65100; color: #fff; font-size: 14px; line-height: 1.4; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
         .ver-banner .ver-x { background: transparent !important; color: #fff !important; font-size: 16px; padding: 0 8px; min-height: 28px; }
@@ -797,6 +803,13 @@
     </style>
 </head>
 <body>
+    <div class="efb-sleep" id="efb-sleep"><div class="box">
+        <h2>ToLiss EFB is paused</h2>
+        <p id="efb-sleep-why">No ToLiss aircraft is loaded.</p>
+        <p>It starts again by itself as soon as you load a ToLiss Airbus.</p>
+        <button onclick="efbRunAnyway()">Run with this aircraft anyway</button>
+        <p style="margin:12px 0 0; font-size:12px;">This turns off Settings → Aircraft → Only run with a ToLiss aircraft.</p>
+    </div></div>
     <div class="ver-banner" id="ver-banner"></div>
 
     <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
@@ -2228,6 +2241,15 @@
                     </select>
                 </div>
 
+                <h3>Aircraft</h3>
+                <div class="toggle-row">
+                    <div style="flex-grow: 1;">
+                        <label for="toggle-toliss-only" style="display: block; font-size: 15px; color: var(--text-main); font-weight: 500; cursor: pointer;">Only run with a ToLiss aircraft</label>
+                        <span style="font-size: 12px; color: var(--text-dim);">With any other aircraft the EFB pauses: nothing runs in X-Plane, no downloads or Hoppie polling, and this page says so. It starts again by itself when you load a ToLiss.</span>
+                    </div>
+                    <input type="checkbox" id="toggle-toliss-only" checked onchange="efbSetTolissOnly(this.checked)">
+                </div>
+
                 <h3>External Tools</h3>
                 <div class="toggle-row">
                     <div style="flex-grow: 1;">
@@ -2261,7 +2283,7 @@
                 <div style="line-height: 1.5; color: var(--text-muted); font-size: 13px;">
                     <p>A web-based, remote interface for the ToLiss line of aircraft in X-Plane 12.</p>
                     <p>By Soarbywire &middot; <a href="https://soarbywire.com" target="_blank" rel="noopener">soarbywire.com</a></p>
-                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.70 Release Beta</p>
+                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.70.1 Release Beta</p>
                     <p style="font-size: 11px; color: #ff9800; margin-top: 5px;"><strong>Caution:</strong> Some features may not work as intended.</p>
                     <p style="font-size: 11px; color: var(--text-dim); margin-top: 5px;">New versions are published on <a href="https://github.com/Soarbywire/toliss-efb/releases" target="_blank" rel="noopener">GitHub</a> and the X-Plane.org forums, and can be installed from <b>Updates</b> above.</p>
                     <div class="lic">
@@ -7688,6 +7710,23 @@
         // runway, the wind components and the alerts; the page shows one line and, on tap, the METAR, ATIS and TAF.
         const WX = { data: null, icao: null, open: false, timer: null, mode: safeGetStorage('toliss_wx_mode') || 'always', seen: {} };
         try { WX.seen = JSON.parse(safeGetStorage('toliss_wx_seen') || '{}') || {}; } catch (e) { WX.seen = {}; }
+        // ===== paused without a ToLiss aircraft =====
+        const EFBGATE = { asleep: false };
+        function efbGateRender(st) {
+            if (!st || st.status !== 'success') return;
+            const cb = document.getElementById('toggle-toliss-only'); if (cb && document.activeElement !== cb) cb.checked = st.toliss_only !== false;
+            const was = EFBGATE.asleep; EFBGATE.asleep = !!st.asleep;
+            document.getElementById('efb-sleep-why').textContent = 'No ToLiss aircraft is loaded' + (st.aircraft ? ` (${st.aircraft})` : '') + '.';
+            document.getElementById('efb-sleep').style.display = st.asleep ? 'flex' : 'none';
+            if (was && !st.asleep) setTimeout(() => location.reload(), 1500);       // awake again: start the page afresh
+        }
+        function efbGatePoll() { fetch('/api/efb/state').then(r => r.json()).then(efbGateRender).catch(() => {}); }
+        function efbSetTolissOnly(on) {
+            fetch('/api/efb/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ toliss_only: !!on }) })
+                .then(r => r.json()).then(efbGateRender).catch(() => {});
+        }
+        function efbRunAnyway() { efbSetTolissOnly(false); }
+        efbGatePoll(); setInterval(efbGatePoll, 3000);
         function wxSetMode(v) { WX.mode = v; safeSetStorage('toliss_wx_mode', v); wxRender(); }
         function wxSetAtisSource(v) {
             fetch('/api/wx/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ atis_source: v }) })
@@ -8675,7 +8714,7 @@
         // ---- after an update: the plugin (Python) and this page must both be reloaded, in that order ----
         // This page knows its own version; the plugin reports the version it is running. While they differ, a banner
         // says which step is left: Reload scripts in X-Plane (the plugin is older), or reload this page (it is newer).
-        const EFB_PAGE_VERSION = '0.70';
+        const EFB_PAGE_VERSION = '0.70.1';
         const XPPY_RELOAD = 'Plugins → XPPython3 → Reload scripts';
         function verCmp(a, b) {
             const x = String(a || '').split('.').map(n => parseInt(n, 10) || 0), y = String(b || '').split('.').map(n => parseInt(n, 10) || 0);
