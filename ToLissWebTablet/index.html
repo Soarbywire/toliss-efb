@@ -714,6 +714,20 @@
         .batc-kv .v small { font: 400 11px var(--font-ui); color: var(--text-dim); margin-left: 6px; }
         .batc-kv .v.fresh { color: #4fc3f7; }
         .batc-kv .v.warn { color: #ff9800; }
+        .bf-apt { margin: 8px 0 3px; font-weight: 600; display: flex; gap: 6px; align-items: baseline; }
+        .bf-apt:first-child { margin-top: 0; }
+        .bf-apt small { color: var(--text-dim); font-weight: 400; font-size: 11px; }
+        .bf-tag { font: 600 10px var(--font-ui); padding: 1px 5px; border-radius: 4px; background: var(--accent); color: #fff; }
+        .bf-row { display: grid; grid-template-columns: 12px 38px 1fr auto; gap: 6px; align-items: center; padding: 2px 0; }
+        .bf-row.cur { background: rgba(79,195,247,0.12); border-radius: 4px; }
+        .bf-row .t { color: var(--text-dim); font-size: 11px; }
+        .bf-row .n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .bf-row button { margin: 0; min-height: 0; padding: 3px 8px; font: 600 13px var(--font-mono); background: var(--input-bg); color: var(--text-main); border: 1px solid var(--border); border-radius: 5px; }
+        .bf-row button:active { background: var(--accent); color: #fff; }
+        .bf-row .fq { padding: 3px 9px; font: 600 13px var(--font-mono); }
+        .bf-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--text-dim); box-sizing: border-box; }
+        .bf-dot.on { background: #4caf50; border-color: #4caf50; }
+        .bf-dot.none { border-color: transparent; }
         .batc-log { height: 62vh; min-height: 320px; overflow-y: auto; background: var(--input-bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px; position: relative; }
         .batc-msg { max-width: 82%; padding: 6px 10px; border-radius: 10px; font-size: 14px; line-height: 1.35; }
         .batc-msg .m { font-size: 11px; color: var(--text-dim); margin-bottom: 2px; }
@@ -1653,6 +1667,13 @@
                             <option value="beacon">at beacon on</option>
                         </select>
                     </div>
+                    <div class="rp-row" style="margin-top:6px; font-size:13px; align-items:center;">
+                        <span style="color:var(--text-dim);">Times in messages</span>
+                        <select id="ops-clock" onchange="opsPost('/api/ops/config', { clock: this.value }).then(opsRefresh).catch(() => {})">
+                            <option value="sim">sim time (X-Plane's UTC clock, as on the ToLiss clock)</option>
+                            <option value="real">real-world UTC</option>
+                        </select>
+                    </div>
                     <div class="rp-row" id="ops-units">
                         <div class="perf-rwys dist-unit" style="margin:0;"><span style="font-size:12px;color:var(--text-dim);align-self:center;">Runway distances in landing data</span>
                             <button class="perf-rwy active" data-u="ft" onclick="setDistUnit('ft')">FT</button><button class="perf-rwy" data-u="m" onclick="setDistUnit('m')">M</button></div>
@@ -1753,13 +1774,15 @@
             <div id="batc" class="tab-content">
                 <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px; gap: 10px; flex-wrap: wrap;">
                     <h3 style="margin: 0; border: none; padding: 0;">BeyondATC</h3>
-                    <label style="font-size:13px; display:flex; gap:6px; align-items:center;"><input type="checkbox" id="batc-party" onchange="batcSetParty(this.checked)"> Show other aircraft</label>
+                    <span style="display:flex; gap:14px; flex-wrap:wrap;"><label style="font-size:13px; display:flex; gap:6px; align-items:center;"><input type="checkbox" id="batc-autotaxi" onchange="batcSetAutoTaxi(this.checked)"> Taxi clearances onto the map automatically</label>
+                    <label style="font-size:13px; display:flex; gap:6px; align-items:center;"><input type="checkbox" id="batc-party" onchange="batcSetParty(this.checked)"> Show other aircraft</label></span>
                 </div>
                 <div class="batc-status" id="batc-status">Looking for BeyondATC's log…</div>
                 <div class="batc-wrap">
                     <div>
                         <div class="batc-card"><h4>Your clearance</h4><div class="batc-kv" id="batc-clr"><span class="k">—</span><span class="v">No instructions yet</span></div></div>
-                        <div class="batc-card"><h4>Radios (as BeyondATC sees them)</h4><div class="batc-kv" id="batc-radios"></div></div>
+                        <div class="batc-card"><h4>Radios and frequencies</h4><div id="batc-freqs" style="font-size:13px;"></div>
+                            <div class="rp-note" style="margin-top:6px;"><span class="bf-dot on"></span> heard on your radio in the last 5 min · <span class="bf-dot"></span> BeyondATC has a controller there. Tap a frequency to put it in COM1 standby.</div></div>
                         <div class="batc-card" id="batc-atis-card"><h4>BeyondATC ATIS</h4><div id="batc-atis" style="font-size:13px;"></div></div>
                     </div>
                     <div>
@@ -2195,6 +2218,15 @@
                         <option value="always">Always</option><option value="alerts">Only with an alert</option><option value="off">Off</option>
                     </select>
                 </div>
+                <div class="toggle-row">
+                    <div style="flex-grow: 1;">
+                        <label for="wx-atis-src" style="display: block; font-size: 15px; color: var(--text-main); font-weight: 500;">ATIS source</label>
+                        <span style="font-size: 12px; color: var(--text-dim);">The ATIS the weather strip and the Ops Centre use (MCDU ATIS messages, takeoff and landing data). Automatic: BeyondATC while it is connected, else VATSIM with real weather, else the EFB ATIS. If the chosen source has no ATIS for the airport, the automatic order is used.</span>
+                    </div>
+                    <select id="wx-atis-src" onchange="wxSetAtisSource(this.value)" style="min-height:36px; margin:0; width:auto; flex-shrink:0;">
+                        <option value="auto">Automatic</option><option value="batc">BeyondATC</option><option value="vatsim">VATSIM</option><option value="efb">EFB ATIS</option>
+                    </select>
+                </div>
 
                 <h3>External Tools</h3>
                 <div class="toggle-row">
@@ -2229,7 +2261,7 @@
                 <div style="line-height: 1.5; color: var(--text-muted); font-size: 13px;">
                     <p>A web-based, remote interface for the ToLiss line of aircraft in X-Plane 12.</p>
                     <p>By Soarbywire &middot; <a href="https://soarbywire.com" target="_blank" rel="noopener">soarbywire.com</a></p>
-                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.69.7 Release Beta</p>
+                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.70 Release Beta</p>
                     <p style="font-size: 11px; color: #ff9800; margin-top: 5px;"><strong>Caution:</strong> Some features may not work as intended.</p>
                     <p style="font-size: 11px; color: var(--text-dim); margin-top: 5px;">New versions are published on <a href="https://github.com/Soarbywire/toliss-efb/releases" target="_blank" rel="noopener">GitHub</a> and the X-Plane.org forums, and can be installed from <b>Updates</b> above.</p>
                     <div class="lic">
@@ -7467,7 +7499,7 @@
                     else taxiShowStrip(`<div class="next" style="font-size:15px;">${esc(res.message)}</div>`, 'off');
                     return;
                 }
-                res.preview = !!preview; res.note = params.note || '';
+                res.preview = !!preview; res.note = [params.note, res.note].filter(Boolean).join(' · ');
                 TAXI.route = res; TAXI.params = params; TAXI.idx = 0; TAXI.offSince = 0; TAXI.arrived = 0; TAXI.lastDraw = 0;
                 msg.textContent = `${preview ? 'Preview' : 'Route planned'}: ${res.summary} (${Math.round(res.length_m)} m).`; msg.style.color = '';
                 if (TAXI.standLayer && !quiet) { map.removeLayer(TAXI.standLayer); TAXI.standLayer = null; }
@@ -7657,12 +7689,18 @@
         const WX = { data: null, icao: null, open: false, timer: null, mode: safeGetStorage('toliss_wx_mode') || 'always', seen: {} };
         try { WX.seen = JSON.parse(safeGetStorage('toliss_wx_seen') || '{}') || {}; } catch (e) { WX.seen = {}; }
         function wxSetMode(v) { WX.mode = v; safeSetStorage('toliss_wx_mode', v); wxRender(); }
+        function wxSetAtisSource(v) {
+            fetch('/api/wx/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ atis_source: v }) })
+                .then(r => r.json()).then(() => wxPoll()).catch(() => {});
+        }
         function wxPoll() {
             if (WX.mode === 'off' && !WX.open) { wxRender(); return; }
             fetch('/api/wx/strip' + (WX.icao ? '?icao=' + encodeURIComponent(WX.icao) : '')).then(r => r.json()).then(d => {
                 if (!d || d.status !== 'success') return;
                 if (WX.icao && d.auto === WX.icao) WX.icao = null;          // the choice is now the automatic one
                 WX.data = d; wxRender();
+                const as = document.getElementById('wx-atis-src');
+                if (as && d.atis_choice && document.activeElement !== as) as.value = d.atis_choice;
             }).catch(() => {});
         }
         function wxStart() { wxPoll(); clearInterval(WX.timer); WX.timer = setInterval(wxPoll, 30000); }
@@ -7753,11 +7791,15 @@
             }
             let atis;
             if (d.atis && d.atis.source === 'vatsim') atis = `<h4>ATIS ${esc(d.atis.letter || '')} (VATSIM)</h4><pre>${esc(d.atis.text || '')}</pre>`;
-            else if (d.atis && d.atis.source === 'batc') atis = `<h4>ATIS ${esc(d.atis.letter || '')} (BeyondATC)</h4><pre>${esc(d.atis.text || '')}</pre><div class="note">BeyondATC is connected, so its ATIS is used: its controllers expect this letter and these runways.</div>`;
+            else if (d.atis && d.atis.source === 'batc') atis = `<h4>ATIS ${esc(d.atis.letter || '')} (BeyondATC)</h4><pre>${esc(d.atis.text || '')}</pre><div class="note">${d.atis_choice === 'batc' ? 'BeyondATC is your chosen ATIS source' : 'BeyondATC is connected, so its ATIS is used'}: its controllers expect this letter.</div>`;
             else if (d.atis) atis = `<h4>EFB ATIS ${esc(d.atis.letter || '')}</h4><pre>${esc(d.atis.text || '')}</pre>
                 <div class="note">Built by the EFB from ${d.wx_src === 'sim' ? "X-Plane's weather" : 'the METAR'}${d.vatsim_atis ? '' : ' (no VATSIM ATIS online)'}. Its letter moves on ${d.wx_src === 'sim' ? 'when the weather changes enough to matter' : 'with each new METAR'} or the runway in use changes.</div>`;
             else atis = `<h4>ATIS</h4><div class="note">No ATIS: no weather for this airport yet.</div>`;
-            if (d.vatsim_atis) atis += `<h4>VATSIM ATIS ${esc(d.vatsim_atis.letter || '')} (${d.atis && d.atis.source === 'batc' ? 'not used while BeyondATC is connected' : 'real-world weather: does not match your custom weather'})</h4><pre>${esc(d.vatsim_atis.text || '')}</pre>`;
+            if (d.vatsim_atis) atis += `<h4>VATSIM ATIS ${esc(d.vatsim_atis.letter || '')} (${d.atis_choice === 'efb' ? 'not used: you chose the EFB ATIS' : d.atis && d.atis.source === 'batc' ? 'not used while BeyondATC is connected' : 'real-world weather: does not match your custom weather'})</h4><pre>${esc(d.vatsim_atis.text || '')}</pre>`;
+            const ATIS_NAMES = { batc: 'BeyondATC', vatsim: 'VATSIM', efb: 'EFB ATIS' };
+            if (d.atis_fallback && d.atis_choice) atis += `<div class="note">No ${ATIS_NAMES[d.atis_choice] || ''} ATIS for ${esc(d.icao)} at the moment, so the automatic choice is shown.</div>`;
+            atis += `<div class="note">ATIS source: <select onchange="wxSetAtisSource(this.value)" onclick="event.stopPropagation()" style="min-height:28px; margin:0 0 0 4px; width:auto; display:inline-block; padding:2px 8px;">` +
+                [['auto', 'Automatic'], ['batc', 'BeyondATC'], ['vatsim', 'VATSIM'], ['efb', 'EFB ATIS']].map(([v, l]) => `<option value="${v}" ${(d.atis_choice || 'auto') === v ? 'selected' : ''}>${l}</option>`).join('') + `</select></div>`;
             p.innerHTML = `<span class="x" onclick="wxTogglePanel(false)">✕</span>
                 <div class="row">${btn(d.orig, 'Departure')}${btn(d.dest, 'Destination')}${d.role === 'here' ? `<button class="active">${esc(d.icao)}</button>` : ''}
                     ${WX.icao ? `<button onclick="event.stopPropagation(); wxChoose(null)">Automatic</button>` : ''}</div>
@@ -7775,6 +7817,7 @@
         const batcOn = () => safeGetStorage('toliss_int_batc') === 'true';
         function batcStart(force) {
             const cb = document.getElementById('batc-party'); if (cb) cb.checked = BATC.party;
+            const at = document.getElementById('batc-autotaxi'); if (at) at.checked = safeGetStorage('toliss_batc_autotaxi', '1') === '1';
             const sel = document.getElementById('atc-mode'); if (sel) sel.value = BATC.mode;
             clearInterval(BATC.timer); BATC.timer = null;
             if (!batcOn()) { document.getElementById('atc-strip').style.display = 'none'; return; }
@@ -7795,7 +7838,7 @@
                 (st.events || []).forEach(batcAdd);
                 BATC.last = Math.max(BATC.last, st.last_id || 0);
                 if (BATC.pinned) log.scrollTop = log.scrollHeight;
-                batcRender(); batcStrip();
+                batcRender(); batcStrip(); batcAutoTaxi(st);
             }).catch(() => {});
         }
         const batcTime = t => { const d = new Date(t * 1000); return d.toTimeString().slice(0, 8); };
@@ -7851,9 +7894,44 @@
                 h += `<span class="k">${label}</span><span class="v${fresh ? ' fresh' : ''}${warn ? ' warn' : ''}" title="${esc(v.text || '')}">${esc(val)}<small>${batcAgo(v.t)}${warn ? ' · set ' + esc(r.xpdr) : ''}</small>${extra}</span>`;
             });
             document.getElementById('batc-clr').innerHTML = h || '<span class="k">—</span><span class="v" style="font-size:13px;">No instructions yet</span>';
-            document.getElementById('batc-radios').innerHTML = r.com1 ? `<span class="k">COM1</span><span class="v">${esc(r.com1)}</span><span class="k">COM2</span><span class="v">${esc(r.com2)}</span><span class="k">Squawk</span><span class="v">${esc(r.xpdr)}</span>` : '<span class="k">—</span><span class="v" style="font-size:13px;">Not reported yet</span>';
+            batcFreqs(st);
             const at = Object.values(st.atis || {}).sort((a, b) => b.t - a.t);
             document.getElementById('batc-atis').innerHTML = at.length ? at.map(a => `<div style="margin-bottom:6px;"><b style="font-family:var(--font-mono);">${esc(a.icao)} ${esc(a.letter)}</b>${a.runways && a.runways.length ? ' · RWY ' + esc(a.runways.join(' / ')) : ''}<div style="color:var(--text-dim); font-size:12px;">${esc(a.text)}</div></div>`).join('') : '<span style="color:var(--text-dim);">None yet</span>';
+        }
+        function batcFreqs(st) {
+            const el = document.getElementById('batc-freqs'); if (!el) return;
+            const F = st.freqs || {};
+            if (F.error) { el.innerHTML = `<span style="color:var(--text-dim);">Not available: ${esc(F.error)}</span>`; return; }
+            const com1 = F.radios && F.radios.com1 ? F.radios.com1.freq : null;
+            const dot = x => `<span class="bf-dot${x.active ? ' on' : (x.heard || x.staffed ? '' : ' none')}"></span>`;
+            const tune = (khz, name, label) => `<button onclick="xpTune(1, ${Number(khz)}, '${esc(String(name || '')).replace(/'/g, '')}')">${esc(label)}</button>`;
+            const row = (x, t, name) => `<div class="bf-row${x.freq === com1 ? ' cur' : ''}">${dot(x)}<span class="t">${esc(t)}</span><span class="n" title="${esc(name || '')}">${esc(name || '')}</span>${tune(x.khz || Math.round(parseFloat(x.freq) * 1000), name, x.freq)}</div>`;
+            let h = '';
+            const rad = F.radios || {};
+            ['com1', 'com2'].forEach(c => {
+                const x = rad[c]; if (!x) return;
+                const who = x.dead && !x.heard ? 'no BeyondATC controller here' : (x.name || (x.staffed ? 'BeyondATC controller' : '—'));
+                h += `<div class="bf-row${c === 'com1' ? ' cur' : ''}">${dot(x)}<span class="t">${c.toUpperCase()}</span><span class="n">${esc(who)}</span><span class="fq">${esc(x.freq)}</span></div>`;
+            });
+            const sq = (st.radios || {}).xpdr;
+            if (sq) h += `<div class="bf-row"><span class="bf-dot none"></span><span class="t">XPDR</span><span class="n">Squawk</span><span class="fq">${esc(sq)}</span></div>`;
+            if (F.next) {
+                const m = String(F.next).match(/(1\d{2}\.\d{1,3})\s*$/);
+                const nm = String(F.next).replace(/\s*1\d{2}\.\d{1,3}\s*$/, '');
+                if (m) h += `<div class="bf-row"><span class="bf-dot none"></span><span class="t">NEXT</span><span class="n">${esc(nm)}</span>${tune(Math.round(parseFloat(m[1]) * 1000), nm, parseFloat(m[1]).toFixed(3))}</div>`;
+            }
+            (F.airports || []).forEach(a => {
+                const tag = a.role === 'dep' ? '<span class="bf-tag">DEP</span>' : (a.role === 'arr' ? '<span class="bf-tag">ARR</span>' : '');
+                h += `<div class="bf-apt">${esc(a.icao)} ${tag}<small>${esc(a.name)}${a.kind === 'dynamic' ? ' · nearby' : ''}</small></div>`;
+                if (!a.stations.length) h += '<div style="color:var(--text-dim); font-size:12px;">No frequencies in X-Plane\'s airport data</div>';
+                a.stations.forEach(x => { h += row(x, x.type, x.name); });
+            });
+            if ((F.centres || []).length) {
+                h += '<div class="bf-apt">Centre<small>the sectors BeyondATC has brought in so far</small></div>';
+                F.centres.forEach(c => { h += row(c, 'CTR', c.name); });
+            }
+            if ((F.quiet || []).length) h += `<div style="color:var(--text-dim); font-size:12px; margin-top:6px;">Also loaded, without ATC: ${esc(F.quiet.join(', '))}</div>`;
+            el.innerHTML = h || '<span style="color:var(--text-dim);">Nothing yet: BeyondATC lists its airports when a flight is loaded</span>';
         }
         function batcStrip() {
             const s = document.getElementById('atc-strip'), st = BATC.st;
@@ -7868,22 +7946,49 @@
             s.style.display = 'flex';
         }
         // the taxi clearance onto the map: the EFB's taxi routing with BeyondATC's route as the clearance
-        function batcTaxi() {
-            const t = BATC.st && BATC.st.clearance && BATC.st.clearance.taxi && BATC.st.clearance.taxi.value;
-            if (!t) return;
-            switchTab('telemetry');
-            setTimeout(() => {
+        // auto: a new taxi clearance from BeyondATC is planned on the map straight away (without leaving this page)
+        function batcTaxi(auto) {
+            const T = BATC.st && BATC.st.clearance && BATC.st.clearance.taxi;
+            if (!T) return Promise.resolve();
+            const t = T.value || {};
+            const stand = t.to && /^(?:stand|gate)\s+(\w+)/i.exec(t.to);
+            const hp = t.to && /^holding point\s+(\w+)/i.exec(t.to);
+            const rwy = (t.runway || (t.to && /^(?:runway\s+)?(\d{2}[LRC]?)$/i.exec(t.to) || [])[1] || (/^\d{2}[LRC]?$/i.test(t.hold_short || '') ? t.hold_short : '') || '').toUpperCase();
+            const clr = [t.clearance || '', hp ? hp[1] : ''].join(' ').trim();      // via G3 C, to holding point C1: G3 C C1
+            const openPanel = why => {
                 taxiOpen(true);
-                document.getElementById('taxi-clr').value = t.clearance || '';
-                const stand = t.to && /^(stand|gate)\s+(\w+)/i.exec(t.to);
-                const rwy = t.runway || (t.to && /^(?:runway\s+)?(\d{2}[LRC]?)$/i.exec(t.to) || [])[1];
                 setTimeout(() => {
-                    if (stand) { taxiSetType('stand'); const sel = document.getElementById('taxi-stand'); if ([...sel.options].some(o => o.value === stand[2])) sel.value = stand[2]; }
-                    else if (rwy) { taxiSetType('runway'); const sel = document.getElementById('taxi-rwy'); if ([...sel.options].some(o => o.value === rwy)) sel.value = rwy; }
-                    const src = document.getElementById('taxi-src'); if (src) src.textContent = 'Clearance from BeyondATC: ' + (BATC.st.clearance.taxi.text || '') + ' Press Plan route.';
+                    document.getElementById('taxi-clr').value = clr;
+                    if (rwy) { taxiSetType('runway'); const sel = document.getElementById('taxi-rwy'); if ([...sel.options].some(o => o.value === rwy)) sel.value = rwy; }
+                    const src = document.getElementById('taxi-src'); if (src) src.textContent = 'Clearance from BeyondATC: ' + (T.text || '') + (why ? ' ' + why : '');
                 }, 900);
-            }, 200);
+            };
+            if (!auto) switchTab('telemetry');
+            return new Promise(res => setTimeout(res, auto ? 0 : 250)).then(() => fetch('/api/taxi/options')).then(r => r.json()).then(o => {
+                if (!o || o.status !== 'success' || o.remote) { if (!auto) openPanel(''); return; }
+                let params = null;
+                if (stand) {
+                    const nm = (o.stands || []).map(x => x.name).find(n => n.toUpperCase() === stand[1].toUpperCase() || n.split(/\s+/).pop().toUpperCase() === stand[1].toUpperCase());
+                    if (nm) params = { dest_type: 'stand', stand: nm, runway: '', clearance: clr };
+                } else if (rwy && (o.runways || []).includes(rwy)) params = { dest_type: 'runway', stand: '', runway: rwy, clearance: clr };
+                if (!params) { if (!auto) openPanel(stand ? `Stand ${stand[1]} was not found in your scenery: choose it and press Plan route.` : 'Choose the destination and press Plan route.'); return; }
+                params.note = 'Cleared by BeyondATC';
+                const before = TAXI.route;
+                return taxiPlan(params, !!auto).then(() => {
+                    if (TAXI.route && TAXI.route !== before) { if (auto) updateStatus('BeyondATC taxi clearance on the map: ' + TAXI.route.summary); }
+                    else if (!auto) openPanel('');
+                });
+            }).catch(() => { if (!auto) openPanel(''); });
         }
+        function batcAutoTaxi(st) {
+            const T = st && st.clearance && st.clearance.taxi;
+            const key = T ? T.t + '|' + T.text : '';
+            if (BATC.taxiKey === undefined) { BATC.taxiKey = key; return; }     // what was already in the log when the page opened
+            if (!T || key === BATC.taxiKey) return;
+            BATC.taxiKey = key;
+            if (safeGetStorage('toliss_batc_autotaxi', '1') === '1') batcTaxi(true);
+        }
+        function batcSetAutoTaxi(on) { safeSetStorage('toliss_batc_autotaxi', on ? '1' : '0'); }
         document.addEventListener('DOMContentLoaded', () => setTimeout(() => batcStart(), 3000));
 
         // ===== DCDU: Ops Centre messages on an A320-family DCDU, with response keys =====
@@ -8152,8 +8257,8 @@
                 const noAtis = k === 'atis' ? f.no_atis_sent : f.no_arr_atis_sent;
                 if (sent && letter) return [`Sent ${opsUtc(sent)} · information ${letter}`, 'ok'];
                 if (sent && noAtis) return [`No VATSIM ATIS: latest METAR sent ${opsUtc(sent)} · checking`, 'wait'];
-                if (online) return [k === 'atis' ? 'VATSIM ATIS online: sends with the package' : 'VATSIM ATIS online: sends at about 150 nm out', ''];
-                return ['No VATSIM ATIS online (checking)', ''];
+                if (online) return [k === 'atis' ? 'ATIS online: sends with the package' : 'ATIS online: sends at about 150 nm out', ''];
+                return ['No BeyondATC or VATSIM ATIS (checking): the EFB ATIS is used', ''];
             }
             if (!sent) {
                 if (f.airborne && OPS_PHASES[0].items.some(i => i[0] === k)) return ['Not sent (airborne)', ''];
@@ -8415,6 +8520,7 @@
                 });
                 const sb = document.getElementById('ops-sbcs'); if (sb) sb.checked = c.use_sb_callsign !== false;
                 const ft = document.getElementById('ops-final-trig'); if (ft && c.final_trigger) ft.value = c.final_trigger;
+                const ck = document.getElementById('ops-clock'); if (ck && c.clock) ck.value = c.clock;
             }).catch(() => {});
         }
         // save the setup as each field is changed, without connecting or disconnecting
@@ -8569,7 +8675,7 @@
         // ---- after an update: the plugin (Python) and this page must both be reloaded, in that order ----
         // This page knows its own version; the plugin reports the version it is running. While they differ, a banner
         // says which step is left: Reload scripts in X-Plane (the plugin is older), or reload this page (it is newer).
-        const EFB_PAGE_VERSION = '0.69.7';
+        const EFB_PAGE_VERSION = '0.70';
         const XPPY_RELOAD = 'Plugins → XPPython3 → Reload scripts';
         function verCmp(a, b) {
             const x = String(a || '').split('.').map(n => parseInt(n, 10) || 0), y = String(b || '').split('.').map(n => parseInt(n, 10) || 0);

@@ -17,6 +17,138 @@ as soon as the aircraft is positioned and finishes setting it up while paused, w
 
 ---
 
+## 0.70
+
+Everything since 0.69, in one update (the changes of 0.69.1 to 0.69.8). Details of each step are below.
+
+### Pushback with X-Plane's physics
+- The push works like Better Pushback: X-Plane's flight model stays on and its gear keeps the wheels on the surface,
+  while the EFB acts as the tug, setting the aircraft's speed and turn rate along the planned path and correcting any
+  drift. Before, the EFB placed the aircraft itself at a fixed height and attitude, so on sloping or uneven aprons
+  (reported at LFML Marseille) or with add-on airport scenery a wheel could end up in the ground and the aircraft
+  couldn't taxi afterwards.
+- Waiting for the tug, waiting after brake release, and holding at the end until you set the parking brake all keep
+  the aircraft still the same way; any creep from idle thrust is pulled back. The plan, map preview, tug, NWS DISC and
+  parking brake behave as before.
+
+### Weather strip (new)
+- **One line under the top bar, on every page**, for the airport that matters now (departure on the ground and while
+  climbing out, then the destination): ATIS letter, runway in use, wind with **headwind/tailwind and crosswind for that
+  runway**, QNH in the airport's unit, visibility and ceiling, temperature, and a dot for the conditions.
+- **Alerts only when something matters**: a new ATIS letter, crosswind from 20 kt, tailwind over 5 kt, thunderstorm,
+  wind shear, hail, freezing precipitation, snow, CB, conditions below CAT I, and a runway that differs from your plan
+  (e.g. **ATC RWY 35, PLANNED 17**).
+- **Tap it** for the full METAR, ATIS and TAF, the wind components in the gusts, and Departure / Destination buttons.
+  Show it always, only with an alert, or off (Settings → Weather strip).
+- **Real weather**: the strip uses the METAR. **Custom weather** (manual or injected): it uses X-Plane's own weather
+  for both airports, which is what you will fly in; the real METAR stays in the panel for reference.
+- **EFB ATIS**: with no VATSIM ATIS (offline), or custom weather, the EFB builds its own ATIS from the same weather, with
+  a letter that moves on like a real one, so **ATIS NEW** works offline too.
+- **Runway in use**: the one BeyondATC assigned you while it is connected; else the ATIS's; else your planned runway
+  while its tailwind is 5 kt or less, else the runway most into wind.
+
+### Choose your ATIS: BeyondATC, VATSIM or the EFB's
+- **ATIS source** (Settings → Weather strip, or the strip's panel): **Automatic** (BeyondATC while connected, else
+  VATSIM with real weather, else the EFB ATIS), **BeyondATC**, **VATSIM** or **EFB ATIS**. It applies to the strip,
+  the Ops Centre's ATIS messages to the MCDU, the runway cautions in the takeoff and landing data, and the ATIS status
+  on the Ops Centre page. If the chosen source has none for the airport, the automatic order is used and the panel
+  says so.
+- ToLiss's own ATSU ATIS request (over Hoppie) still gets Hoppie's ATIS: it doesn't go through the EFB.
+
+### BeyondATC (new, optional)
+- **A BeyondATC page** (Settings → Pages → BeyondATC, off until switched on). When BeyondATC runs on the same PC, the
+  EFB reads its log live and shows:
+  - **the transcript**: ATC's instructions with the controller and frequency, what BeyondATC understood you to say,
+    and optionally the other aircraft on the frequency;
+  - **your clearance**: departure clearance, squawk (amber if your transponder differs), altitude, heading, speed,
+    direct, next frequency, approach, runway clearances and taxi route;
+  - **radios and frequencies**: COM1 and COM2 with the controller on each ("no BeyondATC controller here" on a dead
+    frequency), your squawk and next frequency; the airports BeyondATC is running (departure and arrival first, then
+    nearby airports as it loads them) with their ATC frequencies; and the centre sectors it has brought in. A green dot
+    marks a controller heard in the last 5 minutes, an open dot one BeyondATC has running. Tap a frequency to put it in
+    COM1 standby;
+  - **BeyondATC's ATIS** for each airport, and each runway it assigns you.
+- **Taxi clearances onto the map automatically** (on by default): a taxi clearance is planned straight away, through
+  the holding point ("taxi to holding point C1, runway 13L, via G3, C" follows G3, C and C1). **Show on the map** does
+  the same and opens the map.
+- **ATC's last instruction under the top bar** on every page: always, for 30 s after a new one (the default), or off.
+- The log is `%USERPROFILE%\AppData\LocalLow\Skirmish Mode Games, Inc\BeyondATC\Player.log` (another place can be
+  set in Settings). It is BeyondATC's debug log, not an official interface: if an update changes it beyond
+  recognition, the page says so instead of showing wrong data.
+
+### Taxi routing: taxiway names as sceneries label them
+- "C" also matches segments named "C_1", "TWY C", "C (north)", "C/C1" or "Charlie" (C1 stays a different taxiway).
+  Reported at LFML: "Not a taxiway at LFML: C".
+- A name missing from your scenery no longer blocks the route: it is planned along the rest of the clearance, with a
+  note. If no route follows the clearance exactly, you get the best route to the same place, with a note.
+
+### Ops Centre: sim time in messages
+- **Times in messages**: **sim time** (the default, X-Plane's UTC clock as on the ToLiss clock and MCDU) or
+  **real-world UTC**, for OOOI, the departure report, ETAs, progress, the final load sheet, the block-in summary, and the
+  OOOI times and ETA on the Ops Centre page. With sim time, early or late is measured against the time of day of the
+  SimBrief schedule; block and flight times are always the actual time elapsed.
+
+### Camera views on the Replay and Slew pages
+- **Camera**: X-Plane's views in one tap (Cockpit, Chase, Orbit, Tower, Runway, Fly-by, Moving spot, Free camera),
+  and arrow and zoom buttons (hold them) to move the orbit, chase or free camera. On the Replay and Slew pages.
+- **Replay page** also: your **Quick Looks** as named buttons; **Jump to the landing** (rewinds to about 30 s before
+  the last touchdown, runway view, paused); **Touchdown camera** (runway view from 150 ft until slowed down); and
+  **Auto-cycle** through the views you choose, every 10 to 60 seconds.
+
+### Fix
+- **Map & Telemetry: no line across the map after a reposition.** The blue track no longer joins an instant move
+  (Reposition, slew, the approach trainer, replay) to the old position with a straight line.
+
+## 0.69.8
+
+### Pushback with X-Plane's physics
+- The push now works like Better Pushback: X-Plane's flight model stays on and its gear keeps the wheels on the
+  surface, while the EFB acts as the tug, setting the aircraft's speed and turn rate along the planned path and
+  correcting any drift. Before, the EFB placed the aircraft itself, keeping it at a fixed height and attitude, so on
+  sloping or uneven aprons (reported at LFML Marseille) or with add-on airport scenery a wheel could end up in the
+  ground, and the aircraft couldn't taxi afterwards.
+- Waiting for the tug, waiting after brake release, and holding at the end until you set the parking brake all keep
+  the aircraft still the same way, with X-Plane's physics on; any creep from idle thrust is pulled back.
+- The plan, the map preview, the tug, NWS DISC and the parking brake behave as before.
+
+### Ops Centre: sim time in messages
+- New setting **Times in messages**: **sim time** (the default) or **real-world UTC**. Sim time is X-Plane's UTC clock,
+  the one the ToLiss clock and MCDU show. It is used for OOOI (OUT, OFF, ON, IN), the departure report, ETA updates,
+  progress replies, the final load sheet and the block-in summary, and for the OOOI times and ETA on the Ops Centre page.
+- With sim time, early or late is measured against the time of day of the SimBrief schedule. Block and flight times
+  are always the actual time elapsed.
+
+### BeyondATC: radios and frequencies
+- The BeyondATC page has a **Radios and frequencies** card, updated live from BeyondATC's log:
+  - **your radios**: COM1 and COM2 with the controller on each ("no BeyondATC controller here" if you tune a dead
+    frequency), your squawk, and the next frequency you've been given;
+  - **the airports BeyondATC is running**: your departure and arrival first, then the nearby airports it loads as you
+    fly (they drop off when it does), with their Delivery, Ground, Tower, Approach, Departure and ATIS frequencies from
+    X-Plane's airport data, less the ones BeyondATC merges away;
+  - **the centre sectors** BeyondATC has brought in so far (it doesn't list sectors ahead of you until they're needed).
+- A green dot marks a controller heard on your radio in the last 5 minutes, an open dot one that BeyondATC has
+  running. Tap a frequency to put it in COM1 standby.
+- Nearby airports with no ATC (a CTAF only) are listed in one line underneath.
+
+### BeyondATC taxi clearances on the map
+- A taxi clearance from BeyondATC is now planned on the map straight away (new option on the BeyondATC page, on by
+  default), without pressing Plan route. **Show on the map** under the clearance plans it at once too.
+- The holding point is part of the route: "taxi to holding point C1, runway 13L, via G3, C" follows G3, C and C1.
+- Taxiway names are matched the way sceneries label them: "C" also matches segments named "C_1", "TWY C", "C (north)",
+  "C/C1" or "Charlie" (a different taxiway such as C1 stays separate). Reported at LFML: "Not a taxiway at LFML: C".
+- A name that isn't in your scenery's taxi network no longer blocks the route: it is planned along the rest of the
+  clearance, with a note saying which name was missing. If no route follows the clearance exactly, you get the best
+  route to the same place, with a note.
+
+### Choose your ATIS: BeyondATC, VATSIM or the EFB's
+- New setting **ATIS source** (Settings → Weather strip, or in the weather strip's panel): **Automatic** (BeyondATC
+  while it is connected, else VATSIM with real weather, else the EFB ATIS), **BeyondATC**, **VATSIM** or **EFB ATIS**.
+- It applies to the weather strip, the ATIS messages the Ops Centre sends to the MCDU (automatic or requested with
+  an Ops Centre telex), the runway cautions in the takeoff and landing data (which used to read VATSIM's ATIS only),
+  and the ATIS status on the Ops Centre page.
+- If the chosen source has no ATIS for the airport, the automatic order is used and the strip's panel says so.
+- ToLiss's own ATSU ATIS request (over Hoppie) still gets Hoppie's real-world/VATSIM ATIS: it doesn't go through the EFB.
+
 ## 0.69.7
 
 ### Weather strip: the runway BeyondATC gave you

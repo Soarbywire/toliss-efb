@@ -439,8 +439,18 @@ class WxBar:
         planned = str(_ops_g(o, "origin" if role == "dep" else "destination", "plan_rwy") or "").upper() if role in ("dep", "arr") else ""
         ends = self._runway_ends(icao)
         names = dict(ends)
-        use_vatsim = vatsim is not None and real and batc is None
-        ext = batc or (vatsim if use_vatsim else None)
+        # which ATIS: the one chosen in Settings when it has one for this airport, else the automatic order
+        # (BeyondATC while connected, VATSIM with real weather, else the EFB's own)
+        choice = self.atis_source()
+        if choice == "batc" and batc:
+            ext = batc
+        elif choice == "vatsim" and vatsim:
+            ext = vatsim
+        elif choice == "efb":
+            ext = None
+        else:
+            ext = batc or (vatsim if (vatsim is not None and real) else None)
+        use_vatsim = ext is vatsim and vatsim is not None
         # the runway BeyondATC actually gave us (flight set-up, clearance, taxi, approach) beats its ATIS list
         given = None
         if b is not None and role in ("dep", "arr"):
@@ -452,7 +462,7 @@ class WxBar:
             rwy, rwy_src = given["rwy"], "atc"
         elif ext and ext["runways"]:
             rwy = planned if planned in ext["runways"] else ext["runways"][0]
-            rwy_src = "batc" if batc else "atis"
+            rwy_src = "batc" if ext is batc else "atis"
         else:
             rwy, rwy_src = self._pick_runway(ends, wx, planned)
         atis = ext if ext else self._efb_atis(icao, wx, rwy, real and src == "metar", (mt or {}).get("time") if src == "metar" else None,
@@ -490,6 +500,7 @@ class WxBar:
             alerts.append({"level": "amber", "text": f"{lab} RWY {rwy}, PLANNED {planned}"})
         return {"icao": icao, "role": role, "metar": metar, "metar_age_s": int(time.time() - metar_t) if metar_t else None,
                 "taf": taf, "atis": atis, "vatsim_atis": vatsim if (vatsim and not use_vatsim) else None,
+                "atis_choice": choice, "atis_fallback": choice != "auto" and (atis or {}).get("source") != choice,
                 "runway": rwy, "runway_src": rwy_src, "planned_rwy": planned or None,
                 "wx": wx, "wx_src": src, "sim_note": sim_note, "category": flight_category(wx["vis_m"], wx["ceiling_ft"]) if wx else None,
                 "components": comp, "alerts": alerts, "sim_real_wx": real}
@@ -525,12 +536,29 @@ class WxBar:
             auto = dest or None
         icao = (want_icao or "").upper().strip() or auto
         if not icao or not re.fullmatch(r"[A-Z0-9]{3,4}", icao):
-            return {"status": "success", "icao": None, "orig": orig, "dest": dest}
+            return {"status": "success", "icao": None, "orig": orig, "dest": dest, "atis_choice": self.atis_source()}
         out = self.airport(icao, ctx)
         out.update(status="success", auto=auto, orig=orig, dest=dest, sim_manual_wx=not ctx["real"])
         return out
 
     # ---------------- for the Ops Centre ----------------
+    def atis_source(self):
+        """The ATIS chosen in Settings: auto, batc, vatsim or efb."""
+        c = str((getattr(self.plugin, "config", {}) or {}).get("atis_source") or "auto")
+        return c if c in ("auto", "batc", "vatsim", "efb") else "auto"
+
+    def atis_info(self, icao, arrival=False):
+        """The ATIS and runway the strip shows for an airport (for the Ops Centre's takeoff and landing data).
+        Runs on the Ops Centre's thread (reads the sim through the bridge)."""
+        try:
+            ctx = self._context()
+            a = self.airport(icao, ctx, wait=True)
+            at = a.get("atis") or {}
+            return {"letter": at.get("letter"), "text": at.get("text") or "", "source": at.get("source"),
+                    "runways": list(at.get("runways") or []), "runway": a.get("runway"), "runway_src": a.get("runway_src")}
+        except Exception:
+            return None
+
     def atis_for(self, icao, arrival=False):
         """(letter, text, source) of the ATIS the strip would show: VATSIM's with real weather, else the EFB's.
         Runs on the Ops Centre's thread (reads the sim through the bridge)."""

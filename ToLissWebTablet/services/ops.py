@@ -298,6 +298,8 @@ class OpsCentre:
         self.enabled = bool(cfg.get("ops_enabled", False))
         self.use_sb_cs = bool(cfg.get("ops_use_sb_callsign", True))          # take the aircraft callsign from the plan
         self.final_trigger = cfg.get("ops_final_trigger", "doors") if cfg.get("ops_final_trigger") in ("doors", "beacon") else "doors"
+        self.clock = cfg.get("ops_clock") if cfg.get("ops_clock") in ("sim", "real") else "sim"   # times in messages
+        self._off_cache = (0.0, 0.0)
         self.log = []
         self.lock = threading.RLock()
         self.last_poll = 0.0
@@ -441,7 +443,8 @@ class OpsCentre:
             self.plugin.config.update({"ops_logon": self.logon, "ops_callsign": self.ops_callsign,
                                        "ops_aircraft": self.aircraft, "ops_enabled": self.enabled,
                                        "ops_auto": self.auto, "simbrief_user": self.ofp_user, "ops_autoload": self.autoload,
-                                       "ops_use_sb_callsign": self.use_sb_cs, "ops_final_trigger": self.final_trigger})
+                                       "ops_use_sb_callsign": self.use_sb_cs, "ops_final_trigger": self.final_trigger,
+                                       "ops_clock": self.clock})
             self.plugin.save_config(self.plugin.config)
         except Exception:
             pass
@@ -656,6 +659,52 @@ class OpsCentre:
             self.flight["cs_note"] = f"Aircraft callsign set to {cs} from your SimBrief plan."
             self.save_config()
 
+    # ---------- the clock used in messages ----------
+    def _clock_off(self, zulu=None):
+        """Seconds to add to the PC's UTC time to get the time shown in messages: X-Plane's UTC clock (the one the
+        ToLiss clock and MCDU show) with the sim-time setting, else 0. Within 12 hours either way, as only the time of
+        day is shown."""
+        if self.clock != "sim":
+            return 0.0
+        now = time.time()
+        if zulu is None:
+            if now - self._off_cache[0] < 2.0:
+                return self._off_cache[1]
+            zulu = self._sim(["sim/time/zulu_time_sec"], timeout=1.0).get("sim/time/zulu_time_sec")
+            if zulu is None:
+                return self._off_cache[1]
+        try:
+            zulu = float(zulu)
+        except (TypeError, ValueError):
+            return self._off_cache[1]
+        off = ((zulu - now % 86400) + 43200) % 86400 - 43200
+        self._off_cache = (now, off)
+        return off
+
+    def _hhmm(self, epoch, off=None):
+        """A time in a message: a PC-clock epoch shown on the chosen clock."""
+        if not epoch:
+            return "----Z"
+        return ops_hhmm(float(epoch) + (self._clock_off() if off is None else off))
+
+    def _ev_hhmm(self, key):
+        """The time of an OOOI event, on the clock it was recorded with."""
+        x = self.flight["oooi"]
+        if not x.get(key):
+            return "----Z"
+        return ops_hhmm(x[key] + (self.flight.get("oooi_off") or {}).get(key, 0.0))
+
+    def _sched_diff_min(self, epoch, sched, off=None):
+        """Minutes from a SimBrief scheduled time to an event: with sim time only the times of day are compared."""
+        if self.clock != "sim":
+            return int(round((epoch - sched) / 60))
+        d = ((float(epoch) + (self._clock_off() if off is None else off) - float(sched)) + 43200) % 86400 - 43200
+        return int(round(d / 60))
+
+    def _mark(self, key, now):
+        self.flight["oooi"][key] = int(now)
+        self.flight.setdefault("oooi_off", {})[key] = self._clock_off()
+
     def _sim(self, names, timeout=1.5):
         try:
             v = self.plugin.bridge.call("read_datarefs", names, timeout=timeout)
@@ -839,7 +888,7 @@ class OpsCentre:
         pax = _ops_num(v.get("AirbusFBW/NoPax"), _ops_num(w.get("pax_count")))
         fwd, aft = _ops_num(v.get("AirbusFBW/FwdCargo")), _ops_num(v.get("AirbusFBW/AftCargo"))
         self.flight["edno"] += 1
-        lines = [f'{"REVISED " if revised else ""}LOADSHEET FINAL {time.strftime("%H%MZ", time.gmtime())}', f'EDNO {self.flight["edno"]}',
+        lines = [f'{"REVISED " if revised else ""}LOADSHEET FINAL {self._hhmm(time.time())}', f'EDNO {self.flight["edno"]}',
                  f"{self._cs()} {self._route()}",
                  f'{_ops_g(o, "aircraft", "icaocode")} {_ops_g(o, "aircraft", "reg")}'.strip(),
                  f"PAX {pax}", f"HOLD FWD {fwd}  AFT {aft}",
@@ -897,11 +946,9 @@ class OpsCentre:
         except Exception:
             pass
         orig = _ops_g(o, "origin", "icao_code")
-        letter, atis = self._atis(orig) if orig else (None, None)
-        if atis:
-            dep = re.findall(r"(?:RWY|RUNWAY)S?\s*(\d{2}[LRC]?)(?=[^.]*?(?:DEP|DEPARTURE))", atis.upper()) or re.findall(r"(?:RWY|RUNWAY)S?\s*(\d{2}[LRC]?)", atis.upper())
-            if dep and str(r.get("identifier", "")).upper() not in [d.upper() for d in dep]:
-                cautions.append(f"ATIS {letter or ''} RWY {'/'.join(dict.fromkeys(dep))} NOT PLANNED RWY {r.get('identifier', '')}".replace("  ", " "))
+        c_rw = self._rwy_caution(orig, False, str(r.get("identifier", "")).upper()) if orig else None
+        if c_rw:
+            cautions.append(c_rw)
         metar = self._metar(orig) if orig else None
         mt = re.search(r"\s(M?\d{2})/(M?\d{2})\s", f" {metar} ") if metar else None
         if mt and str(c.get("temperature", "")).lstrip("-").isdigit():
@@ -952,6 +999,46 @@ class OpsCentre:
                 lines += ["EXPECTED, ESTIMATE ONLY:"] + ops_wrap(rwy)
         return "\n".join(lines)
 
+    def _rwy_caution(self, icao, arrival, planned):
+        """A caution when the runway ATC gave you, or the ATIS (from the chosen source), differs from the plan."""
+        if not planned:
+            return None
+        wxbar = getattr(self.plugin, "wxbar", None)
+        info = wxbar.atis_info(icao, arrival) if wxbar is not None else None
+        if info:
+            if info.get("runway_src") == "atc":
+                if info["runway"] and info["runway"].upper() != planned:
+                    return f"ATC RWY {info['runway']} NOT PLANNED RWY {planned}"
+                return None
+            if info.get("source") in ("vatsim", "batc"):
+                rws = [x.upper() for x in info.get("runways") or []]
+                if rws and planned not in rws:
+                    return f"ATIS {info.get('letter') or ''} RWY {'/'.join(dict.fromkeys(rws))} NOT PLANNED RWY {planned}".replace("  ", " ")
+                return None
+            return None
+        letter, atis = self._atis(icao, arrival)
+        if atis:
+            key = r"(?:ARR|APCH|APPROACH|LDG|LANDING)" if arrival else r"(?:DEP|DEPARTURE)"
+            rws = re.findall(r"(?:RWY|RUNWAY)S?\s*(\d{2}[LRC]?)(?=[^.]*?" + key + ")", atis.upper()) or re.findall(r"(?:RWY|RUNWAY)S?\s*(\d{2}[LRC]?)", atis.upper())
+            if rws and planned not in [x.upper() for x in rws]:
+                return f"ATIS {letter or ''} RWY {'/'.join(dict.fromkeys(rws))} NOT PLANNED RWY {planned}".replace("  ", " ")
+        return None
+
+    def _ext_atis_online(self, icao, arrival=False):
+        """An ATIS from the chosen source (BeyondATC or VATSIM) is available for the airport."""
+        if not icao:
+            return False
+        wxbar = getattr(self.plugin, "wxbar", None)
+        choice = wxbar.atis_source() if wxbar is not None else "auto"
+        b = getattr(self.plugin, "batc", None)
+        try:
+            batc = bool(b is not None and b.active() and (b.atis_for(icao) or {}).get("letter"))
+        except Exception:
+            batc = False
+        if choice == "efb":
+            return False
+        return batc or bool(self._atis(icao, arrival)[0])
+
     def msg_atis(self, icao, arrival=False):
         """The ATIS the weather strip shows: a VATSIM controller's with real weather, else the EFB's own ATIS built
         from the weather (the METAR with real weather, X-Plane's custom weather otherwise)."""
@@ -982,9 +1069,12 @@ class OpsCentre:
                        "sim/flightmodel/position/groundspeed", "sim/cockpit2/controls/parking_brake_ratio",
                        "sim/flightmodel/engine/ENGN_running", "sim/flightmodel/weight/m_fuel_total",
                        "sim/cockpit2/engine/indicators/fuel_flow_kg_sec", "sim/flightmodel/position/y_agl",
-                       "sim/flightmodel/weight/m_total", "AirbusFBW/PaxDoorModeArray", "AirbusFBW/CargoDoorModeArray"])
+                       "sim/flightmodel/weight/m_total", "AirbusFBW/PaxDoorModeArray", "AirbusFBW/CargoDoorModeArray",
+                       "sim/time/zulu_time_sec"])
         if not v:
             return
+        if v.get("sim/time/zulu_time_sec") is not None:
+            self._clock_off(v["sim/time/zulu_time_sec"])
         on_ground = float(v.get("sim/flightmodel/failures/onground_any", 1) or 0) >= 1
         try:
             self._inflight(v)
@@ -1115,7 +1205,7 @@ class OpsCentre:
         sched = _ops_num(_ops_g(self.ofp, "times", "sched_on"), 0)
         if not sched:
             return None
-        mins = int(round((eta - sched) / 60))
+        mins = self._sched_diff_min(eta, sched)
         return "ON TIME" if abs(mins) <= 5 else (f"{mins} MIN LATE" if mins > 0 else f"{-mins} MIN EARLY")
 
     def _inflight(self, v):
@@ -1131,22 +1221,23 @@ class OpsCentre:
         # ---- OOOI ----
         fob_now = float(v.get("sim/flightmodel/weight/m_fuel_total", 0) or 0)
         if "out" not in x and on_ground and ((brake < 0.5 and gs_kt > 3) or getattr(self.plugin, 'push', None)):
-            x["out"] = int(now)
+            self._mark("out", now)
             fl["fob_out"] = fob_now
             if self.auto["oooi"]:
-                self._event(f"OUT {ops_hhmm(now)}")
+                self._event(f"OUT {self._ev_hhmm('out')}")
         if "off" not in x and not on_ground and gs_kt > 60:
-            x["off"] = int(now)
-            x.setdefault("out", int(now))
+            self._mark("off", now)
+            if "out" not in x:
+                self._mark("out", now)
             if self.auto["oooi"]:
-                self._event(f"OFF {ops_hhmm(now)}")
+                self._event(f"OFF {self._ev_hhmm('off')}")
             planned_air = _ops_num(_ops_g(o, "times", "est_time_enroute"), 0)
             eta = int(now + planned_air) if planned_air else None
             fl["eta"] = fl["eta_sent"] = eta
             if self.auto["depreport"]:
-                lines = [f"{self._cs()} DEP REPORT", f'OUT {ops_hhmm(x["out"])}  OFF {ops_hhmm(now)}']
+                lines = [f"{self._cs()} DEP REPORT", f"OUT {self._ev_hhmm('out')}  OFF {self._ev_hhmm('off')}"]
                 if eta:
-                    lines.append(f"ETA {dest} {ops_hhmm(eta)}")
+                    lines.append(f"ETA {dest} {self._hhmm(eta)}")
                     dly = self._delay_text(eta)
                     if dly:
                         lines.append(f'STA {ops_hhmm(_ops_g(o, "times", "sched_in"))} {dly}'.strip())
@@ -1156,19 +1247,19 @@ class OpsCentre:
             fl["next_fuel"] = now + 900
             fl["next_wx"] = now + 900
         if "off" in x and "on" not in x and on_ground and gs_kt > 30:
-            x["on"] = int(now)
+            self._mark("on", now)
             if self.auto["oooi"]:
-                self._event(f"ON {ops_hhmm(now)}")
+                self._event(f"ON {self._ev_hhmm('on')}")
         if "on" in x and "in" not in x and on_ground and gs_kt < 1 and brake >= 0.5:
             # IN = parking brake set on stand, as real ACARS reports it, while the ATSU still has power
-            x["in"] = int(now)
+            self._mark("in", now)
             fl["fob_in"] = fob_now
             try:
                 self._learn_stand(float(v.get("sim/flightmodel/position/latitude", 0) or 0), float(v.get("sim/flightmodel/position/longitude", 0) or 0))
             except Exception as e:
                 self.plugin.log.xplane(f"ToLiss EFB: could not note the stand: {e}\n")
             if self.auto["oooi"]:
-                self._event(f"IN {ops_hhmm(now)}")
+                self._event(f"IN {self._ev_hhmm('in')}")
             if self.auto["blockin"] and not fl["summary_sent"]:
                 fl["summary_sent"] = True
                 self._queue("blockin", self.msg_blockin())
@@ -1191,7 +1282,7 @@ class OpsCentre:
                 fl["eta"] = prog["eta"]
                 if fl["eta_sent"] is None or abs(prog["eta"] - fl["eta_sent"]) >= 600:
                     change = int(round((prog["eta"] - fl["eta_sent"]) / 60)) if fl["eta_sent"] else None
-                    lines = ["ETA UPDATE", f"{dest} {ops_hhmm(prog['eta'])}" + (f" ({change:+d} MIN)" if change else ""),
+                    lines = ["ETA UPDATE", f"{dest} {self._hhmm(prog['eta'])}" + (f" ({change:+d} MIN)" if change else ""),
                              f"{prog['rem']} NM TO GO"]
                     dly = self._delay_text(prog["eta"])
                     if dly:
@@ -1423,11 +1514,9 @@ class OpsCentre:
             if d:
                 lines += [f'{label}: AUTOBRK {d.get("brake_setting", "--")}', f' RQD {dist(_ops_num(d.get("factored_distance")))} {unit}']
         cautions = []
-        letter, atis = self._atis(dest, arrival=True) if dest else (None, None)
-        if atis:
-            arr = re.findall(r"(?:RWY|RUNWAY)S?\s*(\d{2}[LRC]?)(?=[^.]*?(?:ARR|APCH|APPROACH|LDG|LANDING))", atis.upper()) or re.findall(r"(?:RWY|RUNWAY)S?\s*(\d{2}[LRC]?)", atis.upper())
-            if arr and str(rw.get("identifier", "")).upper() not in [a.upper() for a in arr]:
-                cautions.append(f"ATIS {letter or ''} RWY {'/'.join(dict.fromkeys(arr))} NOT PLANNED RWY {rw.get('identifier', '')}".replace("  ", " "))
+        c_rw = self._rwy_caution(dest, True, str(rw.get("identifier", "")).upper()) if dest else None
+        if c_rw:
+            cautions.append(c_rw)
         try:
             v = v or self._sim(["sim/flightmodel/position/latitude", "sim/flightmodel/position/longitude",
                                 "sim/flightmodel/position/groundspeed", "sim/flightmodel/weight/m_fuel_total",
@@ -1485,13 +1574,13 @@ class OpsCentre:
             sec = max(0, int(sec))
             return f"{sec // 3600}H{(sec % 3600) // 60:02d}"
         lines = ["BLOCK IN SUMMARY", f"{self._cs()} {self._route()}",
-                 f'OUT {ops_hhmm(x.get("out"))}  OFF {ops_hhmm(x.get("off"))}',
-                 f'ON {ops_hhmm(x.get("on"))}  IN {ops_hhmm(x.get("in"))}']
+                 f"OUT {self._ev_hhmm('out')}  OFF {self._ev_hhmm('off')}",
+                 f"ON {self._ev_hhmm('on')}  IN {self._ev_hhmm('in')}"]
         if x.get("out") and x.get("in") and x.get("off") and x.get("on"):
             lines.append(f'BLOCK {hm(x["in"] - x["out"])} FLT {hm(x["on"] - x["off"])}')
         sched_in = _ops_num(_ops_g(o, "times", "sched_in"), 0)
         if sched_in and x.get("in"):
-            mins = int(round((x["in"] - sched_in) / 60))
+            mins = self._sched_diff_min(x["in"], sched_in, (fl.get("oooi_off") or {}).get("in", 0.0))
             lines.append("ON TIME" if abs(mins) <= 5 else (f"{mins} MIN LATE" if mins > 0 else f"{-mins} MIN EARLY"))
         if fl.get("fob_out") and fl.get("fob_in") is not None:
             f = o.get("fuel", {})
@@ -1556,9 +1645,9 @@ class OpsCentre:
             x = self.flight["oooi"]
             if "off" not in x:
                 return False, "The departure report is sent after takeoff."
-            lines = [f"{self._cs()} DEP REPORT", f'OUT {ops_hhmm(x.get("out"))}  OFF {ops_hhmm(x["off"])}']
+            lines = [f"{self._cs()} DEP REPORT", f"OUT {self._ev_hhmm('out')}  OFF {self._ev_hhmm('off')}"]
             if self.flight.get("eta"):
-                lines.append(f'ETA {_ops_g(o, "destination", "icao_code")} {ops_hhmm(self.flight["eta"])}')
+                lines.append(f'ETA {_ops_g(o, "destination", "icao_code")} {self._hhmm(self.flight["eta"])}')
             self._queue("depreport", "\n".join(lines))
         elif what == "arr_atis":
             letter, text = self.msg_atis(_ops_g(o, "destination", "icao_code"), arrival=True)
@@ -1654,7 +1743,7 @@ class OpsCentre:
             if not prog:
                 self._queue("reply", "PROGRESS NOT AVBL\nNO FLIGHT PLAN OR\nNOT YET IN FLIGHT")
             else:
-                lines = [f"PROGRESS {dest}", f"ETA {ops_hhmm(prog['eta'])}", f"{prog['rem']} NM TO GO"]
+                lines = [f"PROGRESS {dest}", f"ETA {self._hhmm(prog['eta'])}", f"{prog['rem']} NM TO GO"]
                 if prog["efob"] is not None:
                     lines.append(f"EFOB {prog['efob']} KG")
                 dly = self._delay_text(prog["eta"])
@@ -1677,17 +1766,17 @@ class OpsCentre:
                 "loaded": bool(self.ofp), "callsign": self._cs() if self.ofp else "", "route": self._route() if self.ofp else "",
                 "generated": _ops_num(_ops_g(o, "params", "time_generated")), "auto": self.auto, "sent": fl["sent"],
                 "queued": list(fl["queued"]), "ack": fl["ack"], "atis_letter": fl["atis_letter"],
-                "airborne": fl["airborne"], "beacon_seen": fl["beacon_seen"], "oooi": fl["oooi"],
+                "airborne": fl["airborne"], "beacon_seen": fl["beacon_seen"], "oooi": {k: int(t + (fl.get("oooi_off") or {}).get(k, 0.0)) for k, t in fl["oooi"].items()},
                 "cs_note": fl.get("cs_note"), "final_trigger": self.final_trigger,
-                "eta": fl["eta"], "efob": fl["efob"], "dist_rem": fl["dist_rem"], "fuel_level": fl["fuel_level"],
+                "eta": int(fl["eta"] + self._off_cache[1]) if fl["eta"] else fl["eta"], "clock": self.clock, "efob": fl["efob"], "dist_rem": fl["dist_rem"], "fuel_level": fl["fuel_level"],
                 "todata_caution": bool(fl.get("todata_caution")), "ldg_caution": bool(fl.get("ldg_caution")),
                 "stand": (fl.get("stand") or {}).get("name"), "arr_atis_letter": fl.get("arr_atis_letter"),
                 "arrival_sent": fl.get("arrival_sent"), "td_vs": fl.get("td_vs"),
                 "phase": ("done" if "in" in fl["oooi"] else "arrival" if (fl.get("arrival_sent") or "on" in fl["oooi"])
                           else "inflight" if "off" in fl["oooi"] else "pre"),
                 "acft": f'{_ops_g(o, "aircraft", "icaocode")} {_ops_g(o, "aircraft", "reg")}'.strip(),
-                "dep_atis_online": bool(self._atis(_ops_g(o, "origin", "icao_code"))[0]) if self.ofp else False,
-                "arr_atis_online": bool(self._atis(_ops_g(o, "destination", "icao_code"), True)[0]) if self.ofp else False,
+                "dep_atis_online": self._ext_atis_online(_ops_g(o, "origin", "icao_code")) if self.ofp else False,
+                "arr_atis_online": self._ext_atis_online(_ops_g(o, "destination", "icao_code"), True) if self.ofp else False,
                 "no_atis_sent": bool(fl.get("no_atis_sent")), "no_arr_atis_sent": bool(fl.get("no_arr_atis_sent")),
                 "holding": bool(fl.get("holding")), "aircraft_online": self.aircraft_online,
                 "parked_stand": fl.get("parked_stand"), "rules_path": self._rules_path(),

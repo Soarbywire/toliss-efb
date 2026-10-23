@@ -76,6 +76,17 @@ def handle_post(req, plugin):
             req.end_headers()
             req.wfile.write(json.dumps({"status": "success", "dist_unit": plugin.config.get("dist_unit", "ft")}).encode('utf-8'))
 
+        elif req.path == '/api/wx/settings':
+            # which ATIS the weather strip and the Ops Centre use: auto, batc, vatsim or efb
+            c = str((data or {}).get("atis_source") or "") if isinstance(data, dict) else ""
+            if c in ("auto", "batc", "vatsim", "efb"):
+                plugin.config["atis_source"] = c
+                plugin.save_config(plugin.config)
+            req.send_response(200)
+            req.send_header('Content-type', 'application/json')
+            req.end_headers()
+            req.wfile.write(json.dumps({"status": "success", "atis_source": plugin.wxbar.atis_source()}).encode('utf-8'))
+
         elif req.path == '/api/batc/settings':
             # where BeyondATC's Player.log is (empty: the usual place)
             p = str((data or {}).get("path") or "").strip() if isinstance(data, dict) else ""
@@ -286,6 +297,9 @@ def handle_post(req, plugin):
                             ops._callsign_from_plan()
                 if data.get("final_trigger") in ("doors", "beacon"):
                     ops.final_trigger = data["final_trigger"]
+                if data.get("clock") in ("sim", "real"):
+                    ops.clock = data["clock"]
+                    ops._off_cache = (0.0, 0.0)
                 if "autoload" in data:
                     ops.autoload = bool(data["autoload"])
                     ops._autoload_tries, ops._next_autoload = 0, 0.0      # load it now if there is no plan yet

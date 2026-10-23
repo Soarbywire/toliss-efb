@@ -3,6 +3,10 @@
 The path comes from a towing model: the tug steers the nose wheel (within Airbus's 90 degree towing limit) and the
 aircraft pivots about its main gear. The page's preview asks for the same plan (/api/push/plan), so the map shows
 exactly what the push will do. Everything here runs on X-Plane's main thread (from the instructor queue and tick).
+
+X-Plane's flight model stays in charge throughout (as with Better Pushback): its gear keeps the wheels on the
+surface, whatever the slope or the scenery. The EFB is the tug: each frame it sets the aircraft's horizontal speed
+and its turn rate to follow the path, correcting any drift, and holds it still (speed zero) while waiting.
 """
 from __future__ import annotations
 
@@ -18,6 +22,10 @@ class PushbackMixin:
         "AirbusFBW/ParkBrake",
     )
     PUSH_ACCEL = 0.35             # m/s2, gentle start and stop
+    PUSH_K_POS = 0.8              # 1/s: how firmly drift from the path is corrected
+    PUSH_MAX_CORR = 0.6           # m/s: at most this much correction on top of the towing speed
+    PUSH_K_HDG = 0.8              # 1/s: heading correction
+    PUSH_MAX_YAW = 6.0            # deg/s
     # Airbus type dimensions: wheelbase (m, nose gear to main gear) as a fallback, fuselage length and span (m)
     PUSH_TYPES = {"A318": (10.3, 31.4, 34.1), "A319": (11.0, 33.8, 35.8), "A320": (12.6, 37.6, 35.8), "A20N": (12.6, 37.6, 35.8),
                   "A321": (16.9, 44.5, 35.8), "A21N": (16.9, 44.5, 35.8), "A332": (22.2, 58.8, 60.3), "A333": (25.4, 63.7, 60.3),
@@ -179,9 +187,7 @@ class PushbackMixin:
             return {"ok": False, "message": "Set a distance or a turn first."}
         self.push = {"pts": pts, "total": pts[-1][0], "s": 0.0, "v": 0.0, "target": max(0.3, min(3.0, float(item.get("speed_kt", 3)) * 0.514444)),
                      "paused": False, "forward": forward, "t": time.time(), "i": 0, "await_brake": False, "braked": False,
-                     "connecting": True, "start_xz": (x0, z0), "held": False, "go_at": 0.0,
-                     "sl": {"ground": True, "y": g("sim/flightmodel/position/local_y"), "pitch": g("sim/flightmodel/position/theta"),
-                            "agl_m": self._height_above_terrain(x0, z0), "hdg": h0}, "settle": None}
+                     "connecting": True, "start_xz": (x0, z0), "start_hdg": h0, "held": False, "go_at": 0.0, "settle": None}
         # the tug drives up and takes the nose wheel first: nothing moves until it is connected (a safety margin
         # covers a truck that never reports in)
         arrive = self._tug_begin()
@@ -215,32 +221,81 @@ class PushbackMixin:
             self._tug_release()
         except Exception:
             pass
-        self._override_path(False)
-        for d in ("local_vx", "local_vy", "local_vz"):
+        for d in ("local_vx", "local_vz", "Rrad"):
             self._set_num("sim/flightmodel/position/" + d, 0.0)
         self.push_done = message
     def _push_hold(self, pb):
         """Hold the aircraft where the push ended (or was stopped), so idle thrust can't move it, until the brake is set."""
         x, z = pb["hold_xz"]
-        self._slew_place(x, z, pb["sl"])
-        for d in ("local_vx", "local_vy", "local_vz", "local_ax", "local_ay", "local_az", "P", "Q", "R", "Prad", "Qrad", "Rrad"):
-            self._set_num("sim/flightmodel/position/" + d, 0.0)
+        self._push_hold_at(x, z, pb["hold_hdg"])
         if self._brake_set():
             self._push_end(pb.get("hold_msg_done", "Parking brake set: pushback complete. Disconnect the tug."))
     def _push_start_hold(self, pb, done_msg):
         pb["hold"] = True
         pb["paused"], pb["v"] = True, 0.0
         pb["hold_xz"] = (self._get_f("sim/flightmodel/position/local_x"), self._get_f("sim/flightmodel/position/local_z"))
+        pb["hold_hdg"] = self._get_f("sim/flightmodel/position/psi")
         pb["hold_msg_done"] = done_msg
     def _push_still(self, pb):
-        """Keep the aircraft exactly where the push started (waiting for the tug, or for the go after the brake)."""
-        if not pb["held"]:
-            self._override_path(True)
-            pb["held"] = True
+        """Keep the aircraft where the push started (waiting for the tug, or for the go after the brake)."""
+        pb["held"] = True
         x, z = pb["start_xz"]
-        self._slew_place(x, z, pb["sl"])
-        for d in ("local_vx", "local_vy", "local_vz", "local_ax", "local_ay", "local_az", "P", "Q", "R", "Prad", "Qrad", "Rrad"):
-            self._set_num("sim/flightmodel/position/" + d, 0.0)
+        self._push_hold_at(x, z, pb["start_hdg"])
+
+    def _push_drive(self, vx, vz, yaw_deg_s):
+        """The tug at work: the aircraft's horizontal speed (local x east, z south, m/s) and turn rate. Height, pitch
+        and bank are left to X-Plane's gear, so the wheels stay on the surface."""
+        self._set_num("sim/flightmodel/position/local_vx", vx)
+        self._set_num("sim/flightmodel/position/local_vz", vz)
+        self._set_num("sim/flightmodel/position/Rrad", math.radians(yaw_deg_s))
+        self._set_num("sim/flightmodel/position/R", yaw_deg_s)
+
+    def _push_hold_at(self, x, z, hdg):
+        """Hold the aircraft at a spot with the tug (idle thrust can't move it): any creep is pulled back gently."""
+        g = self._get_f
+        ex, ez = x - g("sim/flightmodel/position/local_x"), z - g("sim/flightmodel/position/local_z")
+        d = math.hypot(ex, ez)
+        k = min(self.PUSH_K_POS, 0.3 / d) if d > 1e-6 else 0.0
+        dh = ((hdg - g("sim/flightmodel/position/psi") + 540) % 360) - 180
+        self._push_drive(ex * k, ez * k, max(-2.0, min(2.0, dh * self.PUSH_K_HDG)))
+
+    def _push_follow(self, pb, x, z, hdg, vx_path, vz_path, yaw_path):
+        """Follow the path: its own speed and turn rate, plus a correction towards where the aircraft should be."""
+        g = self._get_f
+        ex, ez = x - g("sim/flightmodel/position/local_x"), z - g("sim/flightmodel/position/local_z")
+        cx, cz = ex * self.PUSH_K_POS, ez * self.PUSH_K_POS
+        c = math.hypot(cx, cz)
+        if c > self.PUSH_MAX_CORR:
+            cx, cz = cx * self.PUSH_MAX_CORR / c, cz * self.PUSH_MAX_CORR / c
+        psi = g("sim/flightmodel/position/psi")
+        dh = ((hdg - psi + 540) % 360) - 180
+        yaw = max(-self.PUSH_MAX_YAW, min(self.PUSH_MAX_YAW, yaw_path + dh * self.PUSH_K_HDG))
+        self._push_drive(vx_path + cx, vz_path + cz, yaw)
+        if abs(dh) > 2.0:
+            self._push_nudge_heading(psi + dh * 0.25)       # the turn rate isn't taking: turn the aircraft a little directly
+        return math.hypot(ex, ez)
+
+    def _push_nudge_heading(self, hdg):
+        """Set the heading only (pitch and bank stay as X-Plane's gear has them)."""
+        try:
+            g = self._get_f
+            q_ref = self._dref("sim/flightmodel/position/q")
+            if q_ref is not None:
+                XPLMSetDatavf(q_ref, self._euler_to_quat(hdg % 360, g("sim/flightmodel/position/theta"), g("sim/flightmodel/position/phi")), 0, 4)
+        except Exception:
+            pass
+
+    def _push_progress(self, pb):
+        """How far along the path the aircraft really is (the nearest path point around where we are)."""
+        g = self._get_f
+        ax, az = g("sim/flightmodel/position/local_x"), g("sim/flightmodel/position/local_z")
+        pts, i = pb["pts"], pb["i"]
+        best, bs = None, pb["s"]
+        for j in range(max(0, i - 8), min(len(pts), i + 40)):
+            d = (pts[j][1] - ax) ** 2 + (pts[j][2] - az) ** 2
+            if best is None or d < best:
+                best, bs = d, pts[j][0]
+        return bs
 
     def _push_tick(self):
         pb = self.push
@@ -275,9 +330,7 @@ class PushbackMixin:
             self._push_still(pb)                         # the tug takes up the load
             pb["t"] = now
             return
-        if not pb["held"]:
-            self._override_path(True)
-            pb["held"] = True
+        pb["held"] = True
         dt, pb["t"] = min(0.1, max(0.0, now - pb["t"])), now
         remaining = pb["total"] - pb["s"]
         # speed: accelerate gently to towing speed, slow down smoothly to stop at the end (or when paused)
@@ -286,7 +339,8 @@ class PushbackMixin:
             pb["v"] = min(want, pb["v"] + self.PUSH_ACCEL * dt)
         else:
             pb["v"] = max(want, pb["v"] - self.PUSH_ACCEL * 2 * dt)
-        pb["s"] = min(pb["total"], pb["s"] + pb["v"] * dt)
+        # the tow point moves on with the towing speed, but never runs away from an aircraft that is held back
+        pb["s"] = min(pb["total"], pb["s"] + pb["v"] * dt, self._push_progress(pb) + 1.5)
         pts, i = pb["pts"], pb["i"]
         while i + 1 < len(pts) and pts[i + 1][0] <= pb["s"]:
             i += 1
@@ -297,18 +351,17 @@ class PushbackMixin:
         x, z = a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f
         dh = ((b[3] - a[3] + 540) % 360) - 180
         pb["phi"] = a[4] + (b[4] - a[4]) * f if len(a) > 4 else 0.0
-        sl = pb["sl"]
-        sl["hdg"] = (a[3] + dh * f) % 360
-        self._slew_place(x, z, sl)
-        # ground speed for the instruments: moving along the path
-        sgn = 1.0 if pb["forward"] else -1.0
-        r = math.radians(sl["hdg"])
-        self._set_num("sim/flightmodel/position/local_vx", sgn * pb["v"] * math.sin(r))
-        self._set_num("sim/flightmodel/position/local_vz", -sgn * pb["v"] * math.cos(r))
+        hdg = (a[3] + dh * f) % 360
+        # the path's own velocity and turn rate at this point (the towing model: no sideways slip at the main gear)
+        ds = b[0] - a[0]
+        if ds > 1e-6 and pb["v"] > 0:
+            vx_p, vz_p = (b[1] - a[1]) / ds * pb["v"], (b[2] - a[2]) / ds * pb["v"]
+            yaw_p = dh / ds * pb["v"]
+        else:
+            vx_p = vz_p = yaw_p = 0.0
+        self._push_follow(pb, x, z, hdg, vx_p, vz_p, yaw_p)
         if pb["s"] >= pb["total"] - 0.01 and pb["v"] < 0.05:
-            # hold still for a second with all motion zeroed, then hand back: no drop or bounce on release
-            for d in ("local_vx", "local_vy", "local_vz", "local_ax", "local_ay", "local_az", "P", "Q", "R", "Prad", "Qrad", "Rrad"):
-                self._set_num("sim/flightmodel/position/" + d, 0.0)
+            # at the end: settle for a second, then keep holding until the parking brake is set
             if pb["settle"] is None:
                 pb["settle"] = now + 1.0
             elif now >= pb["settle"]:

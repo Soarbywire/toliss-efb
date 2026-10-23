@@ -36,6 +36,7 @@ FIXES = {"quantas": "Qantas", "reedback": "readback", "sidd": "SID", "q n h": "Q
 FACILITY = r"(?:ground|tower|approach|departure|centre|center|delivery|clearance|radio|control|information)"
 ATC_FAC = r"(?:ground|tower|approach|departure|centre|center|delivery|radio|control)"
 TENS = {"ten", "eleven", "twelve", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety", "hundred", "thousand"}
+ACTIVE_MIN = 5.0              # min: a controller heard this recently shows as active
 PARTY_DELAY = 2.5             # s: a voice line waits this long in case it is our own exchange (then [Instruction] has it)
 
 
@@ -135,6 +136,15 @@ class BeyondAtc:
         self.atis = {}
         self.assigned = {"dep": {}, "arr": {}}   # the runways BeyondATC gave us: {"icao", "rwy", "src", "t"}
         self.landed = False
+        # frequencies: the airports BeyondATC runs, the rows it dropped, the centres met, who was heard, dead tunes
+        self.airports = {}             # icao -> {"kind": "ops"|"dynamic", "n": load order}
+        self.rm_rows = {}              # icao -> {freq key}
+        self.centres = {}              # freq key -> {"name", "freq", "lc", "t"}
+        self.heard = {}                # freq key -> {"name", "lc", "t", "n"}: spoke on our frequency
+        self.staffed = {}              # freq key -> {"name", "n"}: BeyondATC has a controller there (it got a voice)
+        self.dead = {}                 # freq key -> {"lc", "t"}
+        self.lclock = None             # minutes into the week, from BeyondATC's [PlayerState] lines
+        self.load_n = 0
         self.radios = {}
         self.freq_names = {}
         self.freq_said = set()         # frequencies whose controller ATC has named: BeyondATC's voice list does not override
@@ -261,19 +271,58 @@ class BeyondAtc:
                 self.atis[icao] = {"icao": icao, "letter": letter, "text": text, "runways": parse_atis_runways(text), "t": time.time()}
                 if not old or old.get("letter") != letter:
                     self._event("atis", f"{icao} ATIS {letter}", icao=icao, letter=letter)
+        elif line.startswith("[AirportLoad] ") or line.startswith("[DynamicAirports] "):
+            m = re.match(r"\[AirportLoad\] X-Plane ([A-Z0-9]{3,4}) loaded from apt\.dat", line) or \
+                re.match(r"\[AirportLoad\] ([A-Z0-9]{3,4}) loaded as (dynamic)", line)
+            if m:
+                icao = m.group(1)
+                kind = "dynamic" if m.lastindex and m.lastindex >= 2 else "ops"
+                old = self.airports.get(icao)
+                if not old or old["kind"] == "dynamic":
+                    self.load_n += 1
+                    self.airports[icao] = {"kind": "ops" if kind == "ops" else (old or {}).get("kind", "dynamic"), "n": self.load_n}
+            m = re.match(r"\[DynamicAirports\] evicting dynamic ([A-Z0-9]{3,4})", line)
+            if m and (self.airports.get(m.group(1)) or {}).get("kind") == "dynamic":
+                self.airports.pop(m.group(1), None)
+        elif line.startswith("[Comms] "):
+            m = re.match(r"\[Comms\] ([A-Z0-9]{3,4}): \w+ row at (\d{3}\.\d{1,3}) .*\bremoved\b", line)
+            if m:
+                typ = {"CLEARANCE": "DEL", "DELIVERY": "DEL", "UNICOM": "CTAF", "CTAF": "CTAF", "GROUND": "GND", "TOWER": "TWR",
+                       "APPROACH": "APP", "DEPARTURE": "DEP", "ATIS": "ATIS"}.get(line.split(":", 1)[1].split()[0].upper(), "?")
+                self.rm_rows.setdefault(m.group(1), set()).add((typ, self._fkey(m.group(2))))
+            m = re.match(r"\[Comms\] Tuned (\d{3}\.\d{1,3}) matched center (.+?) via ", line)
+            if m:
+                self._centre(m.group(1), m.group(2))
+                self.dead.pop(self._fkey(m.group(1)), None)
+            m = re.match(r"\[Comms\] (\d{3}\.\d{1,3}) not found\. Aircraft: Player", line)
+            if m:
+                self.dead[self._fkey(m.group(1))] = self._stamp()
+            m = re.match(r"\[Comms\] Duplicate frequency (\d{3}\.\d{1,3}): .* vs center (.+?) -> center wins", line)
+            if m:
+                self._centre(m.group(1), m.group(2))
         elif line.startswith("[Handoff] "):
             m = re.match(r"\[Handoff\] (.+?) handed off by (ControllerAI_\S.*)$", line)
             if m and (not self.callsign or m.group(1).strip().lower() == self.callsign.lower()):
                 name, freq = _controller_name(m.group(2))
+                self._heard(freq, name, centre="ControllerAI_Center_" in m.group(2))
                 self._event("handoff", f"Handed off by {name}" + (f" {freq}" if freq else ""))
         elif line.startswith("[VoiceAssign] controller="):
             m = re.match(r"\[VoiceAssign\] controller=(ControllerAI_[^|]+)\|", line)
             if m:
                 name, freq = _controller_name(m.group(1))
+                if freq:
+                    self.staffed[self._fkey(freq)] = {"name": name, "n": self.line_no}
+                    if "ControllerAI_Center_" in m.group(1):
+                        self._centre(freq, name)
                 if freq and self._fkey(freq) not in self.freq_said:
                     self.freq_names[self._fkey(freq)] = name
         elif line.startswith("[PlayerState] "):
             self.recognised += 1
+            ck = re.match(r"\[PlayerState\] (\w+) (\d{1,2}):(\d{2}),", line)
+            if ck:
+                days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+                d = days.index(ck.group(1).lower()) if ck.group(1).lower() in days else 0
+                self.lclock = d * 1440 + int(ck.group(2)) * 60 + int(ck.group(3))
             m = re.search(r"com1: ([\d.]+)\((\w+)\), com2: ([\d.]+)\((\w+)\), transponder: (\d+)\((\w+)\)", line)
             if m:
                 self.radios = {"com1": m.group(1), "com2": m.group(3), "xpdr": m.group(5), "t": time.time()}
@@ -285,6 +334,34 @@ class BeyondAtc:
                 self.xp = "paused"
             elif "handshake" in line or "resumed" in line or "telemetry received" in line:
                 self.xp = "connected"
+
+    def _stamp(self):
+        return {"lc": self.lclock, "t": time.time(), "n": self.line_no}
+
+    def _heard(self, freq, name=None, centre=False):
+        """A controller spoke (or was assigned a voice, or handed us off) on this frequency."""
+        if not freq:
+            return
+        k = self._fkey(freq)
+        e = dict(self._stamp(), name=name or (self.heard.get(k) or {}).get("name") or self.freq_names.get(k))
+        self.heard[k] = e
+        self.dead.pop(k, None)
+        if centre or (name and re.search(r"(?i)\b(centre|center|control)\b", name)):
+            self._centre(freq, name)
+
+    def _centre(self, freq, name):
+        k = self._fkey(freq)
+        nm = re.sub(r"(?i)^center\s+", "", str(name or "").strip())
+        nm = nm.title() if nm.isupper() else nm
+        self.centres[k] = dict(self._stamp(), name=nm or (self.centres.get(k) or {}).get("name"), freq=k)
+
+    def _recent(self, st):
+        """Heard within the last few minutes: by BeyondATC's own clock when it has logged one, else ours."""
+        if not st:
+            return False
+        if st.get("lc") is not None and self.lclock is not None:
+            return (self.lclock - st["lc"]) % 10080 <= ACTIVE_MIN
+        return time.time() - st.get("t", 0) <= ACTIVE_MIN * 60
 
     @staticmethod
     def _fkey(f):
@@ -335,6 +412,13 @@ class BeyondAtc:
                 self.controller = fac
         who = fac or self.controller
         self._event("atc", text, who=who, freq=freq)
+        if freq:
+            self._heard(freq, who)
+        ct = re.search(r"\bcontact ([A-Za-z]+(?: [A-Za-z]+)*?)(?: on)? (1\d{2}\.\d{1,3})\b", text, re.I)
+        if ct and re.search(r"(?i)\b(centre|center|control)\b", ct.group(1)):
+            k = self._fkey(ct.group(2))
+            if k not in self.centres:
+                self.centres[k] = {"name": ct.group(1).title(), "freq": k, "lc": None, "t": 0}
         self._assigned_from(text)
         self._clearance(text)
 
@@ -433,6 +517,8 @@ class BeyondAtc:
         for t, txt, who, ln, sid in self.pending_party:
             if (before_line is not None and ln <= before_line) or (before_line is None and (before is None or t <= before)):
                 self._event("party", txt, who=who)
+                if who and who != "Aircraft" and self.radios.get("com1"):
+                    self._heard(self.radios["com1"], None)
             else:
                 keep.append((t, txt, who, ln, sid))
         self.pending_party = keep
@@ -561,6 +647,76 @@ class BeyondAtc:
                     "last_id": self.next_id - 1, "age_s": round(age, 1) if age is not None else None,
                     "last_atc": next((dict(e) for e in reversed(self.events) if e["kind"] == "atc"), None),
                     "session_t": self.session_t, "windows": os.name == "nt"}
+
+    def frequencies(self):
+        """The frequencies panel: your radios, the airports BeyondATC runs with their stations, the centres it has."""
+        with self.lock:
+            airports = dict(self.airports)
+            rm = {k: set(v) for k, v in self.rm_rows.items()}
+            heard = {k: dict(v, active=self._recent(v)) for k, v in self.heard.items()}
+            staffed = {k: dict(v) for k, v in self.staffed.items()}
+            dead = set(self.dead)
+            centres = [dict(c) for c in self.centres.values()]
+            radios = dict(self.radios)
+            nxt = (self.clearance.get("next_freq") or {}).get("value")
+            dep, arr = self.assigned["dep"].get("icao"), self.assigned["arr"].get("icao")
+        rest = sorted((a for a in airports if a not in (dep, arr)), key=lambda a: (airports[a]["kind"] != "ops", -airports[a]["n"]))
+        order = list(dict.fromkeys([a for a in (dep, arr) if a and a in airports] + rest))
+        def same(who, icao, aname, sname):
+            """A controller's name fits this airport's station (one frequency can serve several airports)."""
+            if not who:
+                return True
+            w = who.lower()
+            words = [x for x in re.split(r"[^a-z]+", f"{aname} {sname}".lower()) if len(x) > 3 and x not in
+                     ("airport", "international", "intl", "ground", "tower", "approach", "departure", "departures", "delivery",
+                      "clearance", "radio", "information", "centre", "center", "control")]
+            return icao.lower() in w or any(x in w for x in words)
+        def st(k, icao=None, aname="", sname=""):
+            h = heard.get(k)
+            if h and icao and not same(h.get("name"), icao, aname, sname):
+                h = None
+            sf = staffed.get(k)
+            if sf and icao and not same(sf.get("name"), icao, aname, sname):
+                sf = None
+            return {"active": bool(h and h["active"]), "heard": bool(h), "staffed": bool(sf or h)}
+        out, quiet = [], []
+        for icao in order[:16]:
+            info = airports[icao]
+            try:
+                fa = self.plugin.get_airport_freqs(icao) or {}
+            except Exception:
+                fa = {}
+            rows = []
+            for f in fa.get("freqs") or []:
+                k = f"{f['khz'] / 1000:.3f}"
+                if (f["type"], k) in rm.get(icao, set()):
+                    continue
+                rows.append(dict(st(k, icao, fa.get("name") or "", f["name"]), type=f["type"], name=f["name"], freq=k, khz=f["khz"]))
+            if not any(r["type"] != "CTAF" for r in rows) and icao not in (dep, arr):
+                quiet.append(icao)                      # no ATC there: just a CTAF (or nothing)
+                continue
+            out.append({"icao": icao, "name": fa.get("name") or icao, "kind": info["kind"],
+                        "role": "dep" if icao == dep else ("arr" if icao == arr else None), "stations": rows})
+        cs = []
+        for c in centres:
+            cs.append(dict(c, **st(c["freq"]), last=max((heard.get(c["freq"]) or {}).get("n", 0), c.get("n") or 0)))
+        cs.sort(key=lambda c: (not c["active"], -c["last"]))
+        def radio(f):
+            if not f:
+                return None
+            k = self._fkey(f)
+            name = (heard.get(k) or {}).get("name")
+            if not name:
+                for a in out:
+                    name = next((r["name"] for r in a["stations"] if r["freq"] == k), None)
+                    if name:
+                        name = f"{a['icao']} {name}" if a["icao"] not in name.upper() else name
+                        break
+            if not name:
+                name = next((c["name"] for c in cs if c["freq"] == k), None)
+            return dict(st(k), freq=k, name=name, khz=int(round(float(k) * 1000)), dead=k in dead)
+        return {"radios": {"com1": radio(radios.get("com1")), "com2": radio(radios.get("com2"))}, "next": nxt,
+                "airports": out, "quiet": quiet, "centres": cs[:10]}
 
     def active(self):
         """BeyondATC is running and writing its log (used to prefer its ATIS)."""

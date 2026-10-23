@@ -101,9 +101,33 @@ def parse_taxi_network(path, pos):
         net.edges.append(e)
         net.adj.setdefault(e["a"], []).append((i, e["b"]))
         net.adj.setdefault(e["b"], []).append((i, e["a"]))
-        if e["name"]:
-            net.names.add(e["name"].upper())
+        e["keys"] = name_keys(e["name"]) if not e["runway"] else set()
+        net.names.update(e["keys"])
     return net
+
+
+PHONETIC = {"ALPHA": "A", "ALFA": "A", "BRAVO": "B", "CHARLIE": "C", "DELTA": "D", "ECHO": "E", "FOXTROT": "F", "GOLF": "G",
+            "HOTEL": "H", "INDIA": "I", "JULIET": "J", "JULIETT": "J", "KILO": "K", "LIMA": "L", "MIKE": "M", "NOVEMBER": "N",
+            "OSCAR": "O", "PAPA": "P", "QUEBEC": "Q", "ROMEO": "R", "SIERRA": "S", "TANGO": "T", "UNIFORM": "U",
+            "VICTOR": "V", "WHISKEY": "W", "WHISKY": "W", "XRAY": "X", "X-RAY": "X", "YANKEE": "Y", "ZULU": "Z"}
+
+
+def name_keys(name):
+    """The names a taxiway segment answers to. Sceneries label them in many ways ("C", "C_1", "TWY C", "C (north)",
+    "C/C1", "Charlie"); ATC says "C". A trailing number glued to the letter ("C1") is a different taxiway."""
+    up = str(name or "").upper().strip()
+    if not up:
+        return set()
+    keys = {up}
+    for t in re.split(r"[\s/,;()_\-.]+", up):
+        if not t or t in ("TWY", "TAXIWAY", "TWYS", "TAXILANE", "TL", "NORTH", "SOUTH", "EAST", "WEST") and t != up:
+            continue
+        if not t.isdigit():
+            keys.add(PHONETIC.get(t, t))
+    m = re.match(r"^(?:TWY|TAXIWAY)\s*([A-Z]{1,2}\d{0,2})\b", up)
+    if m:
+        keys.add(m.group(1))
+    return keys
 
 
 def runway_ident_match(edge_name, ident):
@@ -123,6 +147,7 @@ def parse_clearance(text, net):
             while i < len(words) and (words[i] in ("RWY", "RUNWAY", "OF") or re.match(r"^\d{1,2}[LRC]?$", words[i])):
                 i += 1
             continue
+        w = PHONETIC.get(w, w)
         if w in skip or re.match(r"^\d{1,2}[LRC]?$", w) and w not in net.names:
             i += 1
             continue
@@ -196,16 +221,15 @@ def plan_route(net, start, hdg, dest, ac_size="C", clearance=None):
         p = net.xy[n]
         return min(math.hypot(p[0] - g[0], p[1] - g[1]) for g in gx)
 
-    def advance(k, name):
-        """Clearance progress after using a segment called name (None = not allowed)."""
+    def advance(k, keys):
+        """Clearance progress after using a segment answering to these names (None = not allowed)."""
         if not seq:
             return k
-        nm = (name or "").upper()
-        if k < len(seq) and nm == seq[k]:
+        if k < len(seq) and seq[k] in keys:
             return k + 1
-        if k > 0 and nm == seq[k - 1]:
+        if k > 0 and seq[k - 1] in keys:
             return k
-        if not nm:
+        if not keys:
             return k
         if k == 0 or k == len(seq):          # leaving the stand area, or after the last cleared taxiway
             return k
@@ -246,7 +270,7 @@ def plan_route(net, start, hdg, dest, ac_size="C", clearance=None):
                 continue
             if not allowed(e) or m == prev:
                 continue
-            k2 = advance(k, e["name"] if not e["runway"] else "")
+            k2 = advance(k, e.get("keys", set()) if not e["runway"] else set())
             if k2 is None:
                 continue
             b_out = _bearing(net.xy[n], net.xy[m])
@@ -522,10 +546,20 @@ def taxi_route(plugin, data, size_codes):
     else:
         dest = {"type": "runway", "ident": str(data.get("runway") or "").upper()}
     seq, unknown = parse_clearance(data.get("clearance", ""), net)
-    if unknown:
+    if unknown and data.get("strict"):
         return {"status": "error", "message": f"Not a taxiway at {icao}: {', '.join(unknown)}."}
     res = plan_route(net, (lat, lon), hdg, dest, size, seq)
+    note = None
+    if unknown:
+        note = f"{', '.join(unknown)} {'is' if len(unknown) == 1 else 'are'} not named in {icao}'s taxi network in your scenery, so the route follows the rest of the clearance."
+    if not res.get("ok") and seq:
+        # the scenery's names don't allow that sequence: the best route instead, said plainly
+        res = plan_route(net, (lat, lon), hdg, dest, size, [])
+        if res.get("ok"):
+            note = (note + " " if note else "") + f"No route in your scenery follows {' '.join(seq)} exactly: this is the best route to the same place."
     if not res.get("ok"):
         return {"status": "error", "message": res.get("message", "No route found.")}
     res.update(status="success", icao=icao, size=size)
+    if note:
+        res["note"] = note
     return res

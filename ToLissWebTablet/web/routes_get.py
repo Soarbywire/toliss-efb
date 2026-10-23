@@ -656,6 +656,10 @@ def handle_get(req, plugin):
                 since = 0
             try:
                 body = {"status_ok": True, **plugin.batc.state(since)}
+                try:
+                    body["freqs"] = plugin.batc.frequencies()
+                except Exception as fexc:
+                    body["freqs"] = {"error": str(fexc)}
             except Exception as exc:
                 body = {"status_ok": False, "status": "error", "message": str(exc), "events": []}
             req.send_response(200)
@@ -789,7 +793,7 @@ def handle_get(req, plugin):
                 body = {"status": "success", "logon": ops.logon, "ops_callsign": ops.ops_callsign,
                         "aircraft": ops.aircraft, "enabled": ops.enabled, "autoload": ops.autoload,
                         "simbrief_user": ops.ofp_user, "ofp_loaded": bool(ops.ofp), "use_sb_callsign": ops.use_sb_cs,
-                        "final_trigger": ops.final_trigger} if ops else {"status": "error"}
+                        "final_trigger": ops.final_trigger, "clock": ops.clock} if ops else {"status": "error"}
             elif parsed.path == '/api/ops/archive':
                 body = {"status": "success", "flights": ops.load_archive()} if ops else {"status": "error"}
             elif parsed.path == '/api/ops/stands':
