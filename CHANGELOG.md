@@ -17,6 +17,18 @@ as soon as the aircraft is positioned and finishes setting it up while paused, w
 
 ---
 
+## 0.70.2
+
+### Pushback: the ground crew on the interphone
+- The ground engineer now talks you through the push, on X-Plane's radio (the pilot's headset), so X-Plane's radio
+  volume controls it, with an interphone sound and radio squelch: towbar connected and ready; brakes released and
+  commencing pushback (tail left, tail right, straight back, or pulling forward); holding position and continuing
+  (Pause and Resume); stopping (parking brake set or Stop during the push); pushback complete, set parking brake;
+  parking brake set, disconnecting towbar; bypass pin removed, hand signals on your left; or pushback cancelled.
+- The push starts as the ground crew says "commencing pushback", not before. Lines never overlap.
+- **Ground crew voice** on the Pushback page turns it on or off (on by default). The recordings are 16-bit WAV files
+  in `ToLissWebTablet/sounds/groundcrew`; a missing file is simply skipped.
+
 ## 0.70.1
 
 ### Only with a ToLiss aircraft

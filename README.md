@@ -6,7 +6,7 @@ opens in any browser on your network, including an iPad:
 - **Preflight:** SimBrief dispatch with takeoff and landing performance, weight & balance with the live CG, ground
   services, and a built-in pushback: planned on a map with a towing model, done by X-Plane's own towbar tug, which
   drives up and connects (with NWS DISC on the E/WD) and works with the parking brake like a real tug, with X-Plane's
-  physics keeping the wheels on the ground on any apron.
+  physics keeping the wheels on the ground on any apron, and a ground crew who talks you through it on the radio.
 - **Weather strip:** on every page, the departure or destination weather in one line (ATIS letter, runway, wind
   components, QNH) with alerts only when something matters: from the METAR with real weather, from X-Plane's own
   weather when it is custom, and the ATIS from the source you choose (BeyondATC, VATSIM or the EFB's own ATIS). The

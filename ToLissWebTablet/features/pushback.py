@@ -120,9 +120,12 @@ class PushbackMixin:
                 if kind == "push_resume" and self._brake_set():
                     res = {"ok": False, "message": "Release the parking brake first."}
                 else:
+                    was = self.push["paused"]
                     self.push["paused"] = kind == "push_pause"
                     if kind == "push_resume":
                         self.push["braked"] = False
+                    if not self.push.get("connecting") and not self.push.get("await_brake") and was != self.push["paused"]:
+                        self._gc_say("holding" if kind == "push_pause" else "continuing")
                     res = {"ok": True, "message": "Paused." if kind == "push_pause" else "Resuming."}
             else:
                 res = {"ok": False, "message": "No pushback is running."}
@@ -130,13 +133,17 @@ class PushbackMixin:
             pb = getattr(self, 'push', None)
             if pb and (pb.get("hold") or item.get("release")):
                 self._push_end("Released without the parking brake.")      # "Release now"
+                self._gc_say("disconnected")
                 res = {"ok": True, "message": "Released."}
             elif pb:
                 if pb.get("connecting") or pb["await_brake"]:
                     self._push_end("Pushback cancelled.")
+                    self._gc_clear()
+                    self._gc_say("cancelled")
                     res = {"ok": True, "message": "Pushback cancelled."}
                 else:
                     self._push_start_hold(pb, "Parking brake set: pushback stopped. Disconnect the tug.")
+                    self._gc_say("stopping")
                     res = {"ok": True, "message": "Stopped: holding the aircraft until the parking brake is set."}
             else:
                 res = {"ok": True, "message": "Stopped."}
@@ -190,6 +197,10 @@ class PushbackMixin:
                      "connecting": True, "start_xz": (x0, z0), "start_hdg": h0, "held": False, "go_at": 0.0, "settle": None}
         # the tug drives up and takes the nose wheel first: nothing moves until it is connected (a safety margin
         # covers a truck that never reports in)
+        turn = float(item.get("turn_deg", 0) or 0)
+        self.push["voice"] = "pull_forward" if forward else ("push_straight" if turn < 1 else
+                                                             ("push_left" if str(item.get("side", "L")) == "L" else "push_right"))
+        self._gc_clear()
         arrive = self._tug_begin()
         self.push["connect_until"] = time.time() + arrive + 5.0
         self.push["phi"] = 0.0
@@ -230,6 +241,8 @@ class PushbackMixin:
         self._push_hold_at(x, z, pb["hold_hdg"])
         if self._brake_set():
             self._push_end(pb.get("hold_msg_done", "Parking brake set: pushback complete. Disconnect the tug."))
+            self._gc_say("brakes_set")
+            self._gc_say("disconnected", delay=2.5)
     def _push_start_hold(self, pb, done_msg):
         pb["hold"] = True
         pb["paused"], pb["v"] = True, 0.0
@@ -313,8 +326,10 @@ class PushbackMixin:
             # connected: with the parking brake set, wait for it to be released; otherwise go in a moment
             pb["connecting"] = False
             pb["await_brake"] = self._brake_set()
+            self._gc_say("connected")
             if not pb["await_brake"]:
-                pb["go_at"] = now + 2.0
+                pb["go_at"] = max(now + 2.0, self._gc_free_at() + 1.0)   # "commencing pushback" comes first
+                self._gc_say(pb.get("voice", "push_straight"))
         if pb["await_brake"]:
             if self._brake_set():
                 if pb["held"]:
@@ -322,10 +337,12 @@ class PushbackMixin:
                 pb["t"] = now
                 return                                   # waiting for the brake to be released
             pb["await_brake"] = False
-            pb["go_at"] = now + 1.5
+            pb["go_at"] = max(now + 1.5, self._gc_free_at() + 1.0)       # "commencing pushback" comes first
+            self._gc_say(pb.get("voice", "push_straight"))
         elif not pb["braked"] and self._brake_set():
             # brake set during the push: stop at once (a real tow bar would be at risk); Resume once released
             pb["braked"], pb["paused"], pb["v"] = True, True, 0.0
+            self._gc_say("stopping")
         if now < pb["go_at"]:
             self._push_still(pb)                         # the tug takes up the load
             pb["t"] = now
@@ -367,6 +384,7 @@ class PushbackMixin:
             elif now >= pb["settle"]:
                 # keep holding the aircraft until the parking brake is set (engines may be running)
                 self._push_start_hold(pb, "Parking brake set: pushback complete. Disconnect the tug.")
+                self._gc_say("complete")
     def _push_state(self):
         pb = getattr(self, 'push', None)
         st = {"pushing": bool(pb), "push_done": getattr(self, 'push_done', None)}

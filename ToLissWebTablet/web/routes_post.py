@@ -129,7 +129,7 @@ def handle_post(req, plugin):
                     clean["fwd"] = bool(s["fwd"])
                 # the truck options: kept unless given
                 old = plugin.config.get("push_settings") or {}
-                for k in ("truck",):
+                for k in ("truck", "voice"):
                     v = s.get(k, old.get(k))
                     if isinstance(v, bool):
                         clean[k] = v

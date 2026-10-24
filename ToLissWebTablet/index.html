@@ -1337,6 +1337,8 @@
                         <div style="margin-top:14px; padding-top:12px; border-top:1px solid var(--border); display:flex; flex-direction:column; gap:8px; font-size:13px;">
                             <label style="display:flex; gap:8px; align-items:center; cursor:pointer;"><input type="checkbox" id="pb-truck" checked onchange="pbSaveSettings()"> Show the pushback truck</label>
                             <div class="rp-note" id="pb-tug-note" style="margin:0;">The truck is X-Plane's own towbar tractor (GT110) with its driver.</div>
+                            <label style="display:flex; gap:8px; align-items:center; cursor:pointer;"><input type="checkbox" id="pb-voice" checked onchange="pbSaveSettings()"> Ground crew voice (on X-Plane's radio)</label>
+                            <div class="rp-note" style="margin:0;">The ground engineer talks you through the push on the interphone. Its volume follows X-Plane's radio volume.</div>
                         </div>
                         <div class="pb-reset-row">
                             <button id="pb-reset" onclick="pbReset()" title="Back to 20 m straight, tail left 90°, 0 m final, 3 kt, Normal steering, push back">Reset settings to defaults</button>
@@ -2283,7 +2285,7 @@
                 <div style="line-height: 1.5; color: var(--text-muted); font-size: 13px;">
                     <p>A web-based, remote interface for the ToLiss line of aircraft in X-Plane 12.</p>
                     <p>By Soarbywire &middot; <a href="https://soarbywire.com" target="_blank" rel="noopener">soarbywire.com</a></p>
-                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.70.1 Release Beta</p>
+                    <p style="margin-top: 10px; font-weight: bold; color: var(--accent);">Version: 0.70.2 Release Beta</p>
                     <p style="font-size: 11px; color: #ff9800; margin-top: 5px;"><strong>Caution:</strong> Some features may not work as intended.</p>
                     <p style="font-size: 11px; color: var(--text-dim); margin-top: 5px;">New versions are published on <a href="https://github.com/Soarbywire/toliss-efb/releases" target="_blank" rel="noopener">GitHub</a> and the X-Plane.org forums, and can be installed from <b>Updates</b> above.</p>
                     <div class="lic">
@@ -7041,7 +7043,7 @@
         const PB_DEFAULTS = { back: 20, turn: 90, final: 0, speed: 3, side: 'L', tight: 'normal', fwd: false };
         let pbSaveTimer = null;
         const pbSettingsNow = () => ({ back: pbVal('back'), turn: pbVal('turn'), final: pbVal('final'), speed: pbVal('speed'), side: PB.side, tight: PB.tight, fwd: !!PB.fwd,
-                                       truck: !!document.getElementById('pb-truck').checked });
+                                       truck: !!document.getElementById('pb-truck').checked, voice: !!document.getElementById('pb-voice').checked });
         function pbSaveSettings() {
             clearTimeout(pbSaveTimer);
             pbSaveTimer = setTimeout(() => {
@@ -7054,6 +7056,7 @@
             pbSide(s.side === 'R' ? 'R' : 'L', restoring);
             pbTight(['gentle', 'normal', 'tight'].includes(s.tight) ? s.tight : 'normal', restoring);
             if (s.truck !== undefined) document.getElementById('pb-truck').checked = s.truck !== false;
+            document.getElementById('pb-voice').checked = s.voice !== false;
         }
         function pbReset() {
             if (PB.st && PB.st.pushing) return;
@@ -8714,7 +8717,7 @@
         // ---- after an update: the plugin (Python) and this page must both be reloaded, in that order ----
         // This page knows its own version; the plugin reports the version it is running. While they differ, a banner
         // says which step is left: Reload scripts in X-Plane (the plugin is older), or reload this page (it is newer).
-        const EFB_PAGE_VERSION = '0.70.1';
+        const EFB_PAGE_VERSION = '0.70.2';
         const XPPY_RELOAD = 'Plugins → XPPython3 → Reload scripts';
         function verCmp(a, b) {
             const x = String(a || '').split('.').map(n => parseInt(n, 10) || 0), y = String(b || '').split('.').map(n => parseInt(n, 10) || 0);

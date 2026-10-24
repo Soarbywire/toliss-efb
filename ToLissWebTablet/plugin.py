@@ -30,6 +30,7 @@ from .features.camera import CameraMixin
 from .features.reposition import RepositionMixin
 from .features.situations import SituationMixin
 from .features.traffic import TrafficMixin
+from .features.groundcrew import GroundCrewMixin
 from .services.airports import AirportMixin
 from .services.navdata import NavDatabase
 from .services.ops import OpsCentre
@@ -43,7 +44,7 @@ from .web.server import ThreadingHTTPServer, make_handler
 
 class PythonInterface(
     AirportMixin, SituationMixin, FailureMixin, PayloadMixin, DataRefMixin,
-    DisplayMixin, InstructorMixin, PushbackMixin, TugMixin, RepositionMixin, ReplayMixin, CameraMixin, TrafficMixin,
+    DisplayMixin, InstructorMixin, PushbackMixin, TugMixin, GroundCrewMixin, RepositionMixin, ReplayMixin, CameraMixin, TrafficMixin,
 ):
     """Thin coordinator. Feature behavior lives in injected mixins/services."""
 
@@ -361,6 +362,7 @@ class PythonInterface(
                      lambda: self._tug_release() if getattr(self, "tug", None) else None,
                      lambda: self._slew_stop() if getattr(self, "slew", None) else None,
                      lambda: self._tfc_release(),
+                     lambda: self._gc_stop(),
                      lambda: self.fdr.stop("aircraft changed") if self.fdr.recording else None):
             try:
                 step()
@@ -416,6 +418,10 @@ class PythonInterface(
             except Exception as exc:
                 self._tfc_release(f"Training traffic stopped: {exc}")
                 self.log.xplane(f"ToLiss EFB: traffic error: {exc}")
+            try:
+                self._gc_tick()
+            except Exception as exc:
+                self.log.xplane(f"ToLiss EFB: ground crew voice error: {exc}")
             try:
                 self._update_stream()
             except Exception as exc:
